@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { fabric } from 'fabric';
 
 export type ToolMode = 'select' | 'text' | 'rectangle' | 'circle' | 'triangle' | 'line' | 'pen' | 'image';
+export type SidebarTab = 'shapes' | 'text' | 'uploads' | 'templates';
 
 export interface CanvasState {
   activeObjectId: string | null;
@@ -15,8 +16,7 @@ export interface CanvasState {
   fabricCanvas: fabric.Canvas | null;
   history: string[];
   historyIndex: number;
-  leftPanelTab: 'templates' | 'elements' | 'text' | 'images' | 'layers';
-  isPanelOpen: boolean;
+  sidebarTab: SidebarTab;
 }
 
 export interface CanvasActions {
@@ -30,8 +30,7 @@ export interface CanvasActions {
   pushHistory: (json: string) => void;
   undo: () => void;
   redo: () => void;
-  setLeftPanelTab: (tab: CanvasState['leftPanelTab']) => void;
-  togglePanel: () => void;
+  setSidebarTab: (tab: SidebarTab) => void;
 }
 
 type Store = CanvasState & CanvasActions;
@@ -48,8 +47,7 @@ export const useStore = create<Store>((set, get) => ({
   fabricCanvas: null,
   history: [],
   historyIndex: -1,
-  leftPanelTab: 'elements',
-  isPanelOpen: true,
+  sidebarTab: 'shapes',
 
   setFabricCanvas: (canvas) => set({ fabricCanvas: canvas }),
   setToolMode: (mode) => set({ toolMode: mode }),
@@ -91,6 +89,5 @@ export const useStore = create<Store>((set, get) => ({
     }
     set({ historyIndex: newIndex });
   },
-  setLeftPanelTab: (tab) => set({ leftPanelTab: tab }),
-  togglePanel: () => set((s) => ({ isPanelOpen: !s.isPanelOpen })),
+  setSidebarTab: (tab) => set({ sidebarTab: tab }),
 }));
