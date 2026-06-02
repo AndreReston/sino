@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Shapes, Type, Upload, LayoutTemplate,
   Square, Circle, Triangle, Minus, Star,
@@ -58,6 +58,14 @@ const PRESETS = [
   { name: 'A4 Document', w: 2480, h: 3508 },
   { name: 'Business Card', w: 1050, h: 600 },
 ];
+
+type TemplateItem = {
+  id: string;
+  title: string;
+  canvas_data: any;
+  created_at: string;
+  updated_at: string;
+};
 
 // ─────────────────────────────────────────────
 // Sidebar Tab definitions
@@ -148,6 +156,27 @@ export default function LeftSidebar() {
     });
     fabricCanvas.add(tb);
     fabricCanvas.setActiveObject(tb);
+    fabricCanvas.renderAll();
+    setToolMode('select');
+  };
+
+  const addTextBox = () => {
+    if (!fabricCanvas) return;
+    const box = new fabric.IText('Edit text', {
+      left: fabricCanvas.getWidth() / 2 - 160,
+      top: fabricCanvas.getHeight() / 2 - 40,
+      width: 320,
+      fontSize: 32,
+      fontFamily: selectedFont + ', sans-serif',
+      fontWeight: '400',
+      fontStyle: 'normal',
+      fill: '#18181b',
+      editable: true,
+      cursorWidth: 2,
+      cursorColor: '#22c55e',
+    });
+    fabricCanvas.add(box);
+    fabricCanvas.setActiveObject(box);
     fabricCanvas.renderAll();
     setToolMode('select');
   };
@@ -362,6 +391,7 @@ export default function LeftSidebar() {
           {sidebarTab === 'text' && (
             <TextPanel
               addText={addText}
+              addTextBox={addTextBox}
               selectedFont={selectedFont}
               setSelectedFont={setSelectedFont}
             />
@@ -458,15 +488,30 @@ function DrawingModeButton() {
 
 function TextPanel({
   addText,
+  addTextBox,
   selectedFont,
   setSelectedFont,
 }: {
   addText: (size: number, weight: string, text: string) => void;
+  addTextBox: () => void;
   selectedFont: string;
   setSelectedFont: (f: string) => void;
 }) {
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs text-zinc-500 mb-2">Rich Text</p>
+          <p className="text-[11px] text-zinc-500">Create an editable text box on canvas.</p>
+        </div>
+        <button
+          onClick={addTextBox}
+          className="rounded-xl border border-panel-border bg-panel-light px-3 py-2 text-xs font-semibold text-zinc-200 hover:border-zinc-500 hover:text-white transition-colors"
+        >
+          + Add Text Box
+        </button>
+      </div>
+
       <div>
         <p className="text-xs text-zinc-500 mb-2">Font Family</p>
         <select
@@ -515,37 +560,108 @@ function UploadsPanel({
   addImage: (url: string) => void;
   fabricCanvas: fabric.Canvas | null;
 }) {
+  const [uploads, setUploads] = useState<{ url: string; name: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchUploads = async () => {
+    try {
+      const res = await fetch('/api/media/list');
+      const payload = await res.json();
+      setUploads(payload.items || []);
+    } catch (err) {
+      setError('Unable to load uploads');
+    }
+  };
+
+  useEffect(() => {
+    fetchUploads();
+  }, []);
+
+  const handleUpload = async (file: File) => {
+    if (!fabricCanvas) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      const res = await fetch('/api/media/upload', {
+        method: 'POST',
+        body,
+      });
+      if (!res.ok) {
+        throw new Error('Upload failed');
+      }
+      const payload = await res.json();
+      if (payload.url) {
+        setUploads((prev) => [{ url: payload.url, name: payload.name }, ...prev]);
+        addImage(payload.url);
+      }
+    } catch (err) {
+      setError('Image upload failed.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Upload */}
       <div>
-        <p className="text-xs text-zinc-500 mb-2">Upload Image</p>
+        <div className="flex items-center justify-between mb-2 gap-3">
+          <div>
+            <p className="text-xs text-zinc-500">Upload Image</p>
+            <p className="text-[11px] text-zinc-500">PNG, JPG, SVG files are accepted.</p>
+          </div>
+          <span className="text-xs text-zinc-400">{uploading ? 'Uploading…' : 'Ready'}</span>
+        </div>
         <label className="relative flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-dashed border-panel-border hover:border-zinc-500 bg-panel-light cursor-pointer transition-all group">
           <Upload className="w-6 h-6 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
           <span className="text-sm text-zinc-500 group-hover:text-zinc-300 transition-colors">Click to upload</span>
           <span className="text-xs text-zinc-600">PNG, JPG, SVG, WEBP</span>
           <input
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/svg+xml,image/webp"
             className="absolute inset-0 opacity-0 cursor-pointer"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (!file || !fabricCanvas) return;
-              const reader = new FileReader();
-              reader.onload = (ev) => {
-                fabric.Image.fromURL(ev.target?.result as string, (img) => {
-                  const maxW = fabricCanvas.getWidth() * 0.5;
-                  img.scale(Math.min(maxW / (img.width || 1), 1));
-                  img.set({ left: 80, top: 80 });
-                  fabricCanvas.add(img);
-                  fabricCanvas.setActiveObject(img);
-                  fabricCanvas.renderAll();
-                });
-              };
-              reader.readAsDataURL(file);
+              if (!file) return;
+              handleUpload(file);
             }}
           />
         </label>
+        {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs text-zinc-500">My Uploads</p>
+          <button
+            onClick={fetchUploads}
+            className="text-xs text-zinc-400 hover:text-zinc-200"
+          >Refresh</button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {uploads.length === 0 ? (
+            <div className="col-span-2 rounded-xl border border-panel-border bg-panel-light p-4 text-center text-xs text-zinc-500">
+              No uploaded assets yet.
+            </div>
+          ) : uploads.map((asset) => (
+            <button
+              key={asset.url}
+              onClick={() => addImage(asset.url)}
+              className="group relative aspect-video rounded-xl overflow-hidden border border-panel-border hover:border-zinc-500 transition-all"
+            >
+              <img
+                src={asset.url}
+                alt={asset.name}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Stock images */}
@@ -580,39 +696,123 @@ function TemplatesPanel({
 }: {
   applyTemplate: (bg: string, w?: number, h?: number) => void;
 }) {
+  const { fabricCanvas, setToolMode } = useStore();
+  const [templates, setTemplates] = useState<TemplateItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchTemplates = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/templates');
+      if (!res.ok) throw new Error('Unable to load templates');
+      const payload = await res.json();
+      setTemplates(payload.items || []);
+    } catch (err) {
+      setError('Unable to load templates');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const saveTemplate = async () => {
+    if (!fabricCanvas) return;
+    const title = window.prompt('Template title', 'Untitled Template');
+    if (!title) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const canvasData = fabricCanvas.toJSON();
+      const res = await fetch('/api/templates/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, canvas_data: canvasData }),
+      });
+      if (!res.ok) {
+        const payload = await res.json();
+        throw new Error(payload?.error || 'Unable to save template');
+      }
+      await fetchTemplates();
+    } catch (err) {
+      setError((err as Error).message || 'Unable to save template');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const loadTemplate = async (id: string) => {
+    if (!fabricCanvas) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/templates/${encodeURIComponent(id)}`);
+      if (!res.ok) throw new Error('Unable to load template');
+      const payload = await res.json();
+      const template = payload.template as TemplateItem;
+      if (!template?.canvas_data) throw new Error('Template data is missing');
+
+      fabricCanvas.discardActiveObject();
+      fabricCanvas.clear();
+      fabricCanvas.loadFromJSON(template.canvas_data, () => {
+        fabricCanvas.renderAll();
+        setToolMode('select');
+      });
+    } catch (err) {
+      setError((err as Error).message || 'Unable to load template');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div>
-        <p className="text-xs text-zinc-500 mb-2">Canvas Themes</p>
-        <div className="grid grid-cols-2 gap-2">
-          {TEMPLATE_PRESETS.map((t) => (
-            <button
-              key={t.name}
-              onClick={() => applyTemplate(t.bg)}
-              className="group relative rounded-xl overflow-hidden border border-panel-border hover:border-zinc-500 transition-all aspect-video"
-              style={{ backgroundColor: t.bg }}
-            >
-              {/* Decorative content preview */}
-              <div className="absolute inset-0 p-2 flex flex-col gap-1 justify-center">
-                <div className="h-1.5 rounded-full w-3/4" style={{ backgroundColor: t.accent, opacity: 0.9 }} />
-                <div className="h-1 rounded-full w-1/2" style={{ backgroundColor: t.accent, opacity: 0.5 }} />
-                <div className="h-1 rounded-full w-2/3" style={{ backgroundColor: t.accent, opacity: 0.3 }} />
-              </div>
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                <span className="text-xs text-white font-semibold px-2 py-1 rounded-md bg-black/50">Apply</span>
-              </div>
-              <div className="absolute bottom-1 left-2 right-2 flex items-center justify-between">
-                <span className="text-white/60 font-medium" style={{ fontSize: '8px' }}>{t.name}</span>
-                <span className="text-white/40" style={{ fontSize: '7px' }}>{t.desc}</span>
-              </div>
-            </button>
-          ))}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs text-zinc-500 mb-2">Saved Templates</p>
+          <p className="text-[11px] text-zinc-500">Save and restore entire canvas states.</p>
         </div>
+        <button
+          onClick={saveTemplate}
+          disabled={saving || !fabricCanvas}
+          className="rounded-xl px-3 py-2 bg-emerald-500 text-xs font-semibold text-white hover:bg-emerald-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
       </div>
 
-      <div>
-        <p className="text-xs text-zinc-500 mb-2">Canvas Background Color</p>
-        <CanvasBgPicker />
+      {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</div>}
+
+      <div className="grid grid-cols-1 gap-3">
+        {loading && templates.length === 0 ? (
+          <div className="rounded-xl border border-panel-border bg-panel-light p-4 text-xs text-zinc-500">Loading templates…</div>
+        ) : templates.length === 0 ? (
+          <div className="rounded-xl border border-panel-border bg-panel-light p-4 text-xs text-zinc-500">No templates saved yet.</div>
+        ) : (
+          templates.map((template) => (
+            <button
+              key={template.id}
+              onClick={() => loadTemplate(template.id)}
+              className="group rounded-2xl border border-panel-border bg-panel-light p-4 text-left hover:border-zinc-500 hover:bg-panel-hover transition-all"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-zinc-100 truncate">{template.title}</div>
+                  <div className="text-[11px] text-zinc-500 mt-1">{new Date(template.created_at).toLocaleString()}</div>
+                </div>
+                <div className="text-xs text-emerald-400">Load</div>
+              </div>
+            </button>
+          ))
+        )}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import React from 'react';
 import ContextualToolbar from './components/ContextualToolbar';
 import LeftSidebar from './components/LeftSidebar';
-import Workspace from './components/Workspace';
+import CanvasWorkspace from './components/CanvasWorkspace';
 
 export default function App() {
   return (
@@ -9,7 +9,7 @@ export default function App() {
       <LeftSidebar />
       <div className="flex flex-col flex-1 min-w-0 min-h-0">
         <ContextualToolbar />
-        <Workspace />
+        <CanvasWorkspace />
       </div>
     </div>
   );

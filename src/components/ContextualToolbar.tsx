@@ -183,7 +183,7 @@ function TextControls({
   duplicateObj,
   fabricCanvas,
 }: {
-  obj: fabric.Textbox;
+  obj: fabric.Textbox | fabric.IText;
   setTextProp: (p: Record<string, unknown>) => void;
   setProp: (p: Partial<fabric.Object>) => void;
   deleteObj: () => void;
@@ -191,6 +191,8 @@ function TextControls({
   fabricCanvas: fabric.Canvas | null;
 }) {
   const { zoom, setZoom } = useStore();
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const color = String(obj.fill || '#000000');
 
   return (
     <>
@@ -211,22 +213,48 @@ function TextControls({
       </select>
 
       {/* Font size */}
-      <select
-        value={obj.fontSize || 16}
-        onChange={(e) => setTextProp({ fontSize: Number(e.target.value) })}
-        className="input-field h-7 py-0 text-xs w-16 shrink-0"
-      >
-        {FONT_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
-      </select>
+      <div className="flex items-center gap-1 shrink-0">
+        <label className="text-xs text-zinc-500">Size</label>
+        <input
+          type="number"
+          min={6}
+          max={256}
+          value={obj.fontSize || 16}
+          onChange={(e) => setTextProp({ fontSize: Number(e.target.value) || 1 })}
+          className="input-field h-7 py-0 text-xs w-16"
+        />
+      </div>
 
       {/* Text color */}
-      <input
-        type="color"
-        value={String(obj.fill || '#000000')}
-        onChange={(e) => setTextProp({ fill: e.target.value })}
-        className="w-7 h-7 rounded-md cursor-pointer border border-panel-border bg-transparent shrink-0"
-        title="Text color"
-      />
+      <div className="relative">
+        <button
+          onClick={() => setShowColorPicker((prev) => !prev)}
+          title="Text color"
+          className="flex items-center gap-2 px-2 py-1 rounded-md border border-panel-border bg-panel-light text-xs text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors"
+        >
+          <span className="w-4 h-4 rounded-sm border border-white/10" style={{ backgroundColor: color }} />
+          Color
+        </button>
+        {showColorPicker && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setShowColorPicker(false)} />
+            <div className="absolute left-0 top-full z-50 mt-2 w-40 rounded-xl border border-panel-border bg-panel shadow-2xl p-3">
+              <input
+                type="color"
+                value={color}
+                onChange={(e) => setTextProp({ fill: e.target.value })}
+                className="w-full h-10 rounded-lg border border-panel-border bg-transparent cursor-pointer"
+              />
+              <input
+                type="text"
+                value={color}
+                onChange={(e) => setTextProp({ fill: e.target.value })}
+                className="input-field w-full mt-2 text-xs"
+              />
+            </div>
+          </>
+        )}
+      </div>
 
       <Divider />
 
@@ -263,17 +291,16 @@ function TextControls({
       {/* Alignment */}
       <div className="flex items-center gap-0.5 shrink-0">
         {[
-          { icon: <AlignLeft className="w-3.5 h-3.5" />, val: 'left' },
-          { icon: <AlignCenter className="w-3.5 h-3.5" />, val: 'center' },
-          { icon: <AlignRight className="w-3.5 h-3.5" />, val: 'right' },
-          { icon: <AlignJustify className="w-3.5 h-3.5" />, val: 'justify' },
-        ].map(({ icon, val }) => (
+          { icon: <AlignLeft className="w-3.5 h-3.5" />, val: 'left', title: 'Start' },
+          { icon: <AlignCenter className="w-3.5 h-3.5" />, val: 'center', title: 'Center' },
+          { icon: <AlignRight className="w-3.5 h-3.5" />, val: 'right', title: 'End' },
+        ].map(({ icon, val, title }) => (
           <ToggleBtn
             key={val}
             icon={icon}
             active={obj.textAlign === val}
             onClick={() => setTextProp({ textAlign: val })}
-            title={`Align ${val}`}
+            title={title}
           />
         ))}
       </div>

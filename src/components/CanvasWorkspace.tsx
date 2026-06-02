@@ -2,11 +2,11 @@ import React, { useEffect } from 'react';
 import { useCanvas } from '../hooks/useCanvas';
 import { useStore } from '../store/useStore';
 
-export default function CanvasArea() {
+export default function CanvasWorkspace() {
   const { canvasRef, containerRef } = useCanvas();
-  const { zoom, setZoom, fabricCanvas, canvasWidth, canvasHeight } = useStore();
+  const { zoom, setZoom, fabricCanvas, activeObject, canvasWidth, canvasHeight } = useStore();
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts: undo/redo/delete/duplicate/bring/send
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -46,6 +46,20 @@ export default function CanvasArea() {
           });
         }
       }
+
+      // Layer shortcuts: Ctrl+[ send back, Ctrl+] bring forward
+      if ((e.ctrlKey || e.metaKey) && e.key === '[') {
+        e.preventDefault();
+        const canvas = store.fabricCanvas;
+        const obj = canvas?.getActiveObject();
+        if (canvas && obj) { canvas.sendBackwards(obj); canvas.renderAll(); }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === ']') {
+        e.preventDefault();
+        const canvas = store.fabricCanvas;
+        const obj = canvas?.getActiveObject();
+        if (canvas && obj) { canvas.bringForward(obj); canvas.renderAll(); }
+      }
       if (e.key === 'Escape') {
         store.setToolMode('select');
       }
@@ -55,7 +69,7 @@ export default function CanvasArea() {
     return () => window.removeEventListener('keydown', handleKey);
   }, []);
 
-  // Mouse wheel zoom
+  // Ctrl+wheel zoom on container
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -68,54 +82,38 @@ export default function CanvasArea() {
     };
     container.addEventListener('wheel', handleWheel, { passive: false });
     return () => container.removeEventListener('wheel', handleWheel);
-  }, []);
+  }, [containerRef]);
+
+  const hasSelection = !!activeObject;
 
   return (
     <div
       ref={containerRef}
-      className="flex-1 overflow-auto bg-canvas-bg flex items-center justify-center relative"
+      className="flex-1 overflow-auto bg-canvas-bg flex items-start justify-center relative"
       style={{ minWidth: 0, minHeight: 0 }}
     >
-      {/* Grid dot pattern background */}
+      {/* Grid dots */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-30"
-        style={{
-          backgroundImage: 'radial-gradient(circle, #3f3f46 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
-        }}
+        className="absolute inset-0 pointer-events-none opacity-20"
+        style={{ backgroundImage: 'radial-gradient(circle, #52525b 1px, transparent 1px)', backgroundSize: '28px 28px' }}
       />
 
-      {/* Canvas wrapper */}
-      <div
-        style={{
-          transform: `scale(${zoom})`,
-          transformOrigin: 'center center',
-          transition: 'transform 0.1s ease',
-        }}
-        className="relative canvas-shadow rounded-sm"
-      >
-        <canvas ref={canvasRef} />
+      {/* Canvas wrapper with centered viewport and top/bottom scroll padding */}
+      <div className="relative my-12 mx-auto" style={{ padding: '0 48px' }}>
+        <div
+          style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.1s ease' }}
+        >
+          <div
+            className={`relative rounded-sm overflow-hidden ${hasSelection ? 'ring-2 ring-emerald-500/30' : ''}`}
+            style={{ boxShadow: '0 4px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03)' }}
+          >
+            <canvas ref={canvasRef} />
+          </div>
+        </div>
       </div>
 
-      {/* Zoom indicator */}
-      <div className="absolute bottom-4 right-4 flex items-center gap-1 bg-panel/80 backdrop-blur-sm border border-panel-border rounded-lg px-2 py-1.5">
-        <button
-          onClick={() => setZoom(zoom - 0.1)}
-          className="text-zinc-400 hover:text-zinc-100 transition-colors text-xs px-1"
-        >
-          −
-        </button>
-        <span className="text-xs text-zinc-400 tabular-nums w-10 text-center">{Math.round(zoom * 100)}%</span>
-        <button
-          onClick={() => setZoom(zoom + 0.1)}
-          className="text-zinc-400 hover:text-zinc-100 transition-colors text-xs px-1"
-        >
-          +
-        </button>
-      </div>
-
-      {/* Canvas size indicator */}
-      <div className="absolute bottom-4 left-4 text-xs text-zinc-600 bg-panel/60 backdrop-blur-sm border border-panel-border/50 rounded px-2 py-1">
+      {/* Canvas metrics badge */}
+      <div className="absolute bottom-4 left-4 text-xs text-zinc-600 bg-panel/70 backdrop-blur-sm border border-panel-border/60 rounded-lg px-3 py-1.5 pointer-events-none">
         {canvasWidth} × {canvasHeight}
       </div>
     </div>

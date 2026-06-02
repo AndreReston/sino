@@ -20,7 +20,7 @@ export interface CanvasState {
 }
 
 export interface CanvasActions {
-  setFabricCanvas: (canvas: fabric.Canvas) => void;
+  setFabricCanvas: (canvas: fabric.Canvas | null) => void;
   setToolMode: (mode: ToolMode) => void;
   setZoom: (zoom: number) => void;
   setActiveObject: (obj: fabric.Object | null) => void;

@@ -69,6 +69,7 @@ export function useCanvas() {
     pushHistory(serializeCanvas(canvas));
 
     return () => {
+      setFabricCanvas(null);
       canvas.dispose();
     };
   }, []);
