@@ -1,0 +1,420 @@
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  AlignLeft, AlignCenter, AlignRight, AlignJustify,
+  Bold, Italic, Underline, Strikethrough,
+  ChevronUp, ChevronDown, Trash2, Copy, FlipHorizontal, FlipVertical,
+  RotateCcw, Maximize2, Minimize2, Palette,
+} from 'lucide-react';
+import { useStore } from '../store/useStore';
+import { fabric } from 'fabric';
+
+const FONT_FAMILIES = [
+  'Inter', 'Georgia', 'Times New Roman', 'Arial', 'Helvetica',
+  'Courier New', 'Trebuchet MS', 'Verdana', 'Impact',
+];
+
+const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64, 72, 96];
+
+export default function RightPanel() {
+  const { activeObject, fabricCanvas, canvasBackground, setCanvasBackground, canvasWidth, canvasHeight } = useStore();
+  const [, forceUpdate] = useState(0);
+  const refresh = useCallback(() => forceUpdate((n) => n + 1), []);
+
+  useEffect(() => {
+    if (!fabricCanvas) return;
+    fabricCanvas.on('object:modified', refresh);
+    fabricCanvas.on('selection:updated', refresh);
+    return () => {
+      fabricCanvas.off('object:modified', refresh);
+      fabricCanvas.off('selection:updated', refresh);
+    };
+  }, [fabricCanvas, refresh]);
+
+  const obj = activeObject;
+  const isText = obj?.type === 'textbox' || obj?.type === 'text';
+  const isImage = obj?.type === 'image';
+
+  const setProp = (props: Partial<fabric.Object>) => {
+    if (!obj || !fabricCanvas) return;
+    obj.set(props as any);
+    fabricCanvas.renderAll();
+    refresh();
+  };
+
+  const setTextProp = (props: Record<string, unknown>) => {
+    if (!obj || !fabricCanvas) return;
+    (obj as fabric.Textbox).set(props as any);
+    fabricCanvas.renderAll();
+    refresh();
+  };
+
+  const deleteObj = () => {
+    if (!obj || !fabricCanvas) return;
+    fabricCanvas.remove(obj);
+    fabricCanvas.discardActiveObject();
+    fabricCanvas.renderAll();
+  };
+
+  const duplicateObj = () => {
+    if (!obj || !fabricCanvas) return;
+    obj.clone((cloned: fabric.Object) => {
+      cloned.set({ left: (obj.left || 0) + 20, top: (obj.top || 0) + 20 });
+      fabricCanvas.add(cloned);
+      fabricCanvas.setActiveObject(cloned);
+      fabricCanvas.renderAll();
+    });
+  };
+
+  const bringForward = () => {
+    if (!obj || !fabricCanvas) return;
+    fabricCanvas.bringForward(obj);
+    fabricCanvas.renderAll();
+  };
+
+  const sendBackward = () => {
+    if (!obj || !fabricCanvas) return;
+    fabricCanvas.sendBackwards(obj);
+    fabricCanvas.renderAll();
+  };
+
+  return (
+    <div className="w-64 bg-panel border-l border-panel-border flex flex-col shrink-0 overflow-hidden">
+      <div className="px-4 py-3 border-b border-panel-border shrink-0">
+        <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+          {obj ? `Properties · ${obj.type}` : 'Canvas'}
+        </h3>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {!obj && <CanvasProperties bg={canvasBackground} setBg={setCanvasBackground} w={canvasWidth} h={canvasHeight} />}
+
+        {obj && (
+          <>
+            {/* Quick Actions */}
+            <Section title="Actions">
+              <div className="flex gap-1.5 flex-wrap">
+                <ActionBtn icon={<Copy className="w-3.5 h-3.5" />} label="Duplicate" onClick={duplicateObj} />
+                <ActionBtn icon={<Trash2 className="w-3.5 h-3.5" />} label="Delete" onClick={deleteObj} danger />
+                <ActionBtn icon={<ChevronUp className="w-3.5 h-3.5" />} label="Forward" onClick={bringForward} />
+                <ActionBtn icon={<ChevronDown className="w-3.5 h-3.5" />} label="Backward" onClick={sendBackward} />
+                <ActionBtn
+                  icon={<FlipHorizontal className="w-3.5 h-3.5" />}
+                  label="Flip H"
+                  onClick={() => setProp({ flipX: !obj.flipX })}
+                />
+                <ActionBtn
+                  icon={<FlipVertical className="w-3.5 h-3.5" />}
+                  label="Flip V"
+                  onClick={() => setProp({ flipY: !obj.flipY })}
+                />
+              </div>
+            </Section>
+
+            {/* Position & Size */}
+            <Section title="Position & Size">
+              <div className="grid grid-cols-2 gap-2">
+                <NumberField
+                  label="X"
+                  value={Math.round(obj.left || 0)}
+                  onChange={(v) => setProp({ left: v })}
+                />
+                <NumberField
+                  label="Y"
+                  value={Math.round(obj.top || 0)}
+                  onChange={(v) => setProp({ top: v })}
+                />
+                <NumberField
+                  label="W"
+                  value={Math.round((obj.width || 0) * (obj.scaleX || 1))}
+                  onChange={(v) => setProp({ scaleX: v / (obj.width || 1) })}
+                />
+                <NumberField
+                  label="H"
+                  value={Math.round((obj.height || 0) * (obj.scaleY || 1))}
+                  onChange={(v) => setProp({ scaleY: v / (obj.height || 1) })}
+                />
+                <NumberField
+                  label="Angle"
+                  value={Math.round(obj.angle || 0)}
+                  onChange={(v) => setProp({ angle: v })}
+                />
+                <NumberField
+                  label="Opacity"
+                  value={Math.round((obj.opacity ?? 1) * 100)}
+                  min={0}
+                  max={100}
+                  onChange={(v) => setProp({ opacity: v / 100 })}
+                />
+              </div>
+            </Section>
+
+            {/* Fill & Stroke (not for images) */}
+            {!isImage && (
+              <Section title="Fill & Stroke">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-zinc-500 w-16 shrink-0">Fill</label>
+                    <div className="flex items-center gap-2 flex-1">
+                      <input
+                        type="color"
+                        value={isText ? String((obj as fabric.Textbox).fill || '#ffffff') : String(obj.fill || '#000000')}
+                        onChange={(e) => isText ? setTextProp({ fill: e.target.value }) : setProp({ fill: e.target.value })}
+                        className="w-8 h-8 rounded cursor-pointer border border-panel-border bg-transparent"
+                      />
+                      <input
+                        type="text"
+                        value={isText ? String((obj as fabric.Textbox).fill || '#ffffff') : String(obj.fill || '#000000')}
+                        onChange={(e) => isText ? setTextProp({ fill: e.target.value }) : setProp({ fill: e.target.value })}
+                        className="input-field flex-1 font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+                  {!isText && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-zinc-500 w-16 shrink-0">Stroke</label>
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="color"
+                            value={String(obj.stroke || '#000000')}
+                            onChange={(e) => setProp({ stroke: e.target.value })}
+                            className="w-8 h-8 rounded cursor-pointer border border-panel-border bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={String(obj.stroke || '#000000')}
+                            onChange={(e) => setProp({ stroke: e.target.value })}
+                            className="input-field flex-1 font-mono text-xs"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-zinc-500 w-16 shrink-0">Stroke W</label>
+                        <input
+                          type="range"
+                          min={0}
+                          max={20}
+                          value={obj.strokeWidth || 0}
+                          onChange={(e) => setProp({ strokeWidth: Number(e.target.value) })}
+                          className="flex-1 accent-neon-green"
+                        />
+                        <span className="text-xs text-zinc-400 w-5 text-right">{obj.strokeWidth || 0}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </Section>
+            )}
+
+            {/* Typography */}
+            {isText && (
+              <Section title="Typography">
+                <div className="space-y-2">
+                  <select
+                    value={(obj as fabric.Textbox).fontFamily || 'Inter'}
+                    onChange={(e) => setTextProp({ fontFamily: e.target.value })}
+                    className="input-field w-full text-xs"
+                  >
+                    {FONT_FAMILIES.map((f) => (
+                      <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
+                    ))}
+                  </select>
+
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={(obj as fabric.Textbox).fontSize || 16}
+                      onChange={(e) => setTextProp({ fontSize: Number(e.target.value) })}
+                      className="input-field flex-1 text-xs"
+                    >
+                      {FONT_SIZES.map((s) => (
+                        <option key={s} value={s}>{s}px</option>
+                      ))}
+                    </select>
+                    <input
+                      type="color"
+                      value={String((obj as fabric.Textbox).fill || '#ffffff')}
+                      onChange={(e) => setTextProp({ fill: e.target.value })}
+                      className="w-9 h-9 rounded cursor-pointer border border-panel-border bg-transparent"
+                    />
+                  </div>
+
+                  <div className="flex gap-1">
+                    {[
+                      { icon: <Bold className="w-3.5 h-3.5" />, prop: 'fontWeight', on: 'bold', off: 'normal' },
+                      { icon: <Italic className="w-3.5 h-3.5" />, prop: 'fontStyle', on: 'italic', off: 'normal' },
+                      { icon: <Underline className="w-3.5 h-3.5" />, prop: 'underline', on: true, off: false },
+                      { icon: <Strikethrough className="w-3.5 h-3.5" />, prop: 'linethrough', on: true, off: false },
+                    ].map(({ icon, prop, on, off }) => {
+                      const val = (obj as any)[prop];
+                      const isActive = val === on;
+                      return (
+                        <button
+                          key={prop}
+                          onClick={() => setTextProp({ [prop]: isActive ? off : on })}
+                          className={`tool-btn w-8 h-8 ${isActive ? 'active' : ''}`}
+                        >
+                          {icon}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex gap-1">
+                    {[
+                      { icon: <AlignLeft className="w-3.5 h-3.5" />, val: 'left' },
+                      { icon: <AlignCenter className="w-3.5 h-3.5" />, val: 'center' },
+                      { icon: <AlignRight className="w-3.5 h-3.5" />, val: 'right' },
+                      { icon: <AlignJustify className="w-3.5 h-3.5" />, val: 'justify' },
+                    ].map(({ icon, val }) => (
+                      <button
+                        key={val}
+                        onClick={() => setTextProp({ textAlign: val })}
+                        className={`tool-btn w-8 h-8 ${(obj as fabric.Textbox).textAlign === val ? 'active' : ''}`}
+                      >
+                        {icon}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-zinc-500">Line Height</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="range"
+                        min={0.8}
+                        max={3}
+                        step={0.1}
+                        value={(obj as fabric.Textbox).lineHeight || 1.2}
+                        onChange={(e) => setTextProp({ lineHeight: Number(e.target.value) })}
+                        className="flex-1 accent-neon-green"
+                      />
+                      <span className="text-xs text-zinc-400 w-8 text-right">
+                        {((obj as fabric.Textbox).lineHeight || 1.2).toFixed(1)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Section>
+            )}
+
+            {/* Image adjustments */}
+            {isImage && (
+              <Section title="Image">
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <label className="text-xs text-zinc-500">Opacity</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={Math.round((obj.opacity ?? 1) * 100)}
+                        onChange={(e) => setProp({ opacity: Number(e.target.value) / 100 })}
+                        className="flex-1 accent-neon-green"
+                      />
+                      <span className="text-xs text-zinc-400 w-8">{Math.round((obj.opacity ?? 1) * 100)}%</span>
+                    </div>
+                  </div>
+                </div>
+              </Section>
+            )}
+
+            {/* Corner Radius for rects */}
+            {obj.type === 'rect' && (
+              <Section title="Corner Radius">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={0}
+                    max={60}
+                    value={(obj as fabric.Rect).rx || 0}
+                    onChange={(e) => setProp({ rx: Number(e.target.value), ry: Number(e.target.value) })}
+                    className="flex-1 accent-neon-green"
+                  />
+                  <span className="text-xs text-zinc-400 w-6 text-right">{(obj as fabric.Rect).rx || 0}</span>
+                </div>
+              </Section>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CanvasProperties({ bg, setBg, w, h }: { bg: string; setBg: (c: string) => void; w: number; h: number }) {
+  return (
+    <Section title="Canvas Settings">
+      <div className="space-y-3">
+        <div className="text-xs text-zinc-500 mb-1">Size: {w} × {h}px</div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-zinc-500 w-20 shrink-0">Background</label>
+          <input
+            type="color"
+            value={bg}
+            onChange={(e) => setBg(e.target.value)}
+            className="w-8 h-8 rounded cursor-pointer border border-panel-border bg-transparent"
+          />
+          <input
+            type="text"
+            value={bg}
+            onChange={(e) => setBg(e.target.value)}
+            className="input-field flex-1 font-mono text-xs"
+          />
+        </div>
+        <div className="pt-1">
+          <p className="text-xs text-zinc-600">Click on an object to edit its properties.</p>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="px-4 py-3 border-b border-panel-border">
+      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2.5">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function NumberField({
+  label, value, onChange, min, max,
+}: {
+  label: string; value: number; onChange: (v: number) => void; min?: number; max?: number;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs text-zinc-500">{label}</label>
+      <input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="input-field text-xs text-center tabular-nums"
+      />
+    </div>
+  );
+}
+
+function ActionBtn({
+  icon, label, onClick, danger,
+}: {
+  icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs border transition-all
+        ${danger
+          ? 'border-red-800/50 text-red-400 hover:bg-red-900/20 hover:border-red-600/50'
+          : 'border-panel-border text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover'}`}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
