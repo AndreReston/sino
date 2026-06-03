@@ -1,12 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useCanvas } from '../hooks/useCanvas';
 import { useStore } from '../store/useStore';
+import PageNavigator from './PageNavigator';
 
 export default function Workspace() {
   const { canvasRef, containerRef } = useCanvas();
   const { zoom, setZoom, canvasWidth, canvasHeight } = useStore();
 
-  // Keyboard shortcuts
+  // ── Keyboard shortcuts ──────────────────────────────────────────────────
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -14,14 +15,23 @@ export default function Workspace() {
 
       const store = useStore.getState();
 
+      // Undo / Redo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         store.undo();
       }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
         e.preventDefault();
         store.redo();
       }
+
+      // New page: Ctrl+Shift+N
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        store.addBlankPage();
+      }
+
+      // Delete selected object
       if (e.key === 'Delete' || e.key === 'Backspace') {
         const canvas = store.fabricCanvas;
         if (!canvas) return;
@@ -32,6 +42,8 @@ export default function Workspace() {
           canvas.renderAll();
         }
       }
+
+      // Duplicate: Ctrl+D
       if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
         e.preventDefault();
         const canvas = store.fabricCanvas;
@@ -46,6 +58,21 @@ export default function Workspace() {
           });
         }
       }
+
+      // Layer order: Ctrl+[ / Ctrl+]
+      if ((e.ctrlKey || e.metaKey) && e.key === '[') {
+        e.preventDefault();
+        const canvas = store.fabricCanvas;
+        const obj = canvas?.getActiveObject();
+        if (canvas && obj) { canvas.sendBackwards(obj); canvas.renderAll(); }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === ']') {
+        e.preventDefault();
+        const canvas = store.fabricCanvas;
+        const obj = canvas?.getActiveObject();
+        if (canvas && obj) { canvas.bringForward(obj); canvas.renderAll(); }
+      }
+
       if (e.key === 'Escape') {
         store.setToolMode('select');
       }
@@ -55,7 +82,7 @@ export default function Workspace() {
     return () => window.removeEventListener('keydown', handleKey);
   }, []);
 
-  // Ctrl+wheel zoom
+  // ── Ctrl+wheel zoom ─────────────────────────────────────────────────────
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -68,7 +95,7 @@ export default function Workspace() {
     };
     container.addEventListener('wheel', handleWheel, { passive: false });
     return () => container.removeEventListener('wheel', handleWheel);
-  }, []);
+  }, [containerRef]);
 
   return (
     <div
@@ -85,8 +112,8 @@ export default function Workspace() {
         }}
       />
 
-      {/* Canvas wrapper — centered horizontally with top/bottom padding for scroll room */}
-      <div className="relative my-12 mx-auto" style={{ padding: '0 48px' }}>
+      {/* Canvas wrapper — extra bottom padding so the page strip doesn't overlap */}
+      <div className="relative my-12 mx-auto" style={{ padding: '0 48px 120px' }}>
         <div
           style={{
             transform: `scale(${zoom})`,
@@ -94,7 +121,6 @@ export default function Workspace() {
             transition: 'transform 0.1s ease',
           }}
         >
-          {/* Canvas shadow / frame */}
           <div
             className="relative rounded-sm overflow-hidden"
             style={{
@@ -106,10 +132,13 @@ export default function Workspace() {
         </div>
       </div>
 
-      {/* Canvas dimensions badge — bottom left */}
-      <div className="absolute bottom-4 left-4 text-xs text-zinc-600 bg-panel/70 backdrop-blur-sm border border-panel-border/60 rounded-lg px-3 py-1.5 pointer-events-none">
+      {/* Canvas dimensions badge */}
+      <div className="absolute bottom-[110px] left-4 text-xs text-zinc-600 bg-panel/70 backdrop-blur-sm border border-panel-border/60 rounded-lg px-3 py-1.5 pointer-events-none">
         {canvasWidth} × {canvasHeight}
       </div>
+
+      {/* Page navigator strip */}
+      <PageNavigator />
     </div>
   );
 }

@@ -1,10 +1,19 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { fabric } from 'fabric';
 import { useStore } from '../store/useStore';
+
+type GuideLine = {
+  orientation: 'vertical' | 'horizontal';
+  pos: number;
+  start: number;
+  end: number;
+  label: string;
+};
 
 export function useCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [guides, setGuides] = useState<GuideLine[]>([]);
 
   const {
     setFabricCanvas,
@@ -18,9 +27,7 @@ export function useCanvas() {
   } = useStore();
 
   const serializeCanvas = useCallback(
-    (canvas: fabric.Canvas) => {
-      return JSON.stringify(canvas.toJSON(['id', 'name']));
-    },
+    (canvas: fabric.Canvas) => JSON.stringify(canvas.toJSON(['id', 'name'])),
     []
   );
 
@@ -63,15 +70,125 @@ export function useCanvas() {
 
     canvas.on('selection:cleared', () => {
       setActiveObject(null);
+      setGuides([]);
     });
 
+    const clearGuides = () => setGuides([]);
+
+    const updateGuides = (opt: fabric.IEvent<MouseEvent>) => {
+      const target = opt.target as fabric.Object | null;
+      if (!target) {
+        setGuides([]);
+        return;
+      }
+
+      const movingRect = target.getBoundingRect(true);
+      const verticalCandidates: Array<{ gap: number; x: number; start: number; end: number; label: string }> = [];
+      const horizontalCandidates: Array<{ gap: number; y: number; start: number; end: number; label: string }> = [];
+
+      canvas.getObjects().forEach((obj) => {
+        if (obj === target || !obj.visible) return;
+        const otherRect = obj.getBoundingRect(true);
+
+        const verticalOverlap = Math.max(0, Math.min(movingRect.top + movingRect.height, otherRect.top + otherRect.height) - Math.max(movingRect.top, otherRect.top));
+        if (verticalOverlap > 16) {
+          if (otherRect.left >= movingRect.left + movingRect.width) {
+            const gap = otherRect.left - (movingRect.left + movingRect.width);
+            verticalCandidates.push({
+              gap,
+              x: movingRect.left + movingRect.width + gap / 2,
+              start: Math.max(movingRect.top, otherRect.top),
+              end: Math.min(movingRect.top + movingRect.height, otherRect.top + otherRect.height),
+              label: `${Math.round(gap)}`,
+            });
+          } else if (movingRect.left >= otherRect.left + otherRect.width) {
+            const gap = movingRect.left - (otherRect.left + otherRect.width);
+            verticalCandidates.push({
+              gap,
+              x: otherRect.left + otherRect.width + gap / 2,
+              start: Math.max(movingRect.top, otherRect.top),
+              end: Math.min(movingRect.top + movingRect.height, otherRect.top + otherRect.height),
+              label: `${Math.round(gap)}`,
+            });
+          }
+        }
+
+        const horizontalOverlap = Math.max(0, Math.min(movingRect.left + movingRect.width, otherRect.left + otherRect.width) - Math.max(movingRect.left, otherRect.left));
+        if (horizontalOverlap > 16) {
+          if (otherRect.top >= movingRect.top + movingRect.height) {
+            const gap = otherRect.top - (movingRect.top + movingRect.height);
+            horizontalCandidates.push({
+              gap,
+              y: movingRect.top + movingRect.height + gap / 2,
+              start: Math.max(movingRect.left, otherRect.left),
+              end: Math.min(movingRect.left + movingRect.width, otherRect.left + otherRect.width),
+              label: `${Math.round(gap)}`,
+            });
+          } else if (movingRect.top >= otherRect.top + otherRect.height) {
+            const gap = movingRect.top - (otherRect.top + otherRect.height);
+            horizontalCandidates.push({
+              gap,
+              y: otherRect.top + otherRect.height + gap / 2,
+              start: Math.max(movingRect.left, otherRect.left),
+              end: Math.min(movingRect.left + movingRect.width, otherRect.left + otherRect.width),
+              label: `${Math.round(gap)}`,
+            });
+          }
+        }
+      });
+
+      const guides: GuideLine[] = [];
+      const bestVertical = verticalCandidates.sort((a, b) => a.gap - b.gap)[0];
+      const bestHorizontal = horizontalCandidates.sort((a, b) => a.gap - b.gap)[0];
+
+      if (bestVertical && bestVertical.gap > 0) {
+        guides.push({
+          orientation: 'vertical',
+          pos: bestVertical.x,
+          start: bestVertical.start,
+          end: bestVertical.end,
+          label: bestVertical.label,
+        });
+      }
+      if (bestHorizontal && bestHorizontal.gap > 0) {
+        guides.push({
+          orientation: 'horizontal',
+          pos: bestHorizontal.y,
+          start: bestHorizontal.start,
+          end: bestHorizontal.end,
+          label: bestHorizontal.label,
+        });
+      }
+
+      setGuides(guides);
+    };
+
+    canvas.on('object:moving', updateGuides);
+    canvas.on('object:scaling', updateGuides);
+    canvas.on('mouse:up', clearGuides);
+
     setFabricCanvas(canvas);
-    pushHistory(serializeCanvas(canvas));
+    const store = useStore.getState();
+    const initialPage = store.pages[store.activePageIndex];
+
+    if (initialPage?.canvas_data) {
+      canvas.loadFromJSON(initialPage.canvas_data, () => {
+        canvas.renderAll();
+        store.saveCurrentPage();
+      });
+    } else {
+      pushHistory(serializeCanvas(canvas));
+      setTimeout(() => {
+        const currentStore = useStore.getState();
+        if (currentStore.saveCurrentPage) currentStore.saveCurrentPage();
+      }, 0);
+    }
 
     return () => {
       setFabricCanvas(null);
       canvas.dispose();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sync canvas size
@@ -82,7 +199,7 @@ export function useCanvas() {
     fabricCanvas.renderAll();
   }, [canvasWidth, canvasHeight, fabricCanvas]);
 
-  // Handle tool mode
+  // Handle tool mode and shape placement
   useEffect(() => {
     if (!fabricCanvas) return;
 
@@ -92,6 +209,9 @@ export function useCanvas() {
       fabricCanvas.defaultCursor = 'default';
     } else if (toolMode === 'pen') {
       fabricCanvas.isDrawingMode = true;
+      if (!fabricCanvas.freeDrawingBrush) {
+        fabricCanvas.freeDrawingBrush = new fabric.PencilBrush(fabricCanvas);
+      }
       fabricCanvas.freeDrawingBrush.width = 3;
       fabricCanvas.freeDrawingBrush.color = '#22c55e';
     } else {
@@ -173,5 +293,5 @@ export function useCanvas() {
     };
   }, [toolMode, fabricCanvas]);
 
-  return { canvasRef, containerRef };
+  return { canvasRef, containerRef, guides };
 }

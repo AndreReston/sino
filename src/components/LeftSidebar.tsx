@@ -106,6 +106,8 @@ export default function LeftSidebar() {
     canvasName, setCanvasName,
     zoom, setZoom, canvasWidth, canvasHeight,
     setCanvasSize,
+    selectedPageIds,
+    exportPagesAsZip,
   } = useStore();
 
   const [editingName, setEditingName] = useState(false);
@@ -216,20 +218,37 @@ export default function LeftSidebar() {
     }
   };
 
-  const handleExport = (format: 'png' | 'jpg' | 'svg') => {
-    if (!fabricCanvas) return;
+  const handleExport = async (
+    target: 'current' | 'selected' | 'all',
+    format: 'png' | 'jpg' | 'svg'
+  ) => {
     setShowExport(false);
-    if (format === 'svg') {
-      const svg = fabricCanvas.toSVG();
-      const blob = new Blob([svg], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'design.svg'; a.click();
-      URL.revokeObjectURL(url);
+    if (target === 'current') {
+      if (!fabricCanvas) return;
+      if (format === 'svg') {
+        const svg = fabricCanvas.toSVG();
+        const blob = new Blob([svg], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'design.svg'; a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const dataURL = fabricCanvas.toDataURL({ format: format === 'jpg' ? 'jpeg' : 'png', quality: 0.95, multiplier: 1 });
+        const a = document.createElement('a');
+        a.href = dataURL; a.download = `design.${format}`; a.click();
+      }
+      return;
+    }
+
+    if (target === 'selected' && selectedPageIds.length === 0) {
+      alert('Select one or more pages before exporting selected pages.');
+      return;
+    }
+
+    if (target === 'selected') {
+      await exportPagesAsZip(selectedPageIds, format);
     } else {
-      const dataURL = fabricCanvas.toDataURL({ format: format === 'jpg' ? 'jpeg' : 'png', quality: 0.95, multiplier: 1 });
-      const a = document.createElement('a');
-      a.href = dataURL; a.download = `design.${format}`; a.click();
+      await exportPagesAsZip(undefined, format);
     }
   };
 
@@ -335,13 +354,56 @@ export default function LeftSidebar() {
             {showExport && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowExport(false)} />
-                <div className="absolute top-full right-0 mt-1 w-36 bg-panel border border-panel-border rounded-xl shadow-2xl z-50 py-1 animate-slide-in">
+                <div className="absolute top-full left-0 mt-1 w-60 bg-panel border border-panel-border rounded-xl shadow-2xl z-50 py-2 animate-slide-in overflow-hidden">
+                  <div className="px-3 pb-1 text-[10px] uppercase tracking-widest text-zinc-600">Current</div>
                   {(['png', 'jpg', 'svg'] as const).map((fmt) => (
-                    <button key={fmt} onClick={() => handleExport(fmt)}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:text-white hover:bg-panel-hover transition-colors uppercase tracking-wide">
-                      <Download className="w-3.5 h-3.5" />{fmt}
+                    <button key={`current-${fmt}`} onClick={() => handleExport('current', fmt)}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 hover:text-white hover:bg-panel-hover transition-colors">
+                      <Download className="w-3 h-3 shrink-0" />
+                      <span className="truncate">Export {fmt.toUpperCase()}</span>
                     </button>
                   ))}
+
+                  <div className="border-t border-panel-border my-1 mx-2" />
+                  <div className="px-3 py-1 text-[10px] uppercase tracking-widest text-zinc-600">Selected</div>
+                  <button
+                    onClick={() => handleExport('selected', 'png')}
+                    disabled={selectedPageIds.length === 0}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 hover:text-white hover:bg-panel-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Download className="w-3 h-3 shrink-0" />
+                    <span className="truncate">ZIP (PNG)</span>
+                  </button>
+                  <button
+                    onClick={() => handleExport('selected', 'jpg')}
+                    disabled={selectedPageIds.length === 0}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 hover:text-white hover:bg-panel-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Download className="w-3 h-3 shrink-0" />
+                    <span className="truncate">ZIP (JPG)</span>
+                  </button>
+                  {selectedPageIds.length > 0 && (
+                    <div className="px-3 py-1 text-[10px] text-zinc-500">
+                      {selectedPageIds.length} selected
+                    </div>
+                  )}
+
+                  <div className="border-t border-panel-border my-1 mx-2" />
+                  <div className="px-3 py-1 text-[10px] uppercase tracking-widest text-zinc-600">All pages</div>
+                  <button
+                    onClick={() => handleExport('all', 'png')}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 hover:text-white hover:bg-panel-hover transition-colors"
+                  >
+                    <Download className="w-3 h-3 shrink-0" />
+                    <span className="truncate">ZIP (PNG)</span>
+                  </button>
+                  <button
+                    onClick={() => handleExport('all', 'jpg')}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 hover:text-white hover:bg-panel-hover transition-colors"
+                  >
+                    <Download className="w-3 h-3 shrink-0" />
+                    <span className="truncate">ZIP (JPG)</span>
+                  </button>
                 </div>
               </>
             )}
@@ -561,12 +623,16 @@ function UploadsPanel({
   fabricCanvas: fabric.Canvas | null;
 }) {
   const [uploads, setUploads] = useState<{ url: string; name: string }[]>([]);
+  const [sessionUploads, setSessionUploads] = useState<{ url: string; name: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchUploads = async () => {
     try {
       const res = await fetch('/api/media/list');
+      if (!res.ok) {
+        throw new Error('Uploads endpoint missing');
+      }
       const payload = await res.json();
       setUploads(payload.items || []);
     } catch (err) {
@@ -596,9 +662,23 @@ function UploadsPanel({
       if (payload.url) {
         setUploads((prev) => [{ url: payload.url, name: payload.name }, ...prev]);
         addImage(payload.url);
+        return;
       }
-    } catch (err) {
-      setError('Image upload failed.');
+      throw new Error('No upload URL returned');
+    } catch (_err) {
+      try {
+        const reader = new FileReader();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error('File read failed'));
+          reader.readAsDataURL(file);
+        });
+        const sessionItem = { url: dataUrl, name: file.name };
+        setSessionUploads((prev) => [sessionItem, ...prev]);
+        addImage(dataUrl);
+      } catch (readError) {
+        setError('Image upload failed.');
+      }
     } finally {
       setUploading(false);
     }
@@ -642,25 +722,27 @@ function UploadsPanel({
           >Refresh</button>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          {uploads.length === 0 ? (
+          {uploads.length + sessionUploads.length === 0 ? (
             <div className="col-span-2 rounded-xl border border-panel-border bg-panel-light p-4 text-center text-xs text-zinc-500">
               No uploaded assets yet.
             </div>
-          ) : uploads.map((asset) => (
-            <button
-              key={asset.url}
-              onClick={() => addImage(asset.url)}
-              className="group relative aspect-video rounded-xl overflow-hidden border border-panel-border hover:border-zinc-500 transition-all"
-            >
-              <img
-                src={asset.url}
-                alt={asset.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-            </button>
-          ))}
+          ) : (
+            [...sessionUploads, ...uploads].map((asset) => (
+              <button
+                key={asset.url}
+                onClick={() => addImage(asset.url)}
+                className="group relative aspect-video rounded-xl overflow-hidden border border-panel-border hover:border-zinc-500 transition-all"
+              >
+                <img
+                  src={asset.url}
+                  alt={asset.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+              </button>
+            ))
+          )}
         </div>
       </div>
 

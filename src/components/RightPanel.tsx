@@ -4,6 +4,7 @@ import {
   Bold, Italic, Underline, Strikethrough,
   ChevronUp, ChevronDown, Trash2, Copy, FlipHorizontal, FlipVertical,
   RotateCcw, Maximize2, Minimize2, Palette,
+  AlignHorizontalCenter, AlignVerticalCenter, AlignHorizontalSpaceAround, AlignVerticalSpaceAround,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { fabric } from 'fabric';
@@ -17,8 +18,10 @@ const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64, 7
 
 export default function RightPanel() {
   const { activeObject, fabricCanvas, canvasBackground, setCanvasBackground, canvasWidth, canvasHeight } = useStore();
+  const { alignCenterH, alignCenterV, alignTop, alignBottom, alignLeft, alignRight } = useStore();
   const [, forceUpdate] = useState(0);
   const refresh = useCallback(() => forceUpdate((n) => n + 1), []);
+
 
   useEffect(() => {
     if (!fabricCanvas) return;
@@ -107,6 +110,18 @@ export default function RightPanel() {
                   label="Flip V"
                   onClick={() => setProp({ flipY: !obj.flipY })}
                 />
+              </div>
+            </Section>
+
+            {/* Alignment */}
+            <Section title="Align">
+              <div className="flex gap-1.5 flex-wrap">
+                <ActionBtn icon={<AlignHorizontalCenter className="w-3.5 h-3.5" />} label="Center H" onClick={alignCenterH} />
+                <ActionBtn icon={<AlignVerticalCenter className="w-3.5 h-3.5" />} label="Center V" onClick={alignCenterV} />
+                <ActionBtn icon={<AlignLeft className="w-3.5 h-3.5" />} label="Left" onClick={alignLeft} />
+                <ActionBtn icon={<AlignRight className="w-3.5 h-3.5" />} label="Right" onClick={alignRight} />
+                <ActionBtn icon={<AlignJustify className="w-3.5 h-3.5" />} label="Top" onClick={alignTop} />
+                <ActionBtn icon={<AlignJustify className="w-3.5 h-3.5" />} label="Bottom" onClick={alignBottom} />
               </div>
             </Section>
 
