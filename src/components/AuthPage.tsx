@@ -5,28 +5,38 @@ type AuthMode = 'login' | 'register';
 type Props = {
   mode: AuthMode;
   onModeChange: (mode: AuthMode) => void;
-  onLogin: (username: string, password: string) => { success: boolean; message: string };
-  onRegister: (username: string, password: string) => { success: boolean; message: string };
+  onLogin: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
+  onRegister: (email: string, password: string, username: string) => Promise<{ success: boolean; message: string }>;
   onBack: () => void;
 };
 
 export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBack }: Props) {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
+    setLoading(true);
 
-    const payload = { username, password };
-    const result = mode === 'login'
-      ? onLogin(payload.username, payload.password)
-      : onRegister(payload.username, payload.password);
+    try {
+      let result;
+      if (mode === 'login') {
+        result = await onLogin(email, password);
+      } else {
+        result = await onRegister(email, password, displayName);
+      }
 
-    if (!result.success) {
-      setError(result.message);
-      return;
+      if (!result.success) {
+        setError(result.message);
+      }
+    } catch {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -67,13 +77,26 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          {mode === 'register' && (
+            <label className="block text-sm text-zinc-300">
+              Display Name
+              <input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="input-field mt-2 w-full"
+                placeholder="Your name"
+              />
+            </label>
+          )}
           <label className="block text-sm text-zinc-300">
-            Username
+            Email
             <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="input-field mt-2 w-full"
-              placeholder="username"
+              placeholder="you@example.com"
+              required
             />
           </label>
           <label className="block text-sm text-zinc-300">
@@ -83,15 +106,18 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
               onChange={(e) => setPassword(e.target.value)}
               type="password"
               className="input-field mt-2 w-full"
-              placeholder="password"
+              placeholder="Min. 6 characters"
+              required
+              minLength={6}
             />
           </label>
           {error && <p className="text-sm text-rose-400">{error}</p>}
           <button
             type="submit"
-            className="w-full rounded-full bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+            disabled={loading}
+            className="w-full rounded-full bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {mode === 'login' ? 'Log in' : 'Create account'}
+            {loading ? 'Please wait...' : mode === 'login' ? 'Log in' : 'Create account'}
           </button>
         </form>
       </div>

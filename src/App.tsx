@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { User } from '@supabase/supabase-js';
 import { useStore, SavedDesign } from './store/useStore';
 import LandingPage from './components/LandingPage';
 import AuthPage from './components/AuthPage';
@@ -14,57 +15,98 @@ import {
   logoutUser,
   registerUser,
   saveUserDesign,
+  getUserProfile,
+  onAuthStateChange,
 } from './lib/userStorage';
 
 type AppView = 'landing' | 'auth' | 'dashboard' | 'workspace';
 
 export default function App() {
   const [view, setView] = useState<AppView>('landing');
-  const [user, setUser] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [username, setUsername] = useState<string>('Guest');
   const [designs, setDesigns] = useState<SavedDesign[]>([]);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [activeDesign, setActiveDesign] = useState<SavedDesign | null>(null);
   const store = useStore();
 
+  const fetchDesigns = async (userId: string) => {
+    const result = await getUserDesigns(userId);
+    setDesigns(result);
+  };
+
+  const fetchUsername = async (userId: string) => {
+    const profile = await getUserProfile(userId);
+    setUsername(profile?.username ?? 'User');
+  };
+
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-      setDesigns(getUserDesigns(currentUser));
-      setView('dashboard');
-    }
+    // Check for existing session
+    (async () => {
+      const currentUser = await getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+        await fetchUsername(currentUser.id);
+        await fetchDesigns(currentUser.id);
+        setView('dashboard');
+      }
+    })();
+
+    // Listen for auth state changes (login/logout from other tabs, etc.)
+    const { data: { subscription } } = onAuthStateChange((newUser) => {
+      if (newUser) {
+        setUser(newUser);
+        fetchUsername(newUser.id);
+        fetchDesigns(newUser.id);
+        setView('dashboard');
+      } else {
+        setUser(null);
+        setUsername('Guest');
+        setDesigns([]);
+        setActiveDesign(null);
+        setView('landing');
+        store.resetWorkspace();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const openDashboard = () => {
+  const openDashboard = async () => {
     if (!user) return;
-    setDesigns(getUserDesigns(user));
+    await fetchDesigns(user.id);
     setActiveDesign(null);
     setView('dashboard');
   };
 
-  const handleLogin = (username: string, password: string) => {
-    const result = loginUser(username, password);
-    if (result.success) {
-      setUser(username);
-      setDesigns(getUserDesigns(username));
+  const handleLogin = async (email: string, password: string) => {
+    const result = await loginUser(email, password);
+    if (result.success && result.user) {
+      setUser(result.user);
+      await fetchUsername(result.user.id);
+      await fetchDesigns(result.user.id);
       setView('dashboard');
     }
-    return result;
+    return { success: result.success, message: result.message };
   };
 
-  const handleRegister = (username: string, password: string) => {
-    const result = registerUser(username, password);
-    if (result.success) {
-      setUser(username);
-      setDesigns([]);
+  const handleRegister = async (email: string, password: string, displayName: string) => {
+    const result = await registerUser(email, password, displayName);
+    if (result.success && result.user) {
+      setUser(result.user);
+      await fetchUsername(result.user.id);
+      await fetchDesigns(result.user.id);
       setView('dashboard');
     }
-    return result;
+    return { success: result.success, message: result.message };
   };
 
-  const handleLogout = () => {
-    logoutUser();
+  const handleLogout = async () => {
+    await logoutUser();
     setUser(null);
+    setUsername('Guest');
     setDesigns([]);
     setActiveDesign(null);
     setView('landing');
@@ -83,7 +125,7 @@ export default function App() {
     setView('workspace');
   };
 
-  const handleSaveDesign = () => {
+  const handleSaveDesign = async () => {
     if (!user) return;
     const design = store.exportDesign();
     const now = new Date().toISOString();
@@ -94,9 +136,10 @@ export default function App() {
       createdAt: activeDesign?.createdAt ?? now,
       updatedAt: now,
     };
-    saveUserDesign(user, savedDesign);
+    const actualId = await saveUserDesign(user.id, savedDesign);
+    savedDesign.id = actualId;
     setActiveDesign(savedDesign);
-    setDesigns(getUserDesigns(user));
+    await fetchDesigns(user.id);
   };
 
   if (view === 'landing') {
@@ -118,7 +161,7 @@ export default function App() {
   if (view === 'dashboard') {
     return (
       <Dashboard
-        user={user ?? 'Guest'}
+        user={username}
         designs={designs}
         onCreate={handleCreateDesign}
         onOpen={handleOpenDesign}

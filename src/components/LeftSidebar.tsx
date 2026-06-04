@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useStore, SidebarTab, ToolMode } from '../store/useStore';
 import { fabric } from 'fabric';
+import { supabase } from '../lib/supabase';
 
 // ─────────────────────────────────────────────
 // Static data
@@ -788,10 +789,12 @@ function TemplatesPanel({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/templates');
-      if (!res.ok) throw new Error('Unable to load templates');
-      const payload = await res.json();
-      setTemplates(payload.items || []);
+      const { data, error: fetchError } = await supabase
+        .from('templates')
+        .select('id, title, canvas_data, created_at, updated_at')
+        .order('created_at', { ascending: false });
+      if (fetchError) throw fetchError;
+      setTemplates((data || []) as TemplateItem[]);
     } catch (err) {
       setError('Unable to load templates');
     } finally {
@@ -813,15 +816,10 @@ function TemplatesPanel({
 
     try {
       const canvasData = fabricCanvas.toJSON();
-      const res = await fetch('/api/templates/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, canvas_data: canvasData }),
-      });
-      if (!res.ok) {
-        const payload = await res.json();
-        throw new Error(payload?.error || 'Unable to save template');
-      }
+      const { error: insertError } = await supabase
+        .from('templates')
+        .insert({ title, canvas_data: canvasData, is_public: false });
+      if (insertError) throw insertError;
       await fetchTemplates();
     } catch (err) {
       setError((err as Error).message || 'Unable to save template');
@@ -836,15 +834,17 @@ function TemplatesPanel({
     setError(null);
 
     try {
-      const res = await fetch(`/api/templates/${encodeURIComponent(id)}`);
-      if (!res.ok) throw new Error('Unable to load template');
-      const payload = await res.json();
-      const template = payload.template as TemplateItem;
-      if (!template?.canvas_data) throw new Error('Template data is missing');
+      const { data, error: fetchError } = await supabase
+        .from('templates')
+        .select('canvas_data')
+        .eq('id', id)
+        .maybeSingle();
+      if (fetchError) throw fetchError;
+      if (!data?.canvas_data) throw new Error('Template data is missing');
 
       fabricCanvas.discardActiveObject();
       fabricCanvas.clear();
-      fabricCanvas.loadFromJSON(template.canvas_data, () => {
+      fabricCanvas.loadFromJSON(data.canvas_data, () => {
         fabricCanvas.renderAll();
         setToolMode('select');
       });
