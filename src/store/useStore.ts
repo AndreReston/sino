@@ -7,6 +7,91 @@ export type BlendMode = 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' 
 export type PageTransition = 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'zoom-in' | 'zoom-out' | 'rotate' | 'wipe-left' | 'wipe-right';
 export type ProjectMode = 'photo' | 'video';
 
+export type VideoStyle = 'cinematic' | 'anime' | 'documentary' | 'tiktok' | 'cyberpunk' | 'corporate' | 'retro-vhs' | 'minimal-clean';
+export type CaptionStyle = 'karaoke' | 'popup' | 'viral-tiktok' | 'minimal' | 'bold-highlight';
+export type MusicMood = 'hype' | 'sad' | 'cinematic' | 'chill' | 'energetic' | 'romantic';
+export type PlatformTarget = 'tiktok' | 'instagram-reels' | 'youtube-shorts' | 'youtube-landscape' | 'ads-15s' | 'ads-30s';
+export type VoiceGender = 'male' | 'female' | 'neutral';
+export type VoiceTone = 'professional' | 'casual' | 'energetic' | 'emotional' | 'narrative';
+
+export interface SceneCard {
+  id: string;
+  order: number;
+  visualDescription: string;
+  scriptLine: string;
+  duration: number;
+  stylePreset: VideoStyle;
+  transitionIn: PageTransition;
+  transitionOut: PageTransition;
+  audioClip?: { url: string; volume: number };
+  imageUrl?: string;
+  videoUrl?: string;
+  isGenerating: boolean;
+  version: number;
+  versionHistory: Array<{ visualDescription: string; imageUrl?: string; createdAt: string }>;
+}
+
+export interface VideoScript {
+  id: string;
+  scenes: SceneCard[];
+  hookText: string;
+  tone: string;
+  structure: string;
+  niche: string;
+  goal: string;
+  platform: PlatformTarget;
+}
+
+export interface VoiceoverConfig {
+  enabled: boolean;
+  gender: VoiceGender;
+  tone: VoiceTone;
+  speed: number;
+  language: string;
+}
+
+export interface MusicConfig {
+  enabled: boolean;
+  mood: MusicMood;
+  volume: number;
+  beatMatch: boolean;
+}
+
+export interface CaptionConfig {
+  enabled: boolean;
+  style: CaptionStyle;
+  highlightKeywords: boolean;
+  syncWithBeat: boolean;
+  autoGenerate: boolean;
+}
+
+export interface VideoExportConfig {
+  platform: PlatformTarget;
+  includeCaptions: boolean;
+  includeVoiceover: boolean;
+  includeMusic: boolean;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
+export interface VideoProjectState {
+  script: VideoScript | null;
+  voiceover: VoiceoverConfig;
+  music: MusicConfig;
+  captions: CaptionConfig;
+  activeSceneId: string | null;
+  vibePrompt: string;
+  chatHistory: ChatMessage[];
+  exportConfig: VideoExportConfig;
+  viralityScore: number | null;
+  isGenerating: boolean;
+}
+
 export interface ImageAdjustments {
   brightness: number; // -100 to 100
   contrast: number; // -100 to 100
@@ -100,6 +185,8 @@ export interface CanvasState {
   activeVideoClipId: string | null;
   // Project mode
   projectMode: ProjectMode;
+  // Video project workspace
+  videoProject: VideoProjectState;
 }
 
 export interface CanvasActions {
@@ -164,6 +251,23 @@ export interface CanvasActions {
   setActiveVideoClip: (clipId: string | null) => void;
   // Project mode
   setProjectMode: (mode: ProjectMode) => void;
+  // Video project actions
+  setVideoProject: (project: Partial<VideoProjectState>) => void;
+  createScript: (prompt: string) => void;
+  updateScene: (sceneId: string, updates: Partial<SceneCard>) => void;
+  regenerateScene: (sceneId: string, target?: 'all' | 'visual' | 'audio' | 'style') => void;
+  reorderScenes: (fromIndex: number, toIndex: number) => void;
+  addScene: (afterSceneId?: string) => void;
+  removeScene: (sceneId: string) => void;
+  setActiveScene: (sceneId: string | null) => void;
+  setVibePrompt: (prompt: string) => void;
+  addChatMessage: (role: 'user' | 'assistant', content: string) => void;
+  setVoiceoverConfig: (config: Partial<VoiceoverConfig>) => void;
+  setMusicConfig: (config: Partial<MusicConfig>) => void;
+  setCaptionConfig: (config: Partial<CaptionConfig>) => void;
+  setExportConfig: (config: Partial<VideoExportConfig>) => void;
+  applyVibeControl: (prompt: string) => void;
+  setViralityScore: (score: number | null) => void;
 }
 
 type Store = CanvasState & CanvasActions;
@@ -230,6 +334,18 @@ export const useStore = create<Store>((set, get) => ({
   },
   activeVideoClipId: null,
   projectMode: 'photo',
+  videoProject: {
+    script: null,
+    voiceover: { enabled: false, gender: 'neutral', tone: 'casual', speed: 1, language: 'en' },
+    music: { enabled: false, mood: 'chill', volume: 0.7, beatMatch: true },
+    captions: { enabled: true, style: 'viral-tiktok', highlightKeywords: true, syncWithBeat: true, autoGenerate: true },
+    activeSceneId: null,
+    vibePrompt: '',
+    chatHistory: [],
+    exportConfig: { platform: 'tiktok', includeCaptions: true, includeVoiceover: true, includeMusic: true },
+    viralityScore: null,
+    isGenerating: false,
+  },
 
   setFabricCanvas: (canvas) => set({ fabricCanvas: canvas }),
   togglePageSelection: (pageId) =>
@@ -274,6 +390,18 @@ export const useStore = create<Store>((set, get) => ({
       },
       activeVideoClipId: null,
       projectMode: 'photo',
+      videoProject: {
+        script: null,
+        voiceover: { enabled: false, gender: 'neutral', tone: 'casual', speed: 1, language: 'en' },
+        music: { enabled: false, mood: 'chill', volume: 0.7, beatMatch: true },
+        captions: { enabled: true, style: 'viral-tiktok', highlightKeywords: true, syncWithBeat: true, autoGenerate: true },
+        activeSceneId: null,
+        vibePrompt: '',
+        chatHistory: [],
+        exportConfig: { platform: 'tiktok', includeCaptions: true, includeVoiceover: true, includeMusic: true },
+        viralityScore: null,
+        isGenerating: false,
+      },
     });
   },
   setToolMode: (mode) => set({ toolMode: mode }),
@@ -918,6 +1046,142 @@ export const useStore = create<Store>((set, get) => ({
       }));
     }
   },
+
+  // ── Video project actions ──────────────────────────────────────────────
+  setVideoProject: (updates) => set((state) => ({ videoProject: { ...state.videoProject, ...updates } })),
+
+  createScript: (prompt) => {
+    const scenes: SceneCard[] = [
+      { id: `scene_${Date.now()}_1`, order: 0, visualDescription: 'Opening hook — dramatic close-up', scriptLine: 'This will change everything you thought you knew...', duration: 3, stylePreset: 'cinematic', transitionIn: 'fade', transitionOut: 'zoom-in', isGenerating: false, version: 1, versionHistory: [] },
+      { id: `scene_${Date.now()}_2`, order: 1, visualDescription: 'Main content — dynamic b-roll montage', scriptLine: 'Here\'s what most people get wrong about this...', duration: 5, stylePreset: 'cinematic', transitionIn: 'zoom-out', transitionOut: 'slide-left', isGenerating: false, version: 1, versionHistory: [] },
+      { id: `scene_${Date.now()}_3`, order: 2, visualDescription: 'Key insight — emphasis moment', scriptLine: 'And that\'s the secret nobody talks about.', duration: 4, stylePreset: 'cinematic', transitionIn: 'slide-right', transitionOut: 'fade', isGenerating: false, version: 1, versionHistory: [] },
+      { id: `scene_${Date.now()}_4`, order: 3, visualDescription: 'Call to action — closing shot', scriptLine: 'Follow for more. Link in bio.', duration: 3, stylePreset: 'cinematic', transitionIn: 'fade', transitionOut: 'fade', isGenerating: false, version: 1, versionHistory: [] },
+    ];
+    const script: VideoScript = {
+      id: `script_${Date.now()}`,
+      scenes,
+      hookText: prompt,
+      tone: 'energetic',
+      structure: 'hook-buildup-payoff',
+      niche: 'general',
+      goal: 'engagement',
+      platform: get().videoProject.exportConfig.platform,
+    };
+    set((state) => ({
+      videoProject: { ...state.videoProject, script, viralityScore: 72 },
+    }));
+  },
+
+  updateScene: (sceneId, updates) => set((state) => {
+    if (!state.videoProject.script) return state;
+    const scenes = state.videoProject.script.scenes.map(s =>
+      s.id === sceneId ? { ...s, ...updates } : s
+    );
+    return { videoProject: { ...state.videoProject, script: { ...state.videoProject.script, scenes } } };
+  }),
+
+  regenerateScene: (sceneId, _target) => {
+    set((state) => {
+      if (!state.videoProject.script) return state;
+      const scenes = state.videoProject.script.scenes.map(s =>
+        s.id === sceneId ? { ...s, isGenerating: true } : s
+      );
+      return { videoProject: { ...state.videoProject, script: { ...state.videoProject.script, scenes }, isGenerating: true } };
+    });
+    setTimeout(() => {
+      set((state) => {
+        if (!state.videoProject.script) return state;
+        const scenes = state.videoProject.script.scenes.map(s =>
+          s.id === sceneId ? { ...s, isGenerating: false, version: s.version + 1 } : s
+        );
+        return { videoProject: { ...state.videoProject, script: { ...state.videoProject.script, scenes }, isGenerating: false } };
+      });
+    }, 1500);
+  },
+
+  reorderScenes: (fromIndex, toIndex) => set((state) => {
+    if (!state.videoProject.script) return state;
+    const scenes = [...state.videoProject.script.scenes];
+    const [moved] = scenes.splice(fromIndex, 1);
+    scenes.splice(toIndex, 0, moved);
+    scenes.forEach((s, i) => { s.order = i; });
+    return { videoProject: { ...state.videoProject, script: { ...state.videoProject.script, scenes } } };
+  }),
+
+  addScene: (afterSceneId) => set((state) => {
+    if (!state.videoProject.script) return state;
+    const newScene: SceneCard = {
+      id: `scene_${Date.now()}`,
+      order: 0,
+      visualDescription: 'New scene — describe the visual',
+      scriptLine: 'Add your script line here',
+      duration: 4,
+      stylePreset: 'cinematic',
+      transitionIn: 'fade',
+      transitionOut: 'fade',
+      isGenerating: false,
+      version: 1,
+      versionHistory: [],
+    };
+    let scenes = [...state.videoProject.script.scenes];
+    if (afterSceneId) {
+      const idx = scenes.findIndex(s => s.id === afterSceneId);
+      scenes.splice(idx + 1, 0, newScene);
+    } else {
+      scenes.push(newScene);
+    }
+    scenes.forEach((s, i) => { s.order = i; });
+    return { videoProject: { ...state.videoProject, script: { ...state.videoProject.script, scenes }, activeSceneId: newScene.id } };
+  }),
+
+  removeScene: (sceneId) => set((state) => {
+    if (!state.videoProject.script) return state;
+    const scenes = state.videoProject.script.scenes.filter(s => s.id !== sceneId);
+    scenes.forEach((s, i) => { s.order = i; });
+    const activeSceneId = state.videoProject.activeSceneId === sceneId ? (scenes[0]?.id ?? null) : state.videoProject.activeSceneId;
+    return { videoProject: { ...state.videoProject, script: { ...state.videoProject.script, scenes }, activeSceneId } };
+  }),
+
+  setActiveScene: (sceneId) => set((state) => ({ videoProject: { ...state.videoProject, activeSceneId: sceneId } })),
+
+  setVibePrompt: (prompt) => set((state) => ({ videoProject: { ...state.videoProject, vibePrompt: prompt } })),
+
+  addChatMessage: (role, content) => set((state) => ({
+    videoProject: {
+      ...state.videoProject,
+      chatHistory: [...state.videoProject.chatHistory, {
+        id: `msg_${Date.now()}`,
+        role,
+        content,
+        timestamp: new Date().toISOString(),
+      }],
+    },
+  })),
+
+  setVoiceoverConfig: (config) => set((state) => ({
+    videoProject: { ...state.videoProject, voiceover: { ...state.videoProject.voiceover, ...config } },
+  })),
+
+  setMusicConfig: (config) => set((state) => ({
+    videoProject: { ...state.videoProject, music: { ...state.videoProject.music, ...config } },
+  })),
+
+  setCaptionConfig: (config) => set((state) => ({
+    videoProject: { ...state.videoProject, captions: { ...state.videoProject.captions, ...config } },
+  })),
+
+  setExportConfig: (config) => set((state) => ({
+    videoProject: { ...state.videoProject, exportConfig: { ...state.videoProject.exportConfig, ...config } },
+  })),
+
+  applyVibeControl: (prompt) => {
+    set((state) => ({ videoProject: { ...state.videoProject, vibePrompt: prompt, isGenerating: true } }));
+    setTimeout(() => {
+      set((state) => ({ videoProject: { ...state.videoProject, isGenerating: false } }));
+    }, 2000);
+  },
+
+  setViralityScore: (score) => set((state) => ({ videoProject: { ...state.videoProject, viralityScore: score } })),
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────

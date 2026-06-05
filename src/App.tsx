@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useStore, SavedDesign, ProjectMode } from './store/useStore';
 import { useVideoStore } from './store/videoStore';
@@ -10,7 +10,7 @@ import LeftSidebar from './components/LeftSidebar';
 import RightPanel from './components/RightPanel';
 import ContextualToolbar from './components/ContextualToolbar';
 import CanvasWorkspace from './components/CanvasWorkspace';
-import VideoTimeline from './components/VideoTimeline';
+import VideoWorkspace from './components/video/VideoWorkspace';
 import VideoWorkspace from './components/video/VideoWorkspace';
 import {
   getCurrentUser,
@@ -176,6 +176,12 @@ export default function App() {
   }
 
   if (view === 'dashboard') {
+  // Video mode: completely separate workspace
+  if (isVideoMode) {
+    return <VideoWorkspace />;
+  }
+
+  // Photo mode: canvas-based design workspace
     return (
       <Dashboard
         user={username}
@@ -206,7 +212,6 @@ export default function App() {
           <TopBar onSave={handleSaveDesign} onBack={openDashboard} />
           <ContextualToolbar />
           <CanvasWorkspace />
-          {isVideoMode && <VideoTimeline />}
         </div>
         <RightPanel />
       </div>
