@@ -12,7 +12,7 @@ export default {
           'blue-bright': '#7dd3fc',
         },
         canvas: {
-          bg: '#0a0a0a',
+          bg: '#07070a',
           surface: '#111111',
         },
         panel: {
