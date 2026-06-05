@@ -1,8 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useVideoStore } from '../../store/videoStore';
 import { Play } from 'lucide-react';
 
-export default function VideoPreview() {
+interface Props {
+  videoRef: React.RefObject<HTMLVideoElement>;
+}
+
+export default function VideoPreview({ videoRef }: Props) {
   const {
     project,
     activeClipId,
@@ -14,9 +18,6 @@ export default function VideoPreview() {
     setActiveTextId,
   } = useVideoStore();
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [videoKey, setVideoKey] = useState(0);
-
   // Get active clip
   const activeClip = project?.clips.find(c => c.id === activeClipId) ?? null;
 
@@ -26,7 +27,7 @@ export default function VideoPreview() {
     if (!video) return;
 
     // Sync play/pause
-    if (isPlaying && !activeClip?.muted) {
+    if (isPlaying) {
       const playPromise = video.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
@@ -36,7 +37,7 @@ export default function VideoPreview() {
     } else {
       video.pause();
     }
-  }, [isPlaying, activeClip?.muted]);
+  }, [isPlaying, activeClip?.id]);
 
   // Sync currentTime (seeking)
   useEffect(() => {
@@ -54,28 +55,25 @@ export default function VideoPreview() {
     }
   }, [currentTime, isPlaying, activeClip]);
 
-  // Sync playback speed
+  // Sync playback speed and audio settings
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !activeClip) return;
     video.playbackRate = activeClip.speed * playbackSpeed;
-  }, [playbackSpeed, activeClip?.speed, activeClip?.id]);
-
-  // Sync mute and volume
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !activeClip) return;
     video.muted = activeClip.muted;
     video.volume = activeClip.volume;
-  }, [activeClip?.muted, activeClip?.volume, activeClip?.id]);
+  }, [playbackSpeed, activeClip?.speed, activeClip?.volume, activeClip?.muted, activeClip?.id]);
 
   // Reset video element when clip changes
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !activeClip) return;
     video.src = activeClip.url;
-    setVideoKey(k => k + 1);
-  }, [activeClip?.id]);
+    video.load();
+    if (currentTime > 0) {
+      video.currentTime = currentTime;
+    }
+  }, [activeClip?.id, currentTime]);
 
   // Update store currentTime while playing
   const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
@@ -190,9 +188,11 @@ export default function VideoPreview() {
     >
       {/* Video element */}
       <video
-        key={videoKey}
         ref={videoRef}
         className="w-full h-full object-cover"
+        preload="metadata"
+        playsInline
+        muted={activeClip?.muted ?? false}
         style={{
           filter: buildFilterString(),
         }}

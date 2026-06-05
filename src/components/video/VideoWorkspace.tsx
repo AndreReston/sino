@@ -104,6 +104,8 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
     );
   }
 
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
   // Full editor workspace
   return (
     <div className="flex h-screen bg-[#07070a] text-white overflow-hidden select-none">
@@ -111,11 +113,11 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
         <VideoTopBar onSave={onSave} onBack={onBack} />
         <div className="flex flex-1 min-w-0 min-h-0">
-          <VideoPreview />
+          <VideoPreview videoRef={videoRef} />
           <VideoProperties />
         </div>
         <VideoTimeline />
-        <PlaybackControls />
+        <PlaybackControls videoRef={videoRef} />
       </div>
     </div>
   );

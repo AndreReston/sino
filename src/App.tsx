@@ -24,6 +24,9 @@ import {
 
 type AppView = 'landing' | 'auth' | 'dashboard' | 'workspace' | 'video-workspace';
 
+const LAST_VIEW_KEY = 'sino:lastView';
+const LAST_DESIGN_KEY = 'sino:lastDesignId';
+
 export default function App() {
   const [view, setView] = useState<AppView>('landing');
   const [user, setUser] = useState<User | null>(null);
@@ -33,14 +36,47 @@ export default function App() {
   const [activeDesign, setActiveDesign] = useState<SavedDesign | null>(null);
   const store = useStore();
 
+  const persistView = (nextView: AppView) => {
+    setView(nextView);
+    try {
+      localStorage.setItem(LAST_VIEW_KEY, nextView);
+    } catch {
+      // Ignore storage errors
+    }
+  };
+
+  const persistActiveDesign = (design: SavedDesign | null) => {
+    setActiveDesign(design);
+    try {
+      if (design?.id) {
+        localStorage.setItem(LAST_DESIGN_KEY, design.id);
+      } else {
+        localStorage.removeItem(LAST_DESIGN_KEY);
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  };
+
   const fetchDesigns = async (userId: string) => {
     const result = await getUserDesigns(userId);
     setDesigns(result);
+    return result;
   };
 
   const fetchUsername = async (userId: string) => {
     const profile = await getUserProfile(userId);
     setUsername(profile?.username ?? 'User');
+  };
+
+  const getVideoCanvasSize = (aspectRatio: string) => {
+    switch (aspectRatio) {
+      case '16:9': return { canvasWidth: 1920, canvasHeight: 1080 };
+      case '1:1': return { canvasWidth: 1080, canvasHeight: 1080 };
+      case '9:16':
+      default:
+        return { canvasWidth: 1080, canvasHeight: 1920 };
+    }
   };
 
   useEffect(() => {
@@ -50,7 +86,42 @@ export default function App() {
       if (currentUser) {
         setUser(currentUser);
         await fetchUsername(currentUser.id);
-        await fetchDesigns(currentUser.id);
+        const savedDesigns = await fetchDesigns(currentUser.id);
+
+        const lastView = localStorage.getItem(LAST_VIEW_KEY);
+        const lastDesignId = localStorage.getItem(LAST_DESIGN_KEY);
+
+        if (lastView === 'workspace' && lastDesignId) {
+          const design = savedDesigns.find(d => d.id === lastDesignId);
+          if (design) {
+            setActiveDesign(design);
+            await store.loadDesign(design);
+            setView('workspace');
+            return;
+          }
+        }
+
+        if (lastView === 'dashboard') {
+          setView('dashboard');
+          return;
+        }
+
+        if (lastView === 'video-workspace' && lastDesignId) {
+          const design = savedDesigns.find(d => d.id === lastDesignId && d.projectMode === 'video');
+          if (design) {
+            setActiveDesign(design);
+            useVideoStore.getState().resetStore();
+            const savedProject = design.pages[0]?.canvas_data as any;
+            if (savedProject?.id) {
+              useVideoStore.getState().loadProject(savedProject);
+            } else {
+              useVideoStore.getState().createProject(design.title, '');
+            }
+            setView('video-workspace');
+            return;
+          }
+        }
+
         setView('dashboard');
       }
     })();
@@ -61,13 +132,13 @@ export default function App() {
         setUser(newUser);
         fetchUsername(newUser.id);
         fetchDesigns(newUser.id);
-        setView('dashboard');
+        persistView('dashboard');
       } else {
         setUser(null);
         setUsername('Guest');
         setDesigns([]);
-        setActiveDesign(null);
-        setView('landing');
+        persistActiveDesign(null);
+        persistView('landing');
         store.resetWorkspace();
       }
     });
@@ -80,8 +151,8 @@ export default function App() {
   const openDashboard = async () => {
     if (!user) return;
     await fetchDesigns(user.id);
-    setActiveDesign(null);
-    setView('dashboard');
+    persistActiveDesign(null);
+    persistView('dashboard');
   };
 
   const handleLogin = async (email: string, password: string) => {
@@ -90,7 +161,7 @@ export default function App() {
       setUser(result.user);
       await fetchUsername(result.user.id);
       await fetchDesigns(result.user.id);
-      setView('dashboard');
+      persistView('dashboard');
     }
     return { success: result.success, message: result.message };
   };
@@ -101,7 +172,7 @@ export default function App() {
       setUser(result.user);
       await fetchUsername(result.user.id);
       await fetchDesigns(result.user.id);
-      setView('dashboard');
+      persistView('dashboard');
     }
     return { success: result.success, message: result.message };
   };
@@ -111,8 +182,8 @@ export default function App() {
     setUser(null);
     setUsername('Guest');
     setDesigns([]);
-    setActiveDesign(null);
-    setView('landing');
+    persistActiveDesign(null);
+    persistView('landing');
     store.resetWorkspace();
   };
 
@@ -120,38 +191,72 @@ export default function App() {
     if (mode === 'video') {
       useVideoStore.getState().resetStore();
       useVideoStore.getState().createProject('Untitled Video', '');
-      setView('video-workspace');
+      persistActiveDesign(null);
+      persistView('video-workspace');
     } else {
       store.resetWorkspace();
       store.setProjectMode(mode);
-      setActiveDesign(null);
-      setView('workspace');
+      persistActiveDesign(null);
+      persistView('workspace');
     }
   };
 
   const handleOpenDesign = (design: SavedDesign) => {
     if (design.projectMode === 'video') {
       useVideoStore.getState().resetStore();
-      useVideoStore.getState().createProject(design.title, '');
-      setView('video-workspace');
+      const savedProject = design.pages[0]?.canvas_data as any;
+      if (savedProject?.id) {
+        useVideoStore.getState().loadProject(savedProject);
+      } else {
+        useVideoStore.getState().createProject(design.title, '');
+      }
+      persistActiveDesign(design);
+      persistView('video-workspace');
     } else {
-      setActiveDesign(design);
+      persistActiveDesign(design);
       store.loadDesign(design);
-      setView('workspace');
+      persistView('workspace');
     }
   };
 
   const handleSaveDesign = async () => {
     if (!user) return;
-    const design = store.exportDesign();
+
+    let savedDesign: SavedDesign;
     const now = new Date().toISOString();
-    const savedDesign: SavedDesign = {
-      ...design,
-      id: activeDesign?.id ?? design.id,
-      title: design.title || 'Untitled Design',
-      createdAt: activeDesign?.createdAt ?? now,
-      updatedAt: now,
-    };
+
+    if (view === 'video-workspace') {
+      const videoProject = useVideoStore.getState().project;
+      if (!videoProject) return;
+
+      const dims = getVideoCanvasSize(videoProject.aspectRatio);
+      savedDesign = {
+        id: activeDesign?.id ?? `design_${Date.now()}`,
+        title: videoProject.title || 'Untitled Video',
+        pages: [{
+          page_id: activeDesign?.pages?.[0]?.page_id ?? `page_${Date.now()}`,
+          canvas_data: videoProject,
+          thumbnail: '',
+        }],
+        canvasWidth: dims.canvasWidth,
+        canvasHeight: dims.canvasHeight,
+        canvasBackground: '#000000',
+        canvasName: videoProject.title || 'Untitled Video',
+        projectMode: 'video',
+        createdAt: activeDesign?.createdAt ?? now,
+        updatedAt: now,
+      };
+    } else {
+      const design = store.exportDesign();
+      savedDesign = {
+        ...design,
+        id: activeDesign?.id ?? design.id,
+        title: design.title || 'Untitled Design',
+        createdAt: activeDesign?.createdAt ?? now,
+        updatedAt: now,
+      };
+    }
+
     const actualId = await saveUserDesign(user.id, savedDesign);
     savedDesign.id = actualId;
     setActiveDesign(savedDesign);
@@ -159,7 +264,7 @@ export default function App() {
   };
 
   if (view === 'landing') {
-    return <LandingPage onLogin={() => { setAuthMode('login'); setView('auth'); }} onRegister={() => { setAuthMode('register'); setView('auth'); }} />;
+    return <LandingPage onLogin={() => { setAuthMode('login'); persistView('auth'); }} onRegister={() => { setAuthMode('register'); persistView('auth'); }} />;
   }
 
   if (view === 'auth') {
@@ -169,7 +274,7 @@ export default function App() {
         onModeChange={(next) => setAuthMode(next)}
         onLogin={handleLogin}
         onRegister={handleRegister}
-        onBack={() => setView('landing')}
+        onBack={() => persistView('landing')}
       />
     );
   }
@@ -196,7 +301,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-canvas-bg overflow-hidden select-none">
+    <div className="flex h-screen bg-canvas-bg select-none">
       <LeftSidebar />
       <div className="flex flex-1 min-w-0 min-h-0">
         <div className="flex flex-col flex-1 min-w-0 min-h-0">

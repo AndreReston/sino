@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Film, Type, Sliders, Volume2, Wand2, Files as Subtitles, LayoutTemplate, Download, Upload, Plus, Trash2, Music, Mic } from 'lucide-react';
+import { Film, Type, Sliders, Volume2, Wand2, Files as Subtitles, LayoutTemplate, Download, Upload, Plus, Trash2, Music, Mic, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useVideoStore, DEFAULT_FILTERS, VideoFilters, TransitionType, CaptionStyle } from '../../store/videoStore';
 
 type Panel = 'clips' | 'text' | 'filters' | 'audio' | 'transitions' | 'subtitles' | 'templates' | 'export';
@@ -40,7 +40,7 @@ export default function VideoSidebar() {
   const videoInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const {
-    project, activeClipId, updateClip, addClip, removeClip,
+    project, activeClipId, updateClip, addClip, removeClip, reorderClip,
     addTextOverlay, removeTextOverlay, updateTextOverlay,
     addSubtitle, removeSubtitle, updateSubtitle,
     setClipFilter, resetClipFilters, addAudioTrack, removeAudioTrack, setBackgroundMusic,
@@ -49,6 +49,7 @@ export default function VideoSidebar() {
   } = useVideoStore();
 
   const activeClip = project?.clips.find(c => c.id === activeClipId);
+  const sortedClips = [...(project?.clips ?? [])].sort((a, b) => a.order - b.order);
 
   const handleVideoUpload = (file: File) => {
     const url = URL.createObjectURL(file);
@@ -99,17 +100,93 @@ export default function VideoSidebar() {
 
               <div>
                 <p className="text-[11px] text-zinc-500 mb-2">Clips ({project?.clips.length ?? 0})</p>
-                {project?.clips.map(clip => (
-                  <button key={clip.id} onClick={() => setActiveClipId(clip.id)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg mb-1 text-left transition-all ${
-                      activeClipId === clip.id ? 'bg-sky-500/10 border border-sky-500/30 text-sky-200' : 'bg-[#151519] border border-white/[0.06] text-zinc-300 hover:border-white/[0.12]'}`}>
-                    {clip.thumbnails[0] ? <img src={clip.thumbnails[0]} alt="" className="w-10 h-6 rounded object-cover" /> : <Film className="w-4 h-4 text-zinc-600 shrink-0" />}
-                    <span className="text-xs truncate flex-1">{clip.name}</span>
-                    <span className="text-[10px] text-zinc-500 tabular-nums">{((clip.duration - clip.trimStart - clip.trimEnd) / clip.speed).toFixed(1)}s</span>
-                    <button onClick={e => { e.stopPropagation(); removeClip(clip.id); }} className="text-zinc-600 hover:text-red-400 transition-colors">
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </button>
+                {sortedClips.map((clip, index) => (
+                  <div
+                    key={clip.id}
+                    className={`w-full rounded-2xl border px-3 py-3 mb-2 transition-all ${
+                      activeClipId === clip.id ? 'border-sky-500/40 bg-sky-500/10 text-sky-200' : 'border-white/[0.06] bg-[#151519] text-zinc-300 hover:border-white/[0.12]'}
+                    `}
+                  >
+                    <div className="flex items-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setActiveClipId(clip.id)}
+                        className="flex items-center gap-3 flex-1 text-left"
+                      >
+                        <div className="w-16 h-10 rounded-lg overflow-hidden bg-zinc-900 flex items-center justify-center shrink-0">
+                          {clip.thumbnails[0] ? (
+                            <img
+                              src={clip.thumbnails[0]}
+                              alt={clip.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Film className="w-5 h-5 text-zinc-500" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold truncate">{clip.name}</p>
+                          <p className="text-[10px] text-zinc-500 mt-1">
+                            {(clip.duration - clip.trimStart - clip.trimEnd).toFixed(1)}s trimmed • {clip.duration.toFixed(1)}s source
+                          </p>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeClip(clip.id)}
+                        className="p-2 rounded-lg bg-zinc-800 text-zinc-400 hover:bg-red-600 hover:text-white transition-colors"
+                        title="Delete clip"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-[10px] text-zinc-300">
+                      <button
+                        type="button"
+                        onClick={() => updateClip(clip.id, { muted: !clip.muted })}
+                        className="rounded-xl bg-zinc-900 px-2 py-2 text-left hover:bg-zinc-800"
+                      >
+                        {clip.muted ? 'Unmute' : 'Mute'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateClip(clip.id, { speed: Math.max(0.25, clip.speed - 0.25) })}
+                        className="rounded-xl bg-zinc-900 px-2 py-2 text-left hover:bg-zinc-800"
+                      >
+                        - Speed
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateClip(clip.id, { speed: Math.min(2, clip.speed + 0.25) })}
+                        className="rounded-xl bg-zinc-900 px-2 py-2 text-left hover:bg-zinc-800"
+                      >
+                        + Speed
+                      </button>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between gap-2 text-[10px] text-zinc-400">
+                      <span className="rounded-full bg-zinc-900 px-2 py-1">#{index + 1}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => reorderClip(clip.id, Math.max(0, index - 1))}
+                          className="rounded-full p-2 bg-zinc-900 hover:bg-zinc-800"
+                          title="Move clip left"
+                        >
+                          <ArrowLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => reorderClip(clip.id, Math.min(sortedClips.length - 1, index + 1))}
+                          className="rounded-full p-2 bg-zinc-900 hover:bg-zinc-800"
+                          title="Move clip right"
+                        >
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
 

@@ -26,7 +26,12 @@ const formatTime = (seconds: number): string => {
 const SKIP_DURATION = 5;
 const SPEED_OPTIONS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
 
-export default function PlaybackControls() {
+interface Props {
+  videoRef: React.RefObject<HTMLVideoElement>;
+}
+
+export default function PlaybackControls({ videoRef }: Props) {
+  const store = useVideoStore();
   const {
     currentTime,
     isPlaying,
@@ -35,16 +40,31 @@ export default function PlaybackControls() {
     setCurrentTime,
     setPlaybackSpeed,
     getTotalDuration,
-  } = useVideoStore();
+    updateClip,
+    project,
+    activeClipId,
+  } = store;
 
-  const [volume, setVolume] = useState(1);
+  const activeClip = project?.clips.find(c => c.id === activeClipId) ?? null;
   const [isSeeking, setIsSeeking] = useState(false);
   const seekBarRef = useRef<HTMLDivElement>(null);
 
   const totalDuration = getTotalDuration();
 
   const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
+    if (!isPlaying) {
+      if (videoRef.current) {
+        videoRef.current.play().catch(() => {
+          // Ignore playback policy issues; state will remain synced.
+        });
+      }
+      setIsPlaying(true);
+    } else {
+      if (videoRef.current) {
+        videoRef.current.pause();
+      }
+      setIsPlaying(false);
+    }
   };
 
   const handleStop = () => {
@@ -211,7 +231,7 @@ export default function PlaybackControls() {
 
       {/* Volume Control */}
       <div className="flex items-center gap-1 flex-shrink-0">
-        {volume === 0 ? (
+        {(activeClip?.volume ?? 1) === 0 ? (
           <VolumeX size={14} className="text-white/50" />
         ) : (
           <Volume2 size={14} className="text-white/50" />
@@ -221,10 +241,14 @@ export default function PlaybackControls() {
           min="0"
           max="1"
           step="0.1"
-          value={volume}
-          onChange={(e) => setVolume(parseFloat(e.target.value))}
+          value={activeClip?.volume ?? 1}
+          onChange={(e) => {
+            if (!activeClip) return;
+            updateClip(activeClip.id, { volume: parseFloat(e.target.value) });
+          }}
           className="w-12 h-1 bg-zinc-700 rounded-full appearance-none cursor-pointer accent-sky-500"
-          title={`Volume: ${Math.round(volume * 100)}%`}
+          title={`Volume: ${Math.round((activeClip?.volume ?? 1) * 100)}%`}
+          disabled={!activeClip}
         />
       </div>
 

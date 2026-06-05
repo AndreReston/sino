@@ -107,6 +107,8 @@ export interface VideoStoreActions {
   // Project
   createProject: (title?: string) => void;
   updateProject: (updates: Partial<VideoProject>) => void;
+  loadProject: (project: VideoProject) => void;
+  exportProject: () => VideoProject | null;
   resetStore: () => void;
   saveToLocalStorage: () => void;
   loadFromLocalStorage: () => void;
@@ -208,6 +210,24 @@ export const useVideoStore = create<VStore>((set, get) => ({
     const next = { ...project, ...updates, updatedAt: new Date().toISOString() };
     set({ project: next });
     get().pushHistory();
+  },
+
+  loadProject: (project) => {
+    set({
+      project,
+      activeClipId: project.clips[0]?.id ?? null,
+      activeTextId: null,
+      activeSubtitleId: null,
+      currentTime: 0,
+      isPlaying: false,
+      playbackSpeed: 1,
+      history: [JSON.stringify(project)],
+      historyIndex: 0,
+    });
+  },
+
+  exportProject: () => {
+    return get().project;
   },
 
   resetStore: () => {
