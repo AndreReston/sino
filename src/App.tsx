@@ -9,6 +9,7 @@ import LeftSidebar from './components/LeftSidebar';
 import RightPanel from './components/RightPanel';
 import ContextualToolbar from './components/ContextualToolbar';
 import CanvasWorkspace from './components/CanvasWorkspace';
+import VideoTimeline from './components/VideoTimeline';
 import {
   getCurrentUser,
   getUserDesigns,
@@ -179,6 +180,7 @@ export default function App() {
           <TopBar onSave={handleSaveDesign} onBack={openDashboard} />
           <ContextualToolbar />
           <CanvasWorkspace />
+          <VideoTimeline />
         </div>
         <RightPanel />
       </div>

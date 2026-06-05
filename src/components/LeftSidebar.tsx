@@ -7,6 +7,7 @@ import {
   MousePointer2, PenLine, Layers, Sparkles, Sliders, Eraser,
   Undo2, Redo2,
   Download, Monitor, ChevronDown,
+  Film,
 } from 'lucide-react';
 import { useStore, SidebarTab, ToolMode } from '../store/useStore';
 import { fabric } from 'fabric';
@@ -629,10 +630,11 @@ function UploadsPanel({
   addImage: (url: string) => void;
   fabricCanvas: fabric.Canvas | null;
 }) {
-  const [uploads, setUploads] = useState<{ url: string; name: string }[]>([]);
-  const [sessionUploads, setSessionUploads] = useState<{ url: string; name: string }[]>([]);
+  const [uploads, setUploads] = useState<{ url: string; name: string; type?: string }[]>([]);
+  const [sessionUploads, setSessionUploads] = useState<{ url: string; name: string; type?: string; thumbnailUrl?: string; duration?: number }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { addVideoClip, videoTrack } = useStore();
 
   const fetchUploads = async () => {
     try {
@@ -651,10 +653,43 @@ function UploadsPanel({
     fetchUploads();
   }, []);
 
+  /** Extract a thumbnail from a video file */
+  const extractVideoThumbnail = (file: File): Promise<{ thumbnailUrl: string; duration: number }> => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      const url = URL.createObjectURL(file);
+      video.preload = 'metadata';
+      video.src = url;
+
+      video.onloadedmetadata = () => {
+        video.currentTime = Math.min(1, video.duration / 4);
+      };
+
+      video.onseeked = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 240;
+        canvas.height = Math.round(240 * (video.videoHeight / Math.max(1, video.videoWidth)));
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        }
+        const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.6);
+        resolve({ thumbnailUrl, duration: video.duration });
+        URL.revokeObjectURL(url);
+      };
+
+      video.onerror = () => {
+        resolve({ thumbnailUrl: '', duration: 5 });
+        URL.revokeObjectURL(url);
+      };
+    });
+  };
+
   const handleUpload = async (file: File) => {
-    if (!fabricCanvas) return;
     setUploading(true);
     setError(null);
+    const isVideo = file.type.startsWith('video/');
+
     try {
       const body = new FormData();
       body.append('file', file);
@@ -667,8 +702,22 @@ function UploadsPanel({
       }
       const payload = await res.json();
       if (payload.url) {
-        setUploads((prev) => [{ url: payload.url, name: payload.name }, ...prev]);
-        addImage(payload.url);
+        setUploads((prev) => [{ url: payload.url, name: payload.name, type: isVideo ? 'video' : 'image' }, ...prev]);
+        if (isVideo) {
+          const { thumbnailUrl, duration } = await extractVideoThumbnail(file);
+          addVideoClip({
+            name: payload.name,
+            url: payload.url,
+            thumbnailUrl,
+            duration,
+            startTime: videoTrack.currentTime,
+            trimStart: 0,
+            trimEnd: 0,
+            volume: 1,
+          });
+        } else {
+          addImage(payload.url);
+        }
         return;
       }
       throw new Error('No upload URL returned');
@@ -680,15 +729,41 @@ function UploadsPanel({
           reader.onerror = () => reject(new Error('File read failed'));
           reader.readAsDataURL(file);
         });
-        const sessionItem = { url: dataUrl, name: file.name };
-        setSessionUploads((prev) => [sessionItem, ...prev]);
-        addImage(dataUrl);
+        if (isVideo) {
+          const { thumbnailUrl, duration } = await extractVideoThumbnail(file);
+          const sessionItem = { url: dataUrl, name: file.name, type: 'video' as const, thumbnailUrl, duration };
+          setSessionUploads((prev) => [sessionItem, ...prev]);
+          addVideoClip({
+            name: file.name,
+            url: dataUrl,
+            thumbnailUrl,
+            duration,
+            startTime: videoTrack.currentTime,
+            trimStart: 0,
+            trimEnd: 0,
+            volume: 1,
+          });
+        } else {
+          const sessionItem = { url: dataUrl, name: file.name, type: 'image' as const };
+          setSessionUploads((prev) => [sessionItem, ...prev]);
+          addImage(dataUrl);
+        }
       } catch (readError) {
-        setError('Image upload failed.');
+        setError('Upload failed.');
       }
     } finally {
       setUploading(false);
     }
+  };
+
+  /** Drag a video clip to timeline */
+  const handleVideoDragStart = (e: React.DragEvent, item: { url: string; name: string; thumbnailUrl?: string; duration?: number }) => {
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      url: item.url,
+      name: item.name,
+      thumbnailUrl: item.thumbnailUrl || '',
+      duration: item.duration || 5,
+    }));
   };
 
   return (
@@ -697,18 +772,18 @@ function UploadsPanel({
       <div>
         <div className="flex items-center justify-between mb-2 gap-3">
           <div>
-            <p className="text-xs text-zinc-500">Upload Image</p>
-            <p className="text-[11px] text-zinc-500">PNG, JPG, SVG files are accepted.</p>
+            <p className="text-xs text-zinc-500">Upload Media</p>
+            <p className="text-[11px] text-zinc-500">Images and videos are accepted.</p>
           </div>
-          <span className="text-xs text-zinc-400">{uploading ? 'Uploading…' : 'Ready'}</span>
+          <span className="text-xs text-zinc-400">{uploading ? 'Uploading...' : 'Ready'}</span>
         </div>
         <label className="relative flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-dashed border-panel-border hover:border-zinc-500 bg-panel-light cursor-pointer transition-all group">
           <Upload className="w-6 h-6 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
           <span className="text-sm text-zinc-500 group-hover:text-zinc-300 transition-colors">Click to upload</span>
-          <span className="text-xs text-zinc-600">PNG, JPG, SVG, WEBP</span>
+          <span className="text-xs text-zinc-600">PNG, JPG, SVG, WEBP, MP4, MOV, WEBM</span>
           <input
             type="file"
-            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+            accept="image/png,image/jpeg,image/svg+xml,image/webp,video/mp4,video/quicktime,video/webm,video/x-msvideo"
             className="absolute inset-0 opacity-0 cursor-pointer"
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -734,21 +809,68 @@ function UploadsPanel({
               No uploaded assets yet.
             </div>
           ) : (
-            [...sessionUploads, ...uploads].map((asset) => (
-              <button
-                key={asset.url}
-                onClick={() => addImage(asset.url)}
-                className="group relative aspect-video rounded-xl overflow-hidden border border-panel-border hover:border-zinc-500 transition-all"
-              >
-                <img
-                  src={asset.url}
-                  alt={asset.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-              </button>
-            ))
+            [...sessionUploads, ...uploads].map((asset) => {
+              const isVideoAsset = asset.type === 'video';
+              return (
+                <button
+                  key={asset.url}
+                  onClick={() => {
+                    if (isVideoAsset) {
+                      addVideoClip({
+                        name: asset.name,
+                        url: asset.url,
+                        thumbnailUrl: (asset as any).thumbnailUrl || '',
+                        duration: (asset as any).duration || 5,
+                        startTime: videoTrack.currentTime,
+                        trimStart: 0,
+                        trimEnd: 0,
+                        volume: 1,
+                      });
+                    } else {
+                      addImage(asset.url);
+                    }
+                  }}
+                  draggable={isVideoAsset}
+                  onDragStart={(e) => isVideoAsset && handleVideoDragStart(e, asset as any)}
+                  className="group relative aspect-video rounded-xl overflow-hidden border border-panel-border hover:border-zinc-500 transition-all"
+                >
+                  {isVideoAsset ? (
+                    <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
+                      {(asset as any).thumbnailUrl ? (
+                        <img
+                          src={(asset as any).thumbnailUrl}
+                          alt={asset.name}
+                          className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
+                        />
+                      ) : (
+                        <Film className="w-6 h-6 text-zinc-600" />
+                      )}
+                      <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-sky-500/80 text-[9px] text-white font-semibold">
+                        MP4
+                      </div>
+                      {(asset as any).duration != null && (
+                        <div className="absolute bottom-1 right-1.5 px-1 py-0.5 rounded bg-black/60 text-[9px] text-zinc-300 font-mono">
+                          {(asset as any).duration.toFixed(1)}s
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <img
+                      src={asset.url}
+                      alt={asset.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                  {isVideoAsset && (
+                    <div className="absolute bottom-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[9px] text-sky-300 font-medium">+ Timeline</span>
+                    </div>
+                  )}
+                </button>
+              );
+            })
           )}
         </div>
       </div>

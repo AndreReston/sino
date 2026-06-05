@@ -26,6 +26,27 @@ export interface LayerInfo {
   adjustments: ImageAdjustments;
 }
 
+export interface VideoClip {
+  id: string;
+  name: string;
+  url: string;
+  thumbnailUrl: string;
+  duration: number; // seconds
+  startTime: number; // position on timeline in seconds
+  trimStart: number; // trim offset in seconds
+  trimEnd: number;   // trim end offset from clip end in seconds
+  volume: number;    // 0–1
+  canvasObjectId?: string; // linked fabric object id
+}
+
+export interface VideoTrackState {
+  clips: VideoClip[];
+  isPlaying: boolean;
+  currentTime: number;   // playback head position in seconds
+  totalDuration: number;  // total timeline duration
+  zoom: number;           // timeline zoom (pixels per second)
+}
+
 export interface SavedDesign {
   id: string;
   title: string;
@@ -72,6 +93,9 @@ export interface CanvasState {
   // Page transition animation
   isPageTransitioning: boolean;
   pageTransitionType: PageTransition;
+  // Video timeline
+  videoTrack: VideoTrackState;
+  activeVideoClipId: string | null;
 }
 
 export interface CanvasActions {
@@ -126,6 +150,14 @@ export interface CanvasActions {
   applyImageFillToText: (textObj: fabric.Object, imageUrl: string, opacity?: number) => Promise<void>;
   removeImageFillFromText: (textObj: fabric.Object) => void;
   setTextImageOpacity: (textObj: fabric.Object, opacity: number) => void;
+  // Video timeline actions
+  addVideoClip: (clip: Omit<VideoClip, 'id'>) => string;
+  removeVideoClip: (clipId: string) => void;
+  updateVideoClip: (clipId: string, updates: Partial<VideoClip>) => void;
+  setVideoPlaying: (playing: boolean) => void;
+  setVideoCurrentTime: (time: number) => void;
+  setVideoTimelineZoom: (zoom: number) => void;
+  setActiveVideoClip: (clipId: string | null) => void;
 }
 
 type Store = CanvasState & CanvasActions;
@@ -141,7 +173,7 @@ function captureThumbnail(canvas: fabric.Canvas): string {
 
 
 /** All custom fabric object properties that must survive toJSON/loadFromJSON round-trips */
-const CUSTOM_PROPS = ['id', 'name', 'imageFill', 'imageFillOpacity'];
+const CUSTOM_PROPS = ['id', 'name', 'imageFill', 'imageFillOpacity', 'videoSource', 'videoClipId'];
 
 export const useStore = create<Store>((set, get) => ({
   activeObjectId: null,
@@ -183,6 +215,14 @@ export const useStore = create<Store>((set, get) => ({
   showMagicToolsPanel: false,
   isPageTransitioning: false,
   pageTransitionType: 'fade',
+  videoTrack: {
+    clips: [],
+    isPlaying: false,
+    currentTime: 0,
+    totalDuration: 30,
+    zoom: 80, // px per second
+  },
+  activeVideoClipId: null,
 
   setFabricCanvas: (canvas) => set({ fabricCanvas: canvas }),
   togglePageSelection: (pageId) =>
@@ -218,6 +258,14 @@ export const useStore = create<Store>((set, get) => ({
       activePageIndex: 0,
       pages: [blankPage],
       selectedPageIds: [],
+      videoTrack: {
+        clips: [],
+        isPlaying: false,
+        currentTime: 0,
+        totalDuration: 30,
+        zoom: 80,
+      },
+      activeVideoClipId: null,
     });
   },
   setToolMode: (mode) => set({ toolMode: mode }),
@@ -797,6 +845,56 @@ export const useStore = create<Store>((set, get) => ({
 
     fabricCanvas.renderAll();
     get().pushHistory(JSON.stringify(fabricCanvas.toJSON(CUSTOM_PROPS)));
+  },
+
+  // ── Video timeline actions ─────────────────────────────────────────────
+  addVideoClip: (clip) => {
+    const id = `vid_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const newClip: VideoClip = { ...clip, id };
+    set((state) => {
+      const clips = [...state.videoTrack.clips, newClip];
+      const totalDuration = Math.max(
+        state.videoTrack.totalDuration,
+        ...clips.map((c) => c.startTime + (c.duration - c.trimStart - c.trimEnd))
+      );
+      return { videoTrack: { ...state.videoTrack, clips, totalDuration } };
+    });
+    return id;
+  },
+
+  removeVideoClip: (clipId) => {
+    set((state) => {
+      const clips = state.videoTrack.clips.filter((c) => c.id !== clipId);
+      return {
+        videoTrack: { ...state.videoTrack, clips },
+        activeVideoClipId: state.activeVideoClipId === clipId ? null : state.activeVideoClipId,
+      };
+    });
+  },
+
+  updateVideoClip: (clipId, updates) => {
+    set((state) => {
+      const clips = state.videoTrack.clips.map((c) =>
+        c.id === clipId ? { ...c, ...updates } : c
+      );
+      return { videoTrack: { ...state.videoTrack, clips } };
+    });
+  },
+
+  setVideoPlaying: (playing) => {
+    set((state) => ({ videoTrack: { ...state.videoTrack, isPlaying: playing } }));
+  },
+
+  setVideoCurrentTime: (time) => {
+    set((state) => ({ videoTrack: { ...state.videoTrack, currentTime: time } }));
+  },
+
+  setVideoTimelineZoom: (zoom) => {
+    set((state) => ({ videoTrack: { ...state.videoTrack, zoom } }));
+  },
+
+  setActiveVideoClip: (clipId) => {
+    set({ activeVideoClipId: clipId });
   },
 }));
 

@@ -71,7 +71,7 @@ export default defineConfig({
           uploadDir: uploadsDir,
           keepExtensions: true,
           multiples: false,
-          maxFileSize: 20 * 1024 * 1024,
+          maxFileSize: 500 * 1024 * 1024, // 500 MB for video support
         });
 
         form.parse(req, (err, fields, files) => {

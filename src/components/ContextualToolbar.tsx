@@ -7,8 +7,9 @@ import {
   Image as ImageIcon, Sliders, RotateCcw, RotateCw,
   Square, Circle, Triangle, Minus as LineIcon, Star,
   Lock, Unlock, X,
+  Film, Volume2, VolumeX,
 } from 'lucide-react';
-import { useStore } from '../store/useStore';
+import { useStore, VideoClip } from '../store/useStore';
 import { fabric } from 'fabric';
 
 const IMAGE_FILL_STOCK = [
@@ -93,10 +94,17 @@ export default function ContextualToolbar() {
     });
   };
 
+  const activeVideoClipId = useStore((s) => s.activeVideoClipId);
+  const videoTrack = useStore((s) => s.videoTrack);
+  const activeClip = activeVideoClipId
+    ? videoTrack.clips.find((c) => c.id === activeVideoClipId)
+    : null;
+
   return (
+    <>
     <div className="flex items-center h-12 bg-panel border-b border-panel-border px-3 gap-1.5 z-50 shrink-0 overflow-x-auto">
       {/* No selection: canvas-level controls */}
-      {!obj && <NoSelectionControls zoom={zoom} setZoom={setZoom} />}
+      {!obj && !activeClip && <NoSelectionControls zoom={zoom} setZoom={setZoom} />}
 
       {/* Text selected */}
       {obj && isText && (
@@ -131,7 +139,13 @@ export default function ContextualToolbar() {
           fabricCanvas={fabricCanvas}
         />
       )}
+
+      {/* Video clip selected on timeline */}
+      {activeClip && !obj && (
+        <VideoClipToolbar clip={activeClip} />
+      )}
     </div>
+    </>
   );
 }
 
@@ -1020,5 +1034,107 @@ function ToolbarBtn({
     >
       {icon}
     </button>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Video clip toolbar (shown when a video clip is selected on timeline)
+// ─────────────────────────────────────────────
+
+function VideoClipToolbar({ clip }: { clip: VideoClip }) {
+  const { updateVideoClip, removeVideoClip, setActiveVideoClip } = useStore();
+  const [isMuted, setIsMuted] = useState(clip.volume === 0);
+
+  const clipDuration = clip.duration - clip.trimStart - clip.trimEnd;
+
+  return (
+    <>
+      <div className="flex items-center gap-1.5 pr-2 shrink-0">
+        <Film className="w-3.5 h-3.5 text-sky-400" />
+        <span className="text-xs text-sky-400 font-medium">Video</span>
+      </div>
+
+      <Divider />
+
+      {/* Clip name */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <label className="text-xs text-zinc-500">Clip</label>
+        <span className="text-xs text-zinc-200 truncate max-w-[160px]">{clip.name}</span>
+      </div>
+
+      <Divider />
+
+      {/* Duration info */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <label className="text-xs text-zinc-500">Duration</label>
+        <span className="text-xs text-zinc-300 tabular-nums">{clipDuration.toFixed(1)}s</span>
+      </div>
+
+      <Divider />
+
+      {/* Trim start */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <label className="text-xs text-zinc-500">Start trim</label>
+        <input
+          type="number"
+          min={0}
+          max={clip.duration - clip.trimEnd - 0.1}
+          step={0.1}
+          value={clip.trimStart.toFixed(1)}
+          onChange={(e) => updateVideoClip(clip.id, { trimStart: Number(e.target.value) || 0 })}
+          className="input-field h-7 py-0 text-xs w-16 text-center tabular-nums"
+        />
+      </div>
+
+      {/* Trim end */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <label className="text-xs text-zinc-500">End trim</label>
+        <input
+          type="number"
+          min={0}
+          max={clip.duration - clip.trimStart - 0.1}
+          step={0.1}
+          value={clip.trimEnd.toFixed(1)}
+          onChange={(e) => updateVideoClip(clip.id, { trimEnd: Number(e.target.value) || 0 })}
+          className="input-field h-7 py-0 text-xs w-16 text-center tabular-nums"
+        />
+      </div>
+
+      <Divider />
+
+      {/* Volume */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <button
+          onClick={() => {
+            const newVolume = isMuted ? 1 : 0;
+            setIsMuted(!isMuted);
+            updateVideoClip(clip.id, { volume: newVolume });
+          }}
+          className="w-7 h-7 flex items-center justify-center rounded text-zinc-500 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
+          title={isMuted ? 'Unmute' : 'Mute'}
+        >
+          {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+        </button>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={Math.round(clip.volume * 100)}
+          onChange={(e) => updateVideoClip(clip.id, { volume: Number(e.target.value) / 100 })}
+          className="w-16 accent-sky-500"
+        />
+        <span className="text-xs text-zinc-300 w-8 tabular-nums">{Math.round(clip.volume * 100)}%</span>
+      </div>
+
+      <div className="flex-1" />
+
+      {/* Delete clip */}
+      <ToolbarBtn
+        icon={<Trash2 className="w-3.5 h-3.5" />}
+        title="Remove clip"
+        onClick={() => { removeVideoClip(clip.id); setActiveVideoClip(null); }}
+        danger
+      />
+    </>
   );
 }
