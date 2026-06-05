@@ -121,8 +121,13 @@ export default function VideoPreview({ videoRef }: Props) {
     s => currentTime >= s.startTime && currentTime <= s.endTime
   ) ?? [];
 
-  const aspectClass = project?.aspectRatio === '9:16' ? '' : project?.aspectRatio === '1:1' ? 'aspect-square' : 'aspect-video';
-  const aspectStyle: React.CSSProperties | undefined = project?.aspectRatio === '9:16' ? { aspectRatio: '9 / 16' } : undefined;
+  const getAspectRatioStyle = (): React.CSSProperties => {
+    switch (project?.aspectRatio) {
+      case '9:16': return { aspectRatio: '9 / 16' };
+      case '1:1': return { aspectRatio: '1 / 1' };
+      default: return { aspectRatio: '16 / 9' };
+    }
+  };
 
   // Build CSS filter string from clip filters
   const buildFilterString = (): string => {
@@ -192,17 +197,19 @@ export default function VideoPreview({ videoRef }: Props) {
   // No clip placeholder
   if (!activeClip || !project) {
     return (
-      <div
-        className={`flex items-center justify-center bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-lg border border-zinc-800 flex-1 ${aspectClass}`}
-        style={aspectStyle}
-      >
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="p-3 rounded-full bg-zinc-800">
-            <Play className="w-8 h-8 text-sky-400" fill="currentColor" />
-          </div>
-          <div>
-            <p className="text-zinc-300 font-medium">No video selected</p>
-            <p className="text-zinc-500 text-sm">Add or select a clip to begin</p>
+      <div className="flex-1 flex items-center justify-center bg-[#0a0a0e] min-h-0 p-6">
+        <div
+          className="flex items-center justify-center bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-lg border border-zinc-800"
+          style={{ ...getAspectRatioStyle(), maxWidth: '100%', maxHeight: '100%', width: 'auto', height: '100%' }}
+        >
+          <div className="flex flex-col items-center gap-3 text-center p-8">
+            <div className="p-3 rounded-full bg-zinc-800">
+              <Play className="w-8 h-8 text-sky-400" fill="currentColor" />
+            </div>
+            <div>
+              <p className="text-zinc-300 font-medium">No video selected</p>
+              <p className="text-zinc-500 text-sm">Add or select a clip to begin</p>
+            </div>
           </div>
         </div>
       </div>
@@ -210,27 +217,28 @@ export default function VideoPreview({ videoRef }: Props) {
   }
 
   return (
-    <div
-      ref={containerRef}
-      className={`relative w-full flex items-center justify-center bg-zinc-950 rounded-lg overflow-hidden border border-zinc-800 flex-1 ${aspectClass}`}
-      style={aspectStyle}
-      onClick={() => setActiveClipId(activeClip.id)}
-    >
-      {/* Video element */}
-      <video
-        ref={videoRef}
-        key={activeClip.id}
-        className="w-full h-full object-cover"
-        src={activeClip.url}
-        preload="metadata"
-        playsInline
-        muted={activeClip.muted}
-        style={{
-          filter: buildFilterString(),
-          ...buildEffectAnimation(),
-        }}
-        onTimeUpdate={handleTimeUpdate}
-      />
+    <div className="flex-1 flex items-center justify-center bg-[#0a0a0e] min-h-0 p-4">
+      <div
+        ref={containerRef}
+        className="relative bg-zinc-950 rounded-lg overflow-hidden border border-zinc-800"
+        style={{ ...getAspectRatioStyle(), maxWidth: '100%', maxHeight: '100%', width: 'auto', height: '100%' }}
+        onClick={() => setActiveClipId(activeClip.id)}
+      >
+        {/* Video element */}
+        <video
+          ref={videoRef}
+          key={activeClip.id}
+          className="absolute inset-0 w-full h-full object-cover"
+          src={activeClip.url}
+          preload="metadata"
+          playsInline
+          muted={activeClip.muted}
+          style={{
+            filter: buildFilterString(),
+            ...buildEffectAnimation(),
+          }}
+          onTimeUpdate={handleTimeUpdate}
+        />
 
       {/* Text overlays — draggable */}
       {activeOverlays.map(overlay => (
@@ -295,6 +303,7 @@ export default function VideoPreview({ videoRef }: Props) {
           80% { transform: translate(1px, 2px); filter: saturate(0.5); }
         }
       `}</style>
+      </div>
     </div>
   );
 }

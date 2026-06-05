@@ -204,7 +204,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
     const project: VideoProject = {
       id: `proj_${uid()}`,
       title: title || 'Untitled Video',
-      aspectRatio: '9:16',
+      aspectRatio: '16:9',
       clips: [],
       textOverlays: [],
       subtitles: [],

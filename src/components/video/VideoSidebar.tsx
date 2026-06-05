@@ -347,7 +347,7 @@ export default function VideoSidebar() {
               )}
               <div className="space-y-2 text-[11px] text-zinc-500">
                 <p>Format: WebM (MediaRecorder)</p>
-                <p>Aspect: {project?.aspectRatio}</p>
+                <p>Resolution: {project?.aspectRatio === '16:9' ? '1920×1080' : project?.aspectRatio === '9:16' ? '1080×1920' : '1080×1080'} ({project?.aspectRatio === '16:9' ? 'Landscape' : project?.aspectRatio === '9:16' ? 'Portrait' : 'Square'})</p>
                 <p>Clips: {project?.clips.length ?? 0}</p>
               </div>
             </div>
