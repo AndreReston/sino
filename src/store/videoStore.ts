@@ -263,7 +263,14 @@ export const useVideoStore = create<VStore>((set, get) => ({
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const project = JSON.parse(raw) as VideoProject;
-        set({ project, history: [raw], historyIndex: 0 });
+        // Migrate old clip data to include missing fields
+        const migratedClips = project.clips.map(clip => ({
+          ...clip,
+          effect: (clip as any).effect ?? 'none' as ClipEffect,
+          keyframes: (clip as any).keyframes ?? [] as Keyframe[],
+        }));
+        const migratedProject = { ...project, clips: migratedClips };
+        set({ project: migratedProject, history: [raw], historyIndex: 0 });
       }
     } catch { /* parse error */ }
   },

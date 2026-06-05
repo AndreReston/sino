@@ -166,11 +166,11 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
         <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
           <Diamond className="w-3.5 h-3.5 text-sky-400" /> Keyframes
         </h3>
-        {clip.keyframes.length === 0 ? (
+        {(clip.keyframes ?? []).length === 0 ? (
           <p className="text-xs text-zinc-600">No keyframes. Add from the timeline or use the button below.</p>
         ) : (
           <div className="space-y-1">
-            {clip.keyframes.map((kf: Keyframe, i: number) => (
+            {(clip.keyframes ?? []).map((kf: Keyframe, i: number) => (
               <div key={i} className="flex items-center gap-2 text-xs text-zinc-300 bg-zinc-900 rounded px-2 py-1.5">
                 <span className="text-sky-400 font-mono">{kf.property}</span>
                 <span className="text-zinc-500">@{kf.time.toFixed(1)}s</span>
