@@ -1,613 +1,602 @@
 import { create } from 'zustand';
 
-export type VideoStyle =
-  | 'cinematic' | 'anime' | 'documentary' | 'tiktok' | 'cyberpunk'
-  | 'corporate' | 'retro-vhs' | 'minimal-clean' | 'dramatic' | 'vaporwave';
+// ─── Types ────────────────────────────────────────────────────────
 
-export type VoiceGender = 'male' | 'female' | 'neutral';
-export type VoiceAge = 'young' | 'middle' | 'senior';
-export type VoiceTone = 'professional' | 'casual' | 'energetic' | 'calm' | 'dramatic';
+export type AspectRatio = '16:9' | '9:16' | '1:1';
+export type TransitionType = 'none' | 'fade' | 'crossfade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'wipe-left' | 'wipe-right';
+export type CaptionStyle = 'karaoke' | 'pop-up' | 'tiktok' | 'minimal' | 'bold-highlight';
 
-export type MusicMood = 'hype' | 'sad' | 'cinematic' | 'chill' | 'upbeat' | 'mysterious' | 'epic' | 'lofi';
-
-export type CaptionStyle = 'karaoke' | 'pop-up' | 'tiktok-subtitles' | 'minimal' | 'bold-highlight' | 'retro';
-
-export type Platform = 'tiktok' | 'instagram-reels' | 'youtube-shorts' | 'youtube-landscape' | 'ads-15s' | 'ads-30s';
-
-export type VibePreset =
-  | 'cinematic' | 'warmer' | 'dreamy' | 'gritty' | 'neon' | 'vintage'
-  | 'moody' | 'bright' | 'clean' | 'dramatic' | 'faded' | 'cyberpunk';
-
-export type EffectPreset =
-  | 'glitch' | 'motion-blur' | 'film-grain' | 'cinematic-zoom'
-  | 'slow-motion-impact' | 'zoom-punch' | 'vhs-distortion' | 'bokeh';
-
-export type SceneStatus = 'draft' | 'generating' | 'ready' | 'error';
-
-export interface SceneCard {
+export interface VideoClip {
   id: string;
+  name: string;
+  url: string;           // object URL or data URL
+  duration: number;       // total seconds of source
+  trimStart: number;      // seconds from start
+  trimEnd: number;        // seconds from end
+  speed: number;          // 0.25 – 2
+  volume: number;         // 0 – 1
+  muted: boolean;
+  filters: VideoFilters;
+  transitionIn: TransitionType;
+  thumbnails: string[];   // data URLs of frame snapshots
   order: number;
-  visualDescription: string;
-  scriptLine: string;
-  durationSeconds: number;
-  stylePreset: VideoStyle;
-  transitionIn: string;
-  transitionOut: string;
-  status: SceneStatus;
-  thumbnailUrl: string;
-  generatedVideoUrl: string;
-  voiceoverId: string | null;
-  captionText: string;
-  captionStyle: CaptionStyle;
-  vibePreset: VibePreset;
-  effects: EffectPreset[];
 }
 
-export interface VoiceConfig {
-  gender: VoiceGender;
-  age: VoiceAge;
-  tone: VoiceTone;
-  language: string;
-  speed: number;
+export interface VideoFilters {
+  brightness: number;   // 0-200, default 100
+  contrast: number;     // 0-200, default 100
+  saturation: number;   // 0-200, default 100
+  blur: number;         // 0-20px, default 0
+  grayscale: number;    // 0-100%, default 0
+  sepia: number;        // 0-100%, default 0
+  hueRotate: number;    // 0-360deg, default 0
 }
 
-export interface ChatMessage {
+export const DEFAULT_FILTERS: VideoFilters = {
+  brightness: 100,
+  contrast: 100,
+  saturation: 100,
+  blur: 0,
+  grayscale: 0,
+  sepia: 0,
+  hueRotate: 0,
+};
+
+export interface TextOverlay {
   id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
+  text: string;
+  fontFamily: string;
+  fontSize: number;
+  fontWeight: string;
+  color: string;
+  opacity: number;
+  x: number;             // percentage 0-100
+  y: number;             // percentage 0-100
+  startTime: number;     // seconds on timeline
+  endTime: number;        // seconds on timeline
+  backgroundColor: string;
+  backgroundOpacity: number;
+}
+
+export interface SubtitleEntry {
+  id: string;
+  text: string;
+  startTime: number;
+  endTime: number;
+  style: CaptionStyle;
+}
+
+export interface AudioTrack {
+  id: string;
+  url: string;
+  name: string;
+  volume: number;
+  muted: boolean;
+  startTime: number;
 }
 
 export interface VideoProject {
   id: string;
   title: string;
-  goal: string;
-  niche: string;
-  tone: string;
-  platform: Platform;
-  style: VideoStyle;
-  voice: VoiceConfig;
-  musicMood: MusicMood;
-  scenes: SceneCard[];
-  chatHistory: ChatMessage[];
-  viralityScore: number;
+  aspectRatio: AspectRatio;
+  clips: VideoClip[];
+  textOverlays: TextOverlay[];
+  subtitles: SubtitleEntry[];
+  audioTracks: AudioTrack[];
+  backgroundMusic: AudioTrack | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface VideoStoreState {
   project: VideoProject | null;
-  activeSceneId: string | null;
-  isGenerating: boolean;
-  rightPanelTab: 'ai-chat' | 'script' | 'vibes' | 'audio' | 'captions' | 'export' | 'templates' | 'engagement';
-  generationProgress: number;
-  promptHistory: string[];
-  versionStack: VideoProject[];
-  versionIndex: number;
+  activeClipId: string | null;
+  activeTextId: string | null;
+  activeSubtitleId: string | null;
+  currentTime: number;
+  isPlaying: boolean;
+  playbackSpeed: number;
+  rightPanel: 'clips' | 'filters' | 'text' | 'audio' | 'transitions' | 'subtitles' | 'export' | 'templates';
+  history: string[];
+  historyIndex: number;
+  isExporting: boolean;
+  exportProgress: number;
 }
 
 export interface VideoStoreActions {
-  createProject: (title: string, prompt: string) => void;
+  // Project
+  createProject: (title?: string) => void;
   updateProject: (updates: Partial<VideoProject>) => void;
-  setActiveSceneId: (id: string | null) => void;
-  setRightPanelTab: (tab: VideoStoreState['rightPanelTab']) => void;
-  addScene: (afterSceneId?: string | null) => void;
-  updateScene: (sceneId: string, updates: Partial<SceneCard>) => void;
-  removeScene: (sceneId: string) => void;
-  reorderScenes: (sceneId: string, newIndex: number) => void;
-  regenerateScene: (sceneId: string, type: 'all' | 'visual' | 'audio' | 'style') => void;
-  generateFullVideo: () => void;
-  setIsGenerating: (v: boolean) => void;
-  addChatMessage: (role: 'user' | 'assistant', content: string) => void;
-  processAICommand: (command: string) => void;
-  applyVibePreset: (preset: VibePreset, sceneId?: string) => void;
-  addEffect: (effect: EffectPreset, sceneId?: string) => void;
-  removeEffect: (effect: EffectPreset, sceneId?: string) => void;
-  updateVoice: (updates: Partial<VoiceConfig>) => void;
-  setMusicMood: (mood: MusicMood) => void;
-  setPlatform: (platform: Platform) => void;
-  calculateViralityScore: () => number;
-  pushVersion: () => void;
-  undoVersion: () => void;
-  redoVersion: () => void;
   resetStore: () => void;
+  saveToLocalStorage: () => void;
+  loadFromLocalStorage: () => void;
+
+  // Clips
+  addClip: (clip: Omit<VideoClip, 'id' | 'order' | 'thumbnails' | 'filters' | 'transitionIn' | 'speed' | 'muted'> & { url: string; name: string; duration: number; trimStart?: number; trimEnd?: number; volume?: number }) => void;
+  removeClip: (id: string) => void;
+  updateClip: (id: string, updates: Partial<VideoClip>) => void;
+  reorderClip: (id: string, newIndex: number) => void;
+  splitClip: (id: string, timeFromStart: number) => void;
+  autoSplitClip: (id: string, intervalSeconds: number) => void;
+  setClipFilter: (id: string, filter: keyof VideoFilters, value: number) => void;
+  resetClipFilters: (id: string) => void;
+  generateThumbnails: (id: string) => void;
+
+  // Text overlays
+  addTextOverlay: (text?: string) => void;
+  removeTextOverlay: (id: string) => void;
+  updateTextOverlay: (id: string, updates: Partial<TextOverlay>) => void;
+
+  // Subtitles
+  addSubtitle: (text?: string, start?: number, end?: number) => void;
+  removeSubtitle: (id: string) => void;
+  updateSubtitle: (id: string, updates: Partial<SubtitleEntry>) => void;
+
+  // Audio
+  addAudioTrack: (url: string, name: string) => void;
+  removeAudioTrack: (id: string) => void;
+  updateAudioTrack: (id: string, updates: Partial<AudioTrack>) => void;
+  setBackgroundMusic: (track: AudioTrack | null) => void;
+
+  // Playback
+  setCurrentTime: (time: number) => void;
+  setIsPlaying: (playing: boolean) => void;
+  setPlaybackSpeed: (speed: number) => void;
+
+  // UI
+  setActiveClipId: (id: string | null) => void;
+  setActiveTextId: (id: string | null) => void;
+  setActiveSubtitleId: (id: string | null) => void;
+  setRightPanel: (panel: VideoStoreState['rightPanel']) => void;
+
+  // History
+  pushHistory: () => void;
+  undo: () => void;
+  redo: () => void;
+
+  // Export
+  startExport: () => void;
+
+  // Computed
+  getTotalDuration: () => number;
+  getActiveClip: () => VideoClip | null;
 }
 
 type VStore = VideoStoreState & VideoStoreActions;
 
-const DEFAULT_VOICE: VoiceConfig = {
-  gender: 'male',
-  age: 'young',
-  tone: 'energetic',
-  language: 'en',
-  speed: 1.0,
-};
+const STORAGE_KEY = 'designforge_video_project';
 
-const createBlankScene = (order: number): SceneCard => ({
-  id: `scene_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-  order,
-  visualDescription: '',
-  scriptLine: '',
-  durationSeconds: 3,
-  stylePreset: 'cinematic',
-  transitionIn: 'fade',
-  transitionOut: 'fade',
-  status: 'draft',
-  thumbnailUrl: '',
-  generatedVideoUrl: '',
-  voiceoverId: null,
-  captionText: '',
-  captionStyle: 'tiktok-subtitles',
-  vibePreset: 'cinematic',
-  effects: [],
-});
+function uid(): string {
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
 
 export const useVideoStore = create<VStore>((set, get) => ({
   project: null,
-  activeSceneId: null,
-  isGenerating: false,
-  rightPanelTab: 'ai-chat',
-  generationProgress: 0,
-  promptHistory: [],
-  versionStack: [],
-  versionIndex: -1,
+  activeClipId: null,
+  activeTextId: null,
+  activeSubtitleId: null,
+  currentTime: 0,
+  isPlaying: false,
+  playbackSpeed: 1,
+  rightPanel: 'clips',
+  history: [],
+  historyIndex: -1,
+  isExporting: false,
+  exportProgress: 0,
 
-  createProject: (title, prompt) => {
+  // ─── Project ─────────────────────────────────────────────────────
+
+  createProject: (title) => {
     const project: VideoProject = {
-      id: `proj_${Date.now()}`,
-      title,
-      goal: '',
-      niche: '',
-      tone: '',
-      platform: 'tiktok',
-      style: 'cinematic',
-      voice: { ...DEFAULT_VOICE },
-      musicMood: 'hype',
-      scenes: [createBlankScene(0)],
-      chatHistory: [],
-      viralityScore: 0,
+      id: `proj_${uid()}`,
+      title: title || 'Untitled Video',
+      aspectRatio: '9:16',
+      clips: [],
+      textOverlays: [],
+      subtitles: [],
+      audioTracks: [],
+      backgroundMusic: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    set({ project, activeSceneId: project.scenes[0].id, versionStack: [project], versionIndex: 0 });
-    get().processAICommand(prompt);
+    set({ project, history: [JSON.stringify(project)], historyIndex: 0, activeClipId: null, currentTime: 0, isPlaying: false });
   },
 
   updateProject: (updates) => {
-    set((s) => ({
-      project: s.project ? { ...s.project, ...updates, updatedAt: new Date().toISOString() } : null,
-    }));
-  },
-
-  setActiveSceneId: (id) => set({ activeSceneId: id }),
-  setRightPanelTab: (tab) => set({ rightPanelTab: tab }),
-
-  addScene: (afterSceneId) => {
     const { project } = get();
     if (!project) return;
-    const scenes = [...project.scenes];
-    let insertAt = scenes.length;
-    if (afterSceneId) {
-      const idx = scenes.findIndex((s) => s.id === afterSceneId);
-      if (idx >= 0) insertAt = idx + 1;
-    }
-    const newScene = createBlankScene(insertAt);
-    scenes.splice(insertAt, 0, newScene);
-    scenes.forEach((s, i) => { s.order = i; });
-    set({ project: { ...project, scenes }, activeSceneId: newScene.id });
-    get().pushVersion();
-  },
-
-  updateScene: (sceneId, updates) => {
-    const { project } = get();
-    if (!project) return;
-    const scenes = project.scenes.map((s) => s.id === sceneId ? { ...s, ...updates } : s);
-    set({ project: { ...project, scenes } });
-  },
-
-  removeScene: (sceneId) => {
-    const { project, activeSceneId } = get();
-    if (!project || project.scenes.length <= 1) return;
-    const scenes = project.scenes.filter((s) => s.id !== sceneId);
-    scenes.forEach((s, i) => { s.order = i; });
-    const newActive = activeSceneId === sceneId ? scenes[0]?.id ?? null : activeSceneId;
-    set({ project: { ...project, scenes }, activeSceneId: newActive });
-    get().pushVersion();
-  },
-
-  reorderScenes: (sceneId, newIndex) => {
-    const { project } = get();
-    if (!project) return;
-    const scenes = [...project.scenes];
-    const oldIndex = scenes.findIndex((s) => s.id === sceneId);
-    if (oldIndex < 0) return;
-    const [moved] = scenes.splice(oldIndex, 1);
-    scenes.splice(newIndex, 0, moved);
-    scenes.forEach((s, i) => { s.order = i; });
-    set({ project: { ...project, scenes } });
-    get().pushVersion();
-  },
-
-  regenerateScene: (sceneId, _type) => {
-    set({ isGenerating: true, generationProgress: 0 });
-    const { project } = get();
-    if (!project) return;
-
-    // Simulate generation
-    const interval = setInterval(() => {
-      const prog = get().generationProgress;
-      if (prog >= 100) {
-        clearInterval(interval);
-        const scene = project.scenes.find((s) => s.id === sceneId);
-        if (scene) {
-          const stockImages = [
-            'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?w=400',
-            'https://images.pexels.com/photos/1629212/pexels-photo-1629212.jpeg?w=400',
-            'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?w=400',
-            'https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg?w=400',
-            'https://images.pexels.com/photos/1261728/pexels-photo-1261728.jpeg?w=400',
-          ];
-          get().updateScene(sceneId, {
-            status: 'ready',
-            thumbnailUrl: stockImages[Math.floor(Math.random() * stockImages.length)],
-          });
-        }
-        set({ isGenerating: false, generationProgress: 0 });
-        get().pushVersion();
-      } else {
-        set({ generationProgress: prog + 8 });
-      }
-    }, 120);
-  },
-
-  generateFullVideo: () => {
-    set({ isGenerating: true, generationProgress: 0 });
-    const { project } = get();
-    if (!project) return;
-
-    const stockImages = [
-      'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?w=400',
-      'https://images.pexels.com/photos/1629212/pexels-photo-1629212.jpeg?w=400',
-      'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?w=400',
-      'https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg?w=400',
-      'https://images.pexels.com/photos/1261728/pexels-photo-1261728.jpeg?w=400',
-      'https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?w=400',
-    ];
-
-    const totalScenes = project.scenes.length;
-    let currentScene = 0;
-    const interval = setInterval(() => {
-      const prog = get().generationProgress;
-      if (currentScene >= totalScenes || prog >= 100) {
-        clearInterval(interval);
-        set({ isGenerating: false, generationProgress: 100 });
-        setTimeout(() => set({ generationProgress: 0 }), 1000);
-        get().pushVersion();
-        return;
-      }
-      const scene = project.scenes[currentScene];
-      if (scene) {
-        get().updateScene(scene.id, {
-          status: 'ready',
-          thumbnailUrl: stockImages[currentScene % stockImages.length],
-        });
-      }
-      currentScene++;
-      set({ generationProgress: Math.round((currentScene / totalScenes) * 100) });
-    }, 600);
-  },
-
-  setIsGenerating: (v) => set({ isGenerating: v }),
-
-  addChatMessage: (role, content) => {
-    const { project } = get();
-    if (!project) return;
-    const msg: ChatMessage = {
-      id: `msg_${Date.now()}`,
-      role,
-      content,
-      timestamp: Date.now(),
-    };
-    set({ project: { ...project, chatHistory: [...project.chatHistory, msg] } });
-  },
-
-  processAICommand: (command) => {
-    const { project } = get();
-    if (!project) return;
-
-    get().addChatMessage('user', command);
-    set({ promptHistory: [...get().promptHistory, command] });
-
-    // Intent interpretation
-    const lowerCmd = command.toLowerCase();
-    let response = '';
-    let projectUpdates: Partial<VideoProject> = {};
-
-    // Detect platform
-    if (lowerCmd.includes('tiktok') || lowerCmd.includes('reel')) {
-      projectUpdates.platform = 'tiktok';
-      projectUpdates.tone = 'high energy';
-    } else if (lowerCmd.includes('youtube') && lowerCmd.includes('short')) {
-      projectUpdates.platform = 'youtube-shorts';
-    } else if (lowerCmd.includes('youtube')) {
-      projectUpdates.platform = 'youtube-landscape';
-    }
-
-    // Detect niche / style
-    if (lowerCmd.includes('gym') || lowerCmd.includes('fitness') || lowerCmd.includes('workout')) {
-      projectUpdates.niche = 'fitness';
-      projectUpdates.musicMood = 'hype';
-    } else if (lowerCmd.includes('product') || lowerCmd.includes('ad')) {
-      projectUpdates.niche = 'product';
-      projectUpdates.musicMood = 'upbeat';
-    } else if (lowerCmd.includes('study') || lowerCmd.includes('aesthetic')) {
-      projectUpdates.niche = 'study-aesthetic';
-      projectUpdates.musicMood = 'lofi';
-    } else if (lowerCmd.includes('documentary') || lowerCmd.includes('story')) {
-      projectUpdates.niche = 'documentary';
-      projectUpdates.musicMood = 'cinematic';
-    }
-
-    // Detect style
-    if (lowerCmd.includes('cinematic')) projectUpdates.style = 'cinematic';
-    else if (lowerCmd.includes('anime')) projectUpdates.style = 'anime';
-    else if (lowerCmd.includes('cyberpunk') || lowerCmd.includes('neon')) projectUpdates.style = 'cyberpunk';
-    else if (lowerCmd.includes('retro') || lowerCmd.includes('vhs')) projectUpdates.style = 'retro-vhs';
-    else if (lowerCmd.includes('corporate') || lowerCmd.includes('professional')) projectUpdates.style = 'corporate';
-    else if (lowerCmd.includes('minimal') || lowerCmd.includes('clean')) projectUpdates.style = 'minimal-clean';
-    else if (lowerCmd.includes('dramatic')) projectUpdates.style = 'dramatic';
-
-    // Detect tone
-    if (lowerCmd.includes('funny') || lowerCmd.includes('gen z')) projectUpdates.tone = 'casual';
-    else if (lowerCmd.includes('serious') || lowerCmd.includes('professional')) projectUpdates.tone = 'professional';
-    else if (lowerCmd.includes('emotional') || lowerCmd.includes('emotional')) projectUpdates.tone = 'dramatic';
-    else if (lowerCmd.includes('energetic') || lowerCmd.includes('hype')) projectUpdates.tone = 'energetic';
-
-    // Script refinement commands
-    const scenes = [...project.scenes];
-    if (lowerCmd.includes('make it shorter')) {
-      scenes.forEach((s) => { s.durationSeconds = Math.max(2, s.durationSeconds - 1); });
-      response = 'Shortened each scene duration for a faster pace. The video now moves quicker to maintain viewer attention.';
-    } else if (lowerCmd.includes('make it longer') || lowerCmd.includes('extend')) {
-      scenes.forEach((s) => { s.durationSeconds = Math.min(15, s.durationSeconds + 1); });
-      response = 'Extended each scene for more breathing room. The video now has a more relaxed pace.';
-    } else if (lowerCmd.includes('add suspense')) {
-      if (scenes.length >= 2) {
-        scenes[scenes.length - 1].vibePreset = 'dramatic';
-        scenes[scenes.length - 1].effects = ['slow-motion-impact'];
-      }
-      response = 'Added suspense to the final scene with a dramatic vibe and slow-motion impact effect. The buildup creates tension before the payoff.';
-    } else if (lowerCmd.includes('more energy') || lowerCmd.includes('hype')) {
-      scenes.forEach((s) => { s.vibePreset = 'neon'; s.effects = ['zoom-punch']; });
-      projectUpdates.musicMood = 'hype';
-      response = 'Boosted the energy across all scenes with neon vibes and zoom-punch effects. Music switched to hype mode for maximum impact.';
-    } else if (lowerCmd.includes('darker') || lowerCmd.includes('moody')) {
-      scenes.forEach((s) => { s.vibePreset = 'moody'; });
-      projectUpdates.musicMood = 'mysterious';
-      response = 'Applied a moody, darker tone across all scenes. Music switched to mysterious for a brooding atmosphere.';
-    } else if (lowerCmd.includes('warmer')) {
-      scenes.forEach((s) => { s.vibePreset = 'warmer'; });
-      response = 'Warmed up the color palette across all scenes for a cozy, inviting feel.';
-    } else if (lowerCmd.includes('dreamy')) {
-      scenes.forEach((s) => { s.vibePreset = 'dreamy'; s.effects = ['bokeh']; });
-      response = 'Applied a dreamy vibe with soft bokeh effects across all scenes. Perfect for emotional or aesthetic content.';
-    } else if (lowerCmd.includes('glitch')) {
-      scenes.forEach((s) => { s.effects = ['glitch']; });
-      response = 'Added glitch effects to all scenes for a techy, edgy look.';
-    } else if (lowerCmd.includes('grain') || lowerCmd.includes('film')) {
-      scenes.forEach((s) => { s.effects = ['film-grain']; s.vibePreset = 'vintage'; });
-      response = 'Applied film grain and a vintage vibe for that classic cinema look.';
-    } else if (lowerCmd.includes('stronger hook')) {
-      if (scenes.length > 0) {
-        scenes[0].durationSeconds = Math.max(scenes[0].durationSeconds, 4);
-        scenes[0].scriptLine = scenes[0].scriptLine || 'You won\'t believe what happens next...';
-        scenes[0].effects = ['cinematic-zoom'];
-      }
-      response = 'Strengthened the opening hook with a longer duration and cinematic zoom. The first scene now grabs attention immediately.';
-    } else if (lowerCmd.includes('fix pacing')) {
-      // Auto-balance durations
-      const avgDuration = Math.round(scenes.reduce((a, s) => a + s.durationSeconds, 0) / scenes.length);
-      scenes.forEach((s, i) => {
-        if (i === 0) s.durationSeconds = Math.max(avgDuration - 1, 2);
-        else if (i === scenes.length - 1) s.durationSeconds = Math.max(avgDuration + 1, 3);
-        else s.durationSeconds = avgDuration;
-      });
-      response = 'Rebalanced scene durations for better pacing: shorter hook, steady middle, extended payoff.';
-    } else if (lowerCmd.includes('apple ad') || lowerCmd.includes('apple')) {
-      scenes.forEach((s) => { s.vibePreset = 'clean'; s.stylePreset = 'minimal-clean'; s.effects = ['cinematic-zoom']; });
-      projectUpdates.style = 'minimal-clean';
-      projectUpdates.musicMood = 'chill';
-      response = 'Applied an Apple-ad inspired aesthetic: minimal clean style, cinematic zoom transitions, and chill background music. Pure and elegant.';
-    } else if (lowerCmd.includes('regenerate all')) {
-      response = 'Regenerating all scenes from scratch with the current settings...';
-      setTimeout(() => get().generateFullVideo(), 500);
-    } else {
-      // Auto-generate scenes based on the prompt
-      const sceneCount = lowerCmd.includes('short') ? 3 : lowerCmd.includes('long') ? 6 : 4;
-      const newScenes: SceneCard[] = [];
-
-      const structureTemplates: Record<string, string[]> = {
-        fitness: ['Opening shot: intense gym environment', 'Close-up: determination in the eyes', 'Action: the workout montage', 'Payoff: transformation reveal'],
-        product: ['Hook: problem statement', 'Solution: product reveal', 'Features: close-up demonstration', 'CTA: where to get it'],
-        'study-aesthetic': ['Cozy setup: desk and coffee', 'Focus mode: deep work', 'Aesthetic break: lo-fi moment', 'Accomplishment: closing the book'],
-        documentary: ['Context: establishing the scene', 'Subject: introducing the story', 'Detail: close-up evidence', 'Revelation: the key insight'],
-        default: ['Hook: grab attention', 'Context: set the scene', 'Development: build the message', 'Payoff: deliver the impact'],
-      };
-
-      const template = structureTemplates[projectUpdates.niche || project.niche || 'default'] || structureTemplates.default;
-      const usedCount = Math.min(sceneCount, template.length);
-
-      for (let i = 0; i < usedCount; i++) {
-        const scene = createBlankScene(i);
-        scene.visualDescription = template[i];
-        scene.scriptLine = '';
-        scene.durationSeconds = i === 0 ? 3 : i === usedCount - 1 ? 4 : 3;
-        scene.stylePreset = (projectUpdates.style || project.style) as VideoStyle;
-        scene.vibePreset = 'cinematic';
-        newScenes.push(scene);
-      }
-
-      // If existing scenes are just drafts, replace them
-      if (project.scenes.every((s) => s.status === 'draft' && !s.visualDescription)) {
-        set({ project: { ...project, scenes: newScenes, ...projectUpdates }, activeSceneId: newScenes[0].id });
-      } else {
-        // Otherwise, update existing scene descriptions
-        newScenes.forEach((ns, i) => {
-          if (scenes[i]) {
-            scenes[i].visualDescription = ns.visualDescription;
-          }
-        });
-        set({ project: { ...project, scenes, ...projectUpdates } });
-      }
-
-      const detectedItems: string[] = [];
-      if (projectUpdates.platform) detectedItems.push(`Platform: ${projectUpdates.platform}`);
-      if (projectUpdates.niche) detectedItems.push(`Niche: ${projectUpdates.niche}`);
-      if (projectUpdates.style) detectedItems.push(`Style: ${projectUpdates.style}`);
-      if (projectUpdates.tone) detectedItems.push(`Tone: ${projectUpdates.tone}`);
-      if (projectUpdates.musicMood) detectedItems.push(`Music: ${projectUpdates.musicMood}`);
-
-      response = `I've created a ${sceneCount}-scene storyboard based on your prompt.${detectedItems.length > 0 ? '\n\nDetected: ' + detectedItems.join(', ') : ''}\n\nYour scenes follow a ${projectUpdates.niche || project.niche || 'general'} structure: hook, context, development, payoff. Click "Generate Video" to bring it to life, or refine individual scenes.`;
-    }
-
-    if (Object.keys(projectUpdates).length > 0) {
-      const currentProject = get().project;
-      if (currentProject) {
-        set({ project: { ...currentProject, ...projectUpdates } });
-      }
-    }
-
-    setTimeout(() => {
-      get().addChatMessage('assistant', response);
-      get().calculateViralityScore();
-    }, 400);
-  },
-
-  applyVibePreset: (preset, sceneId) => {
-    const { project } = get();
-    if (!project) return;
-    if (sceneId) {
-      get().updateScene(sceneId, { vibePreset: preset });
-    } else {
-      const scenes = project.scenes.map((s) => ({ ...s, vibePreset: preset }));
-      set({ project: { ...project, scenes } });
-    }
-    get().pushVersion();
-  },
-
-  addEffect: (effect, sceneId) => {
-    const { project } = get();
-    if (!project) return;
-    if (sceneId) {
-      const scene = project.scenes.find((s) => s.id === sceneId);
-      if (scene && !scene.effects.includes(effect)) {
-        get().updateScene(sceneId, { effects: [...scene.effects, effect] });
-      }
-    } else {
-      const scenes = project.scenes.map((s) => ({
-        ...s,
-        effects: s.effects.includes(effect) ? s.effects : [...s.effects, effect],
-      }));
-      set({ project: { ...project, scenes } });
-    }
-    get().pushVersion();
-  },
-
-  removeEffect: (effect, sceneId) => {
-    const { project } = get();
-    if (!project) return;
-    if (sceneId) {
-      const scene = project.scenes.find((s) => s.id === sceneId);
-      if (scene) {
-        get().updateScene(sceneId, { effects: scene.effects.filter((e) => e !== effect) });
-      }
-    } else {
-      const scenes = project.scenes.map((s) => ({ ...s, effects: s.effects.filter((e) => e !== effect) }));
-      set({ project: { ...project, scenes } });
-    }
-    get().pushVersion();
-  },
-
-  updateVoice: (updates) => {
-    const { project } = get();
-    if (!project) return;
-    set({ project: { ...project, voice: { ...project.voice, ...updates } } });
-  },
-
-  setMusicMood: (mood) => {
-    get().updateProject({ musicMood: mood });
-  },
-
-  setPlatform: (platform) => {
-    get().updateProject({ platform });
-  },
-
-  calculateViralityScore: () => {
-    const { project } = get();
-    if (!project) return 0;
-
-    let score = 50; // base
-
-    // Strong hook (first scene)
-    if (project.scenes[0]?.visualDescription?.toLowerCase().includes('hook')) score += 10;
-    if (project.scenes[0]?.durationSeconds <= 3) score += 5;
-
-    // Scene count
-    if (project.scenes.length >= 4 && project.scenes.length <= 7) score += 10;
-
-    // Platform fit
-    if (project.platform === 'tiktok') score += 8;
-
-    // Style alignment
-    if (project.style === 'tiktok' || project.style === 'cyberpunk') score += 5;
-
-    // Effects
-    const totalEffects = project.scenes.reduce((a, s) => a + s.effects.length, 0);
-    if (totalEffects >= 2) score += 8;
-
-    // Music mood match
-    if (project.musicMood === 'hype' || project.musicMood === 'epic') score += 5;
-
-    // Captions
-    if (project.scenes.some((s) => s.captionStyle !== 'minimal')) score += 4;
-
-    score = Math.min(99, Math.max(10, score));
-    set({ project: { ...project, viralityScore: score } });
-    return score;
-  },
-
-  pushVersion: () => {
-    const { project, versionStack, versionIndex } = get();
-    if (!project) return;
-    const newStack = versionStack.slice(0, versionIndex + 1);
-    newStack.push(JSON.parse(JSON.stringify(project)));
-    set({ versionStack: newStack, versionIndex: newStack.length - 1 });
-  },
-
-  undoVersion: () => {
-    const { versionIndex, versionStack } = get();
-    if (versionIndex <= 0) return;
-    const newIndex = versionIndex - 1;
-    set({ project: JSON.parse(JSON.stringify(versionStack[newIndex])), versionIndex: newIndex });
-  },
-
-  redoVersion: () => {
-    const { versionIndex, versionStack } = get();
-    if (versionIndex >= versionStack.length - 1) return;
-    const newIndex = versionIndex + 1;
-    set({ project: JSON.parse(JSON.stringify(versionStack[newIndex])), versionIndex: newIndex });
+    const next = { ...project, ...updates, updatedAt: new Date().toISOString() };
+    set({ project: next });
+    get().pushHistory();
   },
 
   resetStore: () => {
     set({
-      project: null,
-      activeSceneId: null,
-      isGenerating: false,
-      rightPanelTab: 'ai-chat',
-      generationProgress: 0,
-      promptHistory: [],
-      versionStack: [],
-      versionIndex: -1,
+      project: null, activeClipId: null, activeTextId: null, activeSubtitleId: null,
+      currentTime: 0, isPlaying: false, playbackSpeed: 1, rightPanel: 'clips',
+      history: [], historyIndex: -1, isExporting: false, exportProgress: 0,
     });
+  },
+
+  saveToLocalStorage: () => {
+    const { project } = get();
+    if (!project) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
+    } catch { /* quota exceeded */ }
+  },
+
+  loadFromLocalStorage: () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const project = JSON.parse(raw) as VideoProject;
+        set({ project, history: [raw], historyIndex: 0 });
+      }
+    } catch { /* parse error */ }
+  },
+
+  // ─── Clips ──────────────────────────────────────────────────────
+
+  addClip: (clipData) => {
+    const { project } = get();
+    if (!project) return;
+    const clip: VideoClip = {
+      id: `clip_${uid()}`,
+      name: clipData.name,
+      url: clipData.url,
+      duration: clipData.duration,
+      trimStart: clipData.trimStart ?? 0,
+      trimEnd: clipData.trimEnd ?? 0,
+      speed: 1,
+      volume: clipData.volume ?? 1,
+      muted: false,
+      filters: { ...DEFAULT_FILTERS },
+      transitionIn: 'none',
+      thumbnails: [],
+      order: project.clips.length,
+    };
+    const clips = [...project.clips, clip];
+    set({ project: { ...project, clips }, activeClipId: clip.id });
+    get().pushHistory();
+    get().generateThumbnails(clip.id);
+  },
+
+  removeClip: (id) => {
+    const { project, activeClipId } = get();
+    if (!project) return;
+    let clips = project.clips.filter(c => c.id !== id);
+    clips.forEach((c, i) => { c.order = i; });
+    set({
+      project: { ...project, clips },
+      activeClipId: activeClipId === id ? (clips[0]?.id ?? null) : activeClipId,
+    });
+    get().pushHistory();
+  },
+
+  updateClip: (id, updates) => {
+    const { project } = get();
+    if (!project) return;
+    const clips = project.clips.map(c => c.id === id ? { ...c, ...updates } : c);
+    set({ project: { ...project, clips } });
+  },
+
+  reorderClip: (id, newIndex) => {
+    const { project } = get();
+    if (!project) return;
+    const clips = [...project.clips];
+    const oldIndex = clips.findIndex(c => c.id === id);
+    if (oldIndex < 0) return;
+    const [moved] = clips.splice(oldIndex, 1);
+    clips.splice(newIndex, 0, moved);
+    clips.forEach((c, i) => { c.order = i; });
+    set({ project: { ...project, clips } });
+    get().pushHistory();
+  },
+
+  splitClip: (id, timeFromStart) => {
+    const { project } = get();
+    if (!project) return;
+    const clip = project.clips.find(c => c.id === id);
+    if (!clip) return;
+    const effectiveDuration = (clip.duration - clip.trimStart - clip.trimEnd) / clip.speed;
+    if (timeFromStart <= 0 || timeFromStart >= effectiveDuration) return;
+
+    const splitPointInSource = clip.trimStart + timeFromStart * clip.speed;
+
+    const left: VideoClip = {
+      ...clip,
+      id: `clip_${uid()}`,
+      trimEnd: clip.duration - splitPointInSource,
+      order: clip.order,
+    };
+    const right: VideoClip = {
+      ...clip,
+      id: `clip_${uid()}`,
+      trimStart: splitPointInSource,
+      order: clip.order + 1,
+    };
+
+    const clips = [...project.clips];
+    const idx = clips.findIndex(c => c.id === id);
+    clips.splice(idx, 1, left, right);
+    clips.forEach((c, i) => { c.order = i; });
+    set({ project: { ...project, clips }, activeClipId: left.id });
+    get().pushHistory();
+    get().generateThumbnails(left.id);
+    get().generateThumbnails(right.id);
+  },
+
+  autoSplitClip: (id, intervalSeconds) => {
+    const { project } = get();
+    if (!project) return;
+    const clip = project.clips.find(c => c.id === id);
+    if (!clip) return;
+    const effectiveDuration = (clip.duration - clip.trimStart - clip.trimEnd) / clip.speed;
+    const splitCount = Math.floor(effectiveDuration / intervalSeconds);
+    if (splitCount < 1) return;
+
+    // Split from the end backwards
+    let currentId = id;
+    for (let i = splitCount - 1; i >= 1; i--) {
+      get().splitClip(currentId, i * intervalSeconds);
+      // After split, the left clip keeps the original id
+    }
+  },
+
+  setClipFilter: (id, filter, value) => {
+    const { project } = get();
+    if (!project) return;
+    const clips = project.clips.map(c =>
+      c.id === id ? { ...c, filters: { ...c.filters, [filter]: value } } : c
+    );
+    set({ project: { ...project, clips } });
+  },
+
+  resetClipFilters: (id) => {
+    const { project } = get();
+    if (!project) return;
+    const clips = project.clips.map(c =>
+      c.id === id ? { ...c, filters: { ...DEFAULT_FILTERS } } : c
+    );
+    set({ project: { ...project, clips } });
+    get().pushHistory();
+  },
+
+  generateThumbnails: (id) => {
+    const { project } = get();
+    if (!project) return;
+    const clip = project.clips.find(c => c.id === id);
+    if (!clip) return;
+
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.src = clip.url;
+    video.muted = true;
+
+    const thumbs: string[] = [];
+    const thumbCount = Math.min(8, Math.max(2, Math.ceil(clip.duration / 2)));
+
+    video.onloadedmetadata = () => {
+      const interval = clip.duration / thumbCount;
+      let currentIdx = 0;
+
+      const captureFrame = () => {
+        if (currentIdx >= thumbCount) {
+          get().updateClip(id, { thumbnails: thumbs });
+          return;
+        }
+        video.currentTime = Math.min(clip.trimStart + currentIdx * interval, video.duration - 0.1);
+      };
+
+      video.onseeked = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 160;
+        canvas.height = Math.round(160 * (video.videoHeight / Math.max(1, video.videoWidth)));
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          thumbs.push(canvas.toDataURL('image/jpeg', 0.5));
+        }
+        currentIdx++;
+        captureFrame();
+      };
+
+      captureFrame();
+    };
+
+    video.onerror = () => {
+      // Fallback: empty thumbnails
+      get().updateClip(id, { thumbnails: [] });
+    };
+  },
+
+  // ─── Text Overlays ────────────────────────────────────────────────
+
+  addTextOverlay: (text) => {
+    const { project, currentTime } = get();
+    if (!project) return;
+    const total = get().getTotalDuration();
+    const overlay: TextOverlay = {
+      id: `text_${uid()}`,
+      text: text || 'Your text here',
+      fontFamily: 'Inter',
+      fontSize: 32,
+      fontWeight: '600',
+      color: '#ffffff',
+      opacity: 1,
+      x: 50,
+      y: 50,
+      startTime: currentTime,
+      endTime: Math.min(currentTime + 3, total || currentTime + 3),
+      backgroundColor: 'transparent',
+      backgroundOpacity: 0,
+    };
+    set({ project: { ...project, textOverlays: [...project.textOverlays, overlay] }, activeTextId: overlay.id });
+    get().pushHistory();
+  },
+
+  removeTextOverlay: (id) => {
+    const { project, activeTextId } = get();
+    if (!project) return;
+    set({
+      project: { ...project, textOverlays: project.textOverlays.filter(t => t.id !== id) },
+      activeTextId: activeTextId === id ? null : activeTextId,
+    });
+    get().pushHistory();
+  },
+
+  updateTextOverlay: (id, updates) => {
+    const { project } = get();
+    if (!project) return;
+    const textOverlays = project.textOverlays.map(t => t.id === id ? { ...t, ...updates } : t);
+    set({ project: { ...project, textOverlays } });
+  },
+
+  // ─── Subtitles ───────────────────────────────────────────────────
+
+  addSubtitle: (text, start, end) => {
+    const { project, currentTime } = get();
+    if (!project) return;
+    const sub: SubtitleEntry = {
+      id: `sub_${uid()}`,
+      text: text || 'Subtitle text',
+      startTime: start ?? currentTime,
+      endTime: end ?? currentTime + 3,
+      style: 'tiktok',
+    };
+    set({ project: { ...project, subtitles: [...project.subtitles, sub] }, activeSubtitleId: sub.id });
+    get().pushHistory();
+  },
+
+  removeSubtitle: (id) => {
+    const { project, activeSubtitleId } = get();
+    if (!project) return;
+    set({
+      project: { ...project, subtitles: project.subtitles.filter(s => s.id !== id) },
+      activeSubtitleId: activeSubtitleId === id ? null : activeSubtitleId,
+    });
+    get().pushHistory();
+  },
+
+  updateSubtitle: (id, updates) => {
+    const { project } = get();
+    if (!project) return;
+    const subtitles = project.subtitles.map(s => s.id === id ? { ...s, ...updates } : s);
+    set({ project: { ...project, subtitles } });
+  },
+
+  // ─── Audio ───────────────────────────────────────────────────────
+
+  addAudioTrack: (url, name) => {
+    const { project } = get();
+    if (!project) return;
+    const track: AudioTrack = {
+      id: `audio_${uid()}`,
+      url,
+      name,
+      volume: 1,
+      muted: false,
+      startTime: 0,
+    };
+    set({ project: { ...project, audioTracks: [...project.audioTracks, track] } });
+    get().pushHistory();
+  },
+
+  removeAudioTrack: (id) => {
+    const { project } = get();
+    if (!project) return;
+    set({ project: { ...project, audioTracks: project.audioTracks.filter(a => a.id !== id) } });
+    get().pushHistory();
+  },
+
+  updateAudioTrack: (id, updates) => {
+    const { project } = get();
+    if (!project) return;
+    const audioTracks = project.audioTracks.map(a => a.id === id ? { ...a, ...updates } : a);
+    set({ project: { ...project, audioTracks } });
+  },
+
+  setBackgroundMusic: (track) => {
+    const { project } = get();
+    if (!project) return;
+    set({ project: { ...project, backgroundMusic: track } });
+    get().pushHistory();
+  },
+
+  // ─── Playback ────────────────────────────────────────────────────
+
+  setCurrentTime: (time) => set({ currentTime: Math.max(0, time) }),
+  setIsPlaying: (playing) => set({ isPlaying: playing }),
+  setPlaybackSpeed: (speed) => set({ playbackSpeed: Math.max(0.25, Math.min(2, speed)) }),
+
+  // ─── UI ──────────────────────────────────────────────────────────
+
+  setActiveClipId: (id) => set({ activeClipId: id, activeTextId: null, activeSubtitleId: null }),
+  setActiveTextId: (id) => set({ activeTextId: id, activeClipId: null, activeSubtitleId: null }),
+  setActiveSubtitleId: (id) => set({ activeSubtitleId: id, activeClipId: null, activeTextId: null }),
+  setRightPanel: (panel) => set({ rightPanel: panel }),
+
+  // ─── History ──────────────────────────────────────────────────────
+
+  pushHistory: () => {
+    const { project, history, historyIndex } = get();
+    if (!project) return;
+    const json = JSON.stringify(project);
+    // Debounce: don't push if identical to current
+    if (history[historyIndex] === json) return;
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(json);
+    // Keep max 50 entries
+    if (newHistory.length > 50) newHistory.shift();
+    set({ history: newHistory, historyIndex: newHistory.length - 1 });
+  },
+
+  undo: () => {
+    const { historyIndex, history } = get();
+    if (historyIndex <= 0) return;
+    const newIndex = historyIndex - 1;
+    const project = JSON.parse(history[newIndex]);
+    set({ project, historyIndex: newIndex });
+  },
+
+  redo: () => {
+    const { historyIndex, history } = get();
+    if (historyIndex >= history.length - 1) return;
+    const newIndex = historyIndex + 1;
+    const project = JSON.parse(history[newIndex]);
+    set({ project, historyIndex: newIndex });
+  },
+
+  // ─── Export ───────────────────────────────────────────────────────
+
+  startExport: () => {
+    set({ isExporting: true, exportProgress: 0 });
+    // Simulate export progress (real export would use MediaRecorder)
+    const interval = setInterval(() => {
+      const prog = get().exportProgress;
+      if (prog >= 100) {
+        clearInterval(interval);
+        set({ isExporting: false, exportProgress: 0 });
+      } else {
+        set({ exportProgress: prog + 5 });
+      }
+    }, 200);
+  },
+
+  // ─── Computed ─────────────────────────────────────────────────────
+
+  getTotalDuration: () => {
+    const { project } = get();
+    if (!project) return 0;
+    return project.clips.reduce((sum, c) => {
+      return sum + (c.duration - c.trimStart - c.trimEnd) / Math.max(0.25, c.speed);
+    }, 0);
+  },
+
+  getActiveClip: () => {
+    const { project, activeClipId } = get();
+    if (!project || !activeClipId) return null;
+    return project.clips.find(c => c.id === activeClipId) ?? null;
   },
 }));

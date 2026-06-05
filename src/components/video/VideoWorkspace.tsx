@@ -1,100 +1,102 @@
-import { useState } from 'react';
-import { useStore } from '../../store/useStore';
-import VideoTopBar from './VideoTopBar';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useVideoStore } from '../../store/videoStore';
 import VideoSidebar from './VideoSidebar';
-import ScenePreview from './ScenePreview';
-import SceneProperties from './SceneProperties';
-import PlaybackBar from './PlaybackBar';
-import AIPromptBar from './AIPromptBar';
+import VideoPreview from './VideoPreview';
+import VideoProperties from './VideoProperties';
+import VideoTimeline from './VideoTimeline';
+import PlaybackControls from './PlaybackControls';
+import VideoTopBar from './VideoTopBar';
+import { ArrowLeft, Film, Upload, FolderOpen } from 'lucide-react';
 
-export default function VideoWorkspace() {
-  const { videoProject, createScript } = useStore();
-  const isGenerating = videoProject.isGenerating;
+interface Props {
+  onSave?: () => void;
+  onBack?: () => void;
+}
 
-  const handleBack = () => {
-    useStore.getState().resetWorkspace();
-  };
-
-  const handleSave = () => {
-    // Delegate to App-level save (user can click save in TopBar too)
-    const saveBtn = document.querySelector('[data-save-video]') as HTMLButtonElement | null;
-    saveBtn?.click();
-  };
+export default function VideoWorkspace({ onSave, onBack }: Props) {
+  const { project, createProject, addClip, setIsPlaying, setCurrentTime, getTotalDuration } = useVideoStore();
   const [prompt, setPrompt] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // No script yet — show the creation prompt
-  if (!videoProject.script) {
+  // Playback loop
+  const rafRef = useRef<number>(0);
+  const lastTickRef = useRef<number>(0);
+  const isPlaying = useVideoStore(s => s.isPlaying);
+  const playbackSpeed = useVideoStore(s => s.playbackSpeed);
+
+  useEffect(() => {
+    if (!isPlaying) { cancelAnimationFrame(rafRef.current); return; }
+    lastTickRef.current = performance.now();
+    const tick = (now: number) => {
+      const delta = (now - lastTickRef.current) / 1000;
+      lastTickRef.current = now;
+      const total = useVideoStore.getState().getTotalDuration();
+      const next = useVideoStore.getState().currentTime + delta * playbackSpeed;
+      if (next >= total) {
+        useVideoStore.getState().setCurrentTime(0);
+        useVideoStore.getState().setIsPlaying(false);
+        return;
+      }
+      useVideoStore.getState().setCurrentTime(next);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [isPlaying, playbackSpeed]);
+
+  // No project: creation screen
+  if (!project) {
     return (
       <div className="flex h-screen bg-[#07070a] text-white">
-        {/* Back button */}
-        <button
-          onClick={handleBack}
-          className="fixed top-5 left-5 z-20 flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-900/80 text-xs text-zinc-400 hover:text-white hover:border-zinc-600 transition-all"
-        >
-          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
-          Back to dashboard
-        </button>
-
-        {/* Ambient glow */}
         <div className="fixed inset-0 pointer-events-none">
           <div className="absolute top-[-20%] left-[20%] w-[500px] h-[500px] rounded-full bg-sky-500/[0.04] blur-[120px]" />
-          <div className="absolute bottom-[-10%] right-[10%] w-[400px] h-[400px] rounded-full bg-sky-500/[0.03] blur-[100px]" />
         </div>
-
-        {/* Center prompt */}
+        {onBack && (
+          <button onClick={onBack} className="fixed top-5 left-5 z-20 flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-900/80 text-xs text-zinc-400 hover:text-white hover:border-zinc-600 transition-all">
+            <ArrowLeft className="w-3.5 h-3.5" /> Back
+          </button>
+        )}
         <div className="relative z-10 flex-1 flex items-center justify-center">
           <div className="max-w-xl w-full px-6">
             <div className="text-center mb-8">
               <div className="w-14 h-14 rounded-2xl bg-sky-500/15 border border-sky-500/25 flex items-center justify-center mx-auto mb-5">
-                <svg className="w-7 h-7 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="23 7 16 12 23 17 23 7" />
-                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                </svg>
+                <Film className="w-7 h-7 text-sky-400" />
               </div>
-              <h1 className="text-3xl font-bold tracking-tight text-white mb-3">Create your video</h1>
-              <p className="text-zinc-400 leading-relaxed">
-                Describe your video idea and AI will generate a storyboard with scenes, script, and visuals.
-              </p>
+              <h1 className="text-3xl font-bold tracking-tight text-white mb-3">Video Editor</h1>
+              <p className="text-zinc-400 leading-relaxed">Upload video clips and start editing. Trim, add text, filters, transitions, and export.</p>
             </div>
-
             <div className="space-y-4">
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="e.g. Make a viral gym motivation reel with high energy, dramatic transitions, and an inspirational hook..."
-                className="w-full h-32 bg-[#111115] border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/30 transition-all resize-none"
-              />
               <button
-                onClick={() => {
-                  if (prompt.trim()) {
-                    createScript(prompt.trim());
-                  }
-                }}
-                disabled={!prompt.trim() || isGenerating}
-                className="w-full rounded-xl bg-sky-500 py-3.5 text-sm font-semibold text-white transition-all hover:bg-sky-400 hover:shadow-[0_8px_30px_rgba(56,189,248,0.25)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+                onClick={() => createProject()}
+                className="w-full rounded-xl bg-sky-500 py-3.5 text-sm font-semibold text-white transition-all hover:bg-sky-400 hover:shadow-[0_8px_30px_rgba(56,189,248,0.25)]"
               >
-                {isGenerating ? 'Generating storyboard...' : 'Generate Video'}
+                Create New Project
               </button>
-            </div>
-
-            <div className="mt-8">
-              <p className="text-xs text-zinc-600 text-center mb-4">Quick starts</p>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { label: 'Motivation Reel', prompt: 'Make a viral gym motivation reel with high energy beats and dramatic before/after transformation' },
-                  { label: 'Product Ad', prompt: 'Create a 30-second product ad for a tech gadget with sleek cinematic shots and minimal aesthetic' },
-                  { label: 'Story Documentary', prompt: 'Tell an emotional documentary story with narrative voiceover and cinematic b-roll' },
-                  { label: 'Study Aesthetic', prompt: 'Make a cozy study aesthetic video with lofi vibes, warm lighting, and chill mood' },
-                ].map((t) => (
-                  <button
-                    key={t.label}
-                    onClick={() => setPrompt(t.prompt)}
-                    className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-2.5 text-xs text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 hover:bg-zinc-800/50 transition-all text-left"
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
+              <button
+                onClick={() => { createProject(); setTimeout(() => fileInputRef.current?.click(), 100); }}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900/80 py-3.5 text-sm font-medium text-zinc-200 transition-all hover:border-zinc-500 hover:bg-zinc-800 flex items-center justify-center gap-2"
+              >
+                <Upload className="w-4 h-4" /> Import Video to Start
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime,video/x-msvideo"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const url = URL.createObjectURL(file);
+                  const video = document.createElement('video');
+                  video.preload = 'metadata';
+                  video.onloadedmetadata = () => {
+                    if (!useVideoStore.getState().project) createProject();
+                    addClip({ url, name: file.name, duration: video.duration, trimStart: 0, trimEnd: 0, volume: 1 });
+                  };
+                  video.src = url;
+                  e.target.value = '';
+                }}
+              />
             </div>
           </div>
         </div>
@@ -102,18 +104,18 @@ export default function VideoWorkspace() {
     );
   }
 
-  // Full workspace with script loaded
+  // Full editor workspace
   return (
     <div className="flex h-screen bg-[#07070a] text-white overflow-hidden select-none">
       <VideoSidebar />
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
-        <VideoTopBar onSave={handleSave} onBack={handleBack} />
+        <VideoTopBar onSave={onSave} onBack={onBack} />
         <div className="flex flex-1 min-w-0 min-h-0">
-          <ScenePreview />
-          <SceneProperties />
+          <VideoPreview />
+          <VideoProperties />
         </div>
-        <AIPromptBar />
-        <PlaybackBar />
+        <VideoTimeline />
+        <PlaybackControls />
       </div>
     </div>
   );

@@ -11,7 +11,6 @@ import RightPanel from './components/RightPanel';
 import ContextualToolbar from './components/ContextualToolbar';
 import CanvasWorkspace from './components/CanvasWorkspace';
 import VideoWorkspace from './components/video/VideoWorkspace';
-import VideoWorkspace from './components/video/VideoWorkspace';
 import {
   getCurrentUser,
   getUserDesigns,
@@ -176,12 +175,6 @@ export default function App() {
   }
 
   if (view === 'dashboard') {
-  // Video mode: completely separate workspace
-  if (isVideoMode) {
-    return <VideoWorkspace />;
-  }
-
-  // Photo mode: canvas-based design workspace
     return (
       <Dashboard
         user={username}
@@ -201,8 +194,6 @@ export default function App() {
       />
     );
   }
-
-  const isVideoMode = store.projectMode === 'video';
 
   return (
     <div className="flex h-screen bg-canvas-bg overflow-hidden select-none">
