@@ -4,7 +4,7 @@ import {
   Bold, Italic, Underline, Strikethrough,
   ChevronUp, ChevronDown, Trash2, Copy, FlipHorizontal, FlipVertical,
   RotateCcw, Maximize2, Minimize2, Palette,
-  AlignHorizontalCenter, AlignVerticalCenter, AlignHorizontalSpaceAround, AlignVerticalSpaceAround,
+  AlignHorizontalSpaceAround, AlignVerticalSpaceAround,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { fabric } from 'fabric';
@@ -17,7 +17,18 @@ const FONT_FAMILIES = [
 const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64, 72, 96];
 
 export default function RightPanel() {
-  const { activeObject, fabricCanvas, canvasBackground, setCanvasBackground, canvasWidth, canvasHeight } = useStore();
+  const {
+    activeObject,
+    fabricCanvas,
+    canvasBackground,
+    setCanvasBackground,
+    canvasWidth,
+    canvasHeight,
+    selectedObjectAdjustments,
+    setObjectAdjustments,
+    applyAdjustmentsToObject,
+    removeBackground,
+  } = useStore();
   const { alignCenterH, alignCenterV, alignTop, alignBottom, alignLeft, alignRight } = useStore();
   const [, forceUpdate] = useState(0);
   const refresh = useCallback(() => forceUpdate((n) => n + 1), []);
@@ -116,8 +127,8 @@ export default function RightPanel() {
             {/* Alignment */}
             <Section title="Align">
               <div className="flex gap-1.5 flex-wrap">
-                <ActionBtn icon={<AlignHorizontalCenter className="w-3.5 h-3.5" />} label="Center H" onClick={alignCenterH} />
-                <ActionBtn icon={<AlignVerticalCenter className="w-3.5 h-3.5" />} label="Center V" onClick={alignCenterV} />
+                <ActionBtn icon={<AlignHorizontalSpaceAround className="w-3.5 h-3.5" />} label="Center H" onClick={alignCenterH} />
+                <ActionBtn icon={<AlignVerticalSpaceAround className="w-3.5 h-3.5" />} label="Center V" onClick={alignCenterV} />
                 <ActionBtn icon={<AlignLeft className="w-3.5 h-3.5" />} label="Left" onClick={alignLeft} />
                 <ActionBtn icon={<AlignRight className="w-3.5 h-3.5" />} label="Right" onClick={alignRight} />
                 <ActionBtn icon={<AlignJustify className="w-3.5 h-3.5" />} label="Top" onClick={alignTop} />
@@ -315,20 +326,83 @@ export default function RightPanel() {
             {/* Image adjustments */}
             {isImage && (
               <Section title="Image">
-                <div className="space-y-2">
-                  <div className="space-y-1">
-                    <label className="text-xs text-zinc-500">Opacity</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={Math.round((obj.opacity ?? 1) * 100)}
-                        onChange={(e) => setProp({ opacity: Number(e.target.value) / 100 })}
-                        className="flex-1 accent-neon-green"
-                      />
-                      <span className="text-xs text-zinc-400 w-8">{Math.round((obj.opacity ?? 1) * 100)}%</span>
-                    </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs text-zinc-500">Blend Mode</label>
+                    <select
+                      value={(obj as any).globalCompositeOperation || 'source-over'}
+                      onChange={(e) => setProp({ globalCompositeOperation: e.target.value })}
+                      className="input-field w-full text-xs"
+                    >
+                      {[
+                        { label: 'Normal', value: 'source-over' },
+                        { label: 'Multiply', value: 'multiply' },
+                        { label: 'Screen', value: 'screen' },
+                        { label: 'Overlay', value: 'overlay' },
+                        { label: 'Darken', value: 'darken' },
+                        { label: 'Lighten', value: 'lighten' },
+                        { label: 'Color Dodge', value: 'color-dodge' },
+                        { label: 'Color Burn', value: 'color-burn' },
+                        { label: 'Hard Light', value: 'hard-light' },
+                        { label: 'Soft Light', value: 'soft-light' },
+                        { label: 'Difference', value: 'difference' },
+                        { label: 'Exclusion', value: 'exclusion' },
+                        { label: 'Hue', value: 'hue' },
+                        { label: 'Saturation', value: 'saturation' },
+                        { label: 'Color', value: 'color' },
+                        { label: 'Luminosity', value: 'luminosity' },
+                      ].map((mode) => (
+                        <option key={mode.value} value={mode.value}>{mode.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-3">
+                    {([
+                      { label: 'Brightness', field: 'brightness', min: -100, max: 100 },
+                      { label: 'Contrast', field: 'contrast', min: -100, max: 100 },
+                      { label: 'Saturation', field: 'saturation', min: -100, max: 100 },
+                      { label: 'Hue', field: 'hue', min: -180, max: 180 },
+                    ] as const).map(({ label, field, min, max }) => (
+                      <div key={field} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs text-zinc-400">
+                          <span>{label}</span>
+                          <span>{selectedObjectAdjustments[field]}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={min}
+                          max={max}
+                          value={selectedObjectAdjustments[field]}
+                          onChange={(e) => {
+                            const value = Number(e.target.value);
+                            const next = { ...selectedObjectAdjustments, [field]: value };
+                            setObjectAdjustments(next);
+                            if (obj) applyAdjustmentsToObject(obj, next);
+                          }}
+                          className="w-full accent-neon-green"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        const reset = { brightness: 0, contrast: 0, saturation: 0, hue: 0, clarity: 0, highlights: 0, shadows: 0 };
+                        setObjectAdjustments(reset);
+                        if (obj) applyAdjustmentsToObject(obj, reset);
+                      }}
+                      className="flex-1 rounded-xl border border-panel-border px-3 py-2 text-xs text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      onClick={() => removeBackground()}
+                      className="flex-1 rounded-xl bg-emerald-500 px-3 py-2 text-xs text-white hover:bg-emerald-400 transition-colors"
+                    >
+                      Remove Background
+                    </button>
                   </div>
                 </div>
               </Section>

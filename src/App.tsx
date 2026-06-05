@@ -6,6 +6,7 @@ import AuthPage from './components/AuthPage';
 import Dashboard from './components/Dashboard';
 import TopBar from './components/TopBar';
 import LeftSidebar from './components/LeftSidebar';
+import RightPanel from './components/RightPanel';
 import ContextualToolbar from './components/ContextualToolbar';
 import CanvasWorkspace from './components/CanvasWorkspace';
 import {
@@ -173,10 +174,13 @@ export default function App() {
   return (
     <div className="flex h-screen bg-canvas-bg overflow-hidden select-none">
       <LeftSidebar />
-      <div className="flex flex-col flex-1 min-w-0 min-h-0">
-        <TopBar onSave={handleSaveDesign} onBack={openDashboard} />
-        <ContextualToolbar />
-        <CanvasWorkspace />
+      <div className="flex flex-1 min-w-0 min-h-0">
+        <div className="flex flex-col flex-1 min-w-0 min-h-0">
+          <TopBar onSave={handleSaveDesign} onBack={openDashboard} />
+          <ContextualToolbar />
+          <CanvasWorkspace />
+        </div>
+        <RightPanel />
       </div>
     </div>
   );

@@ -27,6 +27,8 @@ export default function PageNavigator() {
     clearPageSelection,
     fabricCanvas,
     saveCurrentPage,
+    pageTransitionType,
+    setPageTransitionType,
   } = useStore();
 
   // Refresh the thumbnail of the active page periodically while the user edits.
@@ -152,6 +154,28 @@ export default function PageNavigator() {
               Del
             </button>
           </div>
+        </div>
+
+        {/* Transition selector */}
+        <div className="w-px h-12 bg-panel-border" />
+        <div className="flex flex-col gap-2">
+          <label className="text-[11px] text-zinc-400">Transition</label>
+          <select
+            value={pageTransitionType}
+            onChange={(e) => setPageTransitionType(e.target.value as any)}
+            className="px-3 py-2 rounded-lg bg-panel-light border border-panel-border text-zinc-300 text-xs hover:border-zinc-500 transition-colors focus:outline-none focus:border-emerald-500/50"
+          >
+            <option value="fade">Fade</option>
+            <option value="slide-left">Slide Left</option>
+            <option value="slide-right">Slide Right</option>
+            <option value="slide-up">Slide Up</option>
+            <option value="slide-down">Slide Down</option>
+            <option value="zoom-in">Zoom In</option>
+            <option value="zoom-out">Zoom Out</option>
+            <option value="rotate">Rotate</option>
+            <option value="wipe-left">Wipe Left</option>
+            <option value="wipe-right">Wipe Right</option>
+          </select>
         </div>
       </div>
     </div>

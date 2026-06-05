@@ -4,7 +4,7 @@ import {
   Square, Circle, Triangle, Minus, Star,
   Bold, Italic, AlignLeft, AlignCenter, AlignRight,
   Image as ImageIcon, Folder, ChevronRight,
-  MousePointer2, PenLine, Layers,
+  MousePointer2, PenLine, Layers, Sparkles, Sliders, Eraser,
   Undo2, Redo2,
   Download, Monitor, ChevronDown,
 } from 'lucide-react';
@@ -77,6 +77,9 @@ const TABS: { id: SidebarTab; icon: React.ReactNode; label: string }[] = [
   { id: 'text', icon: <Type className="w-5 h-5" />, label: 'Text' },
   { id: 'uploads', icon: <Upload className="w-5 h-5" />, label: 'Uploads' },
   { id: 'templates', icon: <LayoutTemplate className="w-5 h-5" />, label: 'Templates' },
+  { id: 'layers', icon: <Layers className="w-5 h-5" />, label: 'Layers' },
+  { id: 'magicTools', icon: <Sparkles className="w-5 h-5" />, label: 'Magic' },
+  { id: 'adjustments', icon: <Sliders className="w-5 h-5" />, label: 'Adjust' },
 ];
 
 // ─────────────────────────────────────────────
@@ -461,6 +464,9 @@ export default function LeftSidebar() {
           )}
           {sidebarTab === 'uploads' && <UploadsPanel addImage={addImage} fabricCanvas={fabricCanvas} />}
           {sidebarTab === 'templates' && <TemplatesPanel applyTemplate={applyTemplate} />}
+          {sidebarTab === 'layers' && <LayersPanel />}
+          {sidebarTab === 'magicTools' && <MagicToolsPanel />}
+          {sidebarTab === 'adjustments' && <AdjustmentsPanel />}
         </div>
       </div>
     </aside>
@@ -770,6 +776,234 @@ function UploadsPanel({
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+const DEFAULT_ADJUSTMENTS = {
+  brightness: 0,
+  contrast: 0,
+  saturation: 0,
+  hue: 0,
+  clarity: 0,
+  highlights: 0,
+  shadows: 0,
+};
+
+function LayersPanel() {
+  const { fabricCanvas, activeObject, setActiveObject } = useStore();
+  const [layers, setLayers] = useState<fabric.Object[]>([]);
+
+  useEffect(() => {
+    if (!fabricCanvas) return;
+    const refresh = () => setLayers([...fabricCanvas.getObjects()].reverse());
+    refresh();
+    fabricCanvas.on('object:added', refresh);
+    fabricCanvas.on('object:removed', refresh);
+    fabricCanvas.on('object:modified', refresh);
+    return () => {
+      fabricCanvas.off('object:added', refresh);
+      fabricCanvas.off('object:removed', refresh);
+      fabricCanvas.off('object:modified', refresh);
+    };
+  }, [fabricCanvas]);
+
+  const toggleLayerVisibility = (obj: fabric.Object) => {
+    obj.set({ visible: !obj.visible });
+    fabricCanvas?.renderAll();
+    setLayers((prev) => [...(fabricCanvas?.getObjects().reverse() ?? [])]);
+  };
+
+  const toggleLayerLock = (obj: fabric.Object) => {
+    const locked = (obj as any).lockMovementX;
+    obj.set({
+      lockMovementX: !locked,
+      lockMovementY: !locked,
+      lockRotation: !locked,
+      lockScalingX: !locked,
+      lockScalingY: !locked,
+      selectable: locked,
+    });
+    fabricCanvas?.renderAll();
+    setLayers((prev) => [...(fabricCanvas?.getObjects().reverse() ?? [])]);
+  };
+
+  const deleteLayer = (obj: fabric.Object) => {
+    fabricCanvas?.remove(obj);
+    fabricCanvas?.renderAll();
+    setLayers((prev) => [...(fabricCanvas?.getObjects().reverse() ?? [])]);
+  };
+
+  const moveLayer = (obj: fabric.Object, direction: 'up' | 'down') => {
+    if (!fabricCanvas) return;
+    const objects = fabricCanvas.getObjects();
+    const currentIndex = objects.indexOf(obj);
+    const targetIndex = direction === 'up'
+      ? Math.min(objects.length - 1, currentIndex + 1)
+      : Math.max(0, currentIndex - 1);
+    if (targetIndex === currentIndex) return;
+    fabricCanvas.moveTo(obj, targetIndex);
+    fabricCanvas.renderAll();
+    setLayers([...fabricCanvas.getObjects()].reverse());
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-xs text-zinc-500 mb-2">Layers</p>
+        <p className="text-[11px] text-zinc-500">Reorder, hide, lock, and manage every object in your design.</p>
+      </div>
+      <div className="space-y-2">
+        {layers.length === 0 ? (
+          <div className="rounded-xl border border-panel-border bg-panel-light p-4 text-xs text-zinc-500 text-center">
+            Add objects to the canvas to build your layer stack.
+          </div>
+        ) : layers.map((obj, index) => {
+          const isSelected = activeObject === obj;
+          const label = (obj as any).name || (obj.type === 'textbox' ? 'Text' : obj.type || 'Object');
+          const visible = obj.visible !== false;
+          const locked = !!(obj as any).lockMovementX;
+          return (
+            <div
+              key={(obj as any).id || index}
+              className={`rounded-2xl border px-3 py-2 transition-colors ${isSelected ? 'border-emerald-400/50 bg-emerald-500/10' : 'border-panel-border bg-panel-light hover:border-zinc-500 hover:bg-panel-hover'}`}
+            >
+              <button
+                onClick={() => {
+                  setActiveObject(obj);
+                  fabricCanvas?.setActiveObject(obj);
+                  fabricCanvas?.renderAll();
+                }}
+                className="w-full flex items-center gap-3 text-left"
+              >
+                <div className="text-xs text-zinc-400 w-5 text-right">{layers.length - index}</div>
+                <div className="flex-1 text-sm text-zinc-200 truncate">{label}</div>
+              </button>
+              <div className="mt-3 flex items-center justify-between gap-2 text-zinc-300">
+                <div className="flex items-center gap-1">
+                  <button onClick={() => toggleLayerVisibility(obj)} className="tool-btn w-8 h-8" title={visible ? 'Hide layer' : 'Show layer'}>
+                    {visible ? '👁' : '🚫'}
+                  </button>
+                  <button onClick={() => toggleLayerLock(obj)} className="tool-btn w-8 h-8" title={locked ? 'Unlock layer' : 'Lock layer'}>
+                    {locked ? '🔒' : '🔓'}
+                  </button>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => moveLayer(obj, 'up')} className="tool-btn w-8 h-8" title="Bring forward">▲</button>
+                  <button onClick={() => moveLayer(obj, 'down')} className="tool-btn w-8 h-8" title="Send backward">▼</button>
+                  <button onClick={() => deleteLayer(obj)} className="tool-btn w-8 h-8 text-red-400" title="Delete layer">🗑</button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MagicToolsPanel() {
+  const { toolMode, setToolMode, activeObject, removeBackground } = useStore();
+  const isImage = activeObject?.type === 'image';
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-xs text-zinc-500 mb-2">Magic Studio</p>
+        <p className="text-[11px] text-zinc-500">Select an image and apply intelligent edits with one click.</p>
+      </div>
+      <div className="grid gap-3">
+        <button
+          onClick={() => setToolMode('magicGrab')}
+          className={`w-full rounded-2xl px-4 py-3 text-left transition ${toolMode === 'magicGrab' ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-200' : 'bg-panel-light border border-panel-border text-zinc-300 hover:border-zinc-500 hover:text-white'}`}
+        >
+          <div className="flex items-center justify-between">
+            <span>Magic Grab</span>
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <p className="text-[11px] text-zinc-500 mt-1">Click an image to isolate it from the background.</p>
+        </button>
+        <button
+          onClick={() => setToolMode('magicErase')}
+          className={`w-full rounded-2xl px-4 py-3 text-left transition ${toolMode === 'magicErase' ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-200' : 'bg-panel-light border border-panel-border text-zinc-300 hover:border-zinc-500 hover:text-white'}`}
+        >
+          <div className="flex items-center justify-between">
+            <span>Magic Erase</span>
+            <Eraser className="w-4 h-4" />
+          </div>
+          <p className="text-[11px] text-zinc-500 mt-1">Brush over unwanted objects and blend the texture automatically.</p>
+        </button>
+        <button
+          onClick={() => removeBackground()}
+          disabled={!isImage}
+          className="w-full rounded-2xl px-4 py-3 bg-panel-light border border-panel-border text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <div className="flex items-center justify-between">
+            <span>Background Remover</span>
+            <Eraser className="w-4 h-4" />
+          </div>
+          <p className="text-[11px] text-zinc-500 mt-1">Remove the background from the selected image instantly.</p>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AdjustmentsPanel() {
+  const { activeObject, selectedObjectAdjustments, setObjectAdjustments, applyAdjustmentsToObject } = useStore();
+  const isImage = activeObject?.type === 'image';
+
+  const updateAdjustment = (field: keyof typeof DEFAULT_ADJUSTMENTS, value: number) => {
+    const next = { ...selectedObjectAdjustments, [field]: value };
+    setObjectAdjustments(next);
+    if (isImage && activeObject) {
+      applyAdjustmentsToObject(activeObject, next);
+    }
+  };
+
+  const resetAdjustments = () => {
+    setObjectAdjustments(DEFAULT_ADJUSTMENTS);
+    if (isImage && activeObject) {
+      applyAdjustmentsToObject(activeObject, DEFAULT_ADJUSTMENTS);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-xs text-zinc-500 mb-2">Photo Adjustments</p>
+        <p className="text-[11px] text-zinc-500">Tune brightness, contrast, saturation and hue for the selected image.</p>
+      </div>
+      {!isImage ? (
+        <div className="rounded-2xl border border-panel-border bg-panel-light p-4 text-xs text-zinc-500">
+          Select an image to apply photo adjustments.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {(['brightness', 'contrast', 'saturation', 'hue'] as const).map((field) => (
+            <div key={field} className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-zinc-400">
+                <span>{field.charAt(0).toUpperCase() + field.slice(1)}</span>
+                <span>{selectedObjectAdjustments[field]}</span>
+              </div>
+              <input
+                type="range"
+                min={field === 'hue' ? -180 : -100}
+                max={field === 'hue' ? 180 : 100}
+                value={selectedObjectAdjustments[field]}
+                onChange={(e) => updateAdjustment(field, Number(e.target.value))}
+                className="w-full accent-emerald-400"
+              />
+            </div>
+          ))}
+          <button
+            onClick={resetAdjustments}
+            className="w-full rounded-2xl border border-panel-border px-4 py-3 text-xs text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors"
+          >
+            Reset Adjustments
+          </button>
+        </div>
+      )}
     </div>
   );
 }

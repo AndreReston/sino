@@ -5,7 +5,7 @@ import PageNavigator from './PageNavigator';
 
 export default function CanvasWorkspace() {
   const { canvasRef, containerRef, guides } = useCanvas();
-  const { zoom, fabricCanvas, activeObject, canvasWidth, canvasHeight } = useStore();
+  const { zoom, fabricCanvas, activeObject, canvasWidth, canvasHeight, isPageTransitioning, pageTransitionType } = useStore();
   const setZoom = useStore((state) => state.setZoom);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [autoFit, setAutoFit] = useState(true);
@@ -131,11 +131,53 @@ export default function CanvasWorkspace() {
 
   const hasSelection = !!activeObject;
 
+  // Helper function to get transition styles based on type
+  const getTransitionStyle = () => {
+    const baseStyle = {
+      transform: `scale(${zoom})`,
+      transformOrigin: 'top center',
+      transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+    } as React.CSSProperties;
+
+    if (!isPageTransitioning) {
+      return {
+        ...baseStyle,
+        opacity: 1,
+        transform: `scale(${zoom})`,
+      };
+    }
+
+    switch (pageTransitionType) {
+      case 'fade':
+        return { ...baseStyle, opacity: 0 };
+      case 'slide-left':
+        return { ...baseStyle, opacity: 0, transform: `scale(${zoom}) translateX(100px)` };
+      case 'slide-right':
+        return { ...baseStyle, opacity: 0, transform: `scale(${zoom}) translateX(-100px)` };
+      case 'slide-up':
+        return { ...baseStyle, opacity: 0, transform: `scale(${zoom}) translateY(100px)` };
+      case 'slide-down':
+        return { ...baseStyle, opacity: 0, transform: `scale(${zoom}) translateY(-100px)` };
+      case 'zoom-in':
+        return { ...baseStyle, opacity: 0, transform: `scale(${zoom * 1.3})` };
+      case 'zoom-out':
+        return { ...baseStyle, opacity: 0, transform: `scale(${zoom * 0.7})` };
+      case 'rotate':
+        return { ...baseStyle, opacity: 0, transform: `scale(${zoom}) rotateY(90deg)` };
+      case 'wipe-left':
+        return { ...baseStyle, opacity: 0.3, transform: `scale(${zoom}) translateX(-150px)` };
+      case 'wipe-right':
+        return { ...baseStyle, opacity: 0.3, transform: `scale(${zoom}) translateX(150px)` };
+      default:
+        return { ...baseStyle, opacity: 0 };
+    }
+  };
+
   return (
     <div
       ref={containerRef}
       className="flex-1 overflow-auto bg-canvas-bg flex items-start justify-center relative"
-      style={{ minWidth: 0, minHeight: 0 }}
+      style={{ minWidth: 0, minHeight: 0, perspective: '1000px' }}
     >
       {/* Grid dots */}
       <div
@@ -145,9 +187,7 @@ export default function CanvasWorkspace() {
 
       {/* Canvas wrapper with centered viewport and top/bottom scroll padding */}
       <div className="relative my-12 mx-auto" style={{ padding: '0 48px 180px' }}>
-        <div
-          style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.1s ease' }}
-        >
+        <div style={getTransitionStyle()}>
           <div
             className={`relative rounded-2xl overflow-hidden ${hasSelection ? 'ring-2 ring-emerald-500/30' : ''}`}
             style={{

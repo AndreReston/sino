@@ -4,12 +4,27 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   ChevronUp, ChevronDown, Copy, Trash2,
   FlipHorizontal, FlipVertical, Minus, Plus,
-  Image as ImageIcon, Sliders, RotateCcw,
-  Square, Circle, Triangle, Minus as LineIcon,
-  Lock, Unlock,
+  Image as ImageIcon, Sliders, RotateCcw, RotateCw,
+  Square, Circle, Triangle, Minus as LineIcon, Star,
+  Lock, Unlock, X,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { fabric } from 'fabric';
+
+const IMAGE_FILL_STOCK = [
+  { url: 'https://images.pexels.com/photos/1629212/pexels-photo-1629212.jpeg?w=400', label: 'Nature' },
+  { url: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?w=400', label: 'Team' },
+  { url: 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?w=400', label: 'Office' },
+  { url: 'https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg?w=400', label: 'Meeting' },
+  { url: 'https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?w=400', label: 'Work' },
+  { url: 'https://images.pexels.com/photos/7376/startup-photos.jpg?w=400', label: 'Startup' },
+  { url: 'https://images.pexels.com/photos/3183197/pexels-photo-3183197.jpeg?w=400', label: 'People' },
+  { url: 'https://images.pexels.com/photos/1181244/pexels-photo-1181244.jpeg?w=400', label: 'Tech' },
+  { url: 'https://images.pexels.com/photos/1103970/pexels-photo-1103970.jpeg?w=400', label: 'Sky' },
+  { url: 'https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg?w=400', label: 'City' },
+  { url: 'https://images.pexels.com/photos/1261728/pexels-photo-1261728.jpeg?w=400', label: 'Forest' },
+  { url: 'https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?w=400', label: 'Galaxy' },
+];
 
 const FONT_FAMILIES = [
   'Inter', 'Georgia', 'Times New Roman', 'Arial', 'Helvetica',
@@ -132,6 +147,74 @@ function NoSelectionControls({
   setZoom: (z: number) => void;
 }) {
   const { canvasWidth, canvasHeight, canvasBackground, setCanvasBackground } = useStore();
+  const { fabricCanvas, pushHistory, updateLayersFromCanvas, setActiveObject } = useStore();
+  const [shapeColor, setShapeColor] = useState('#3f3f46');
+  const [shapeSize, setShapeSize] = useState<'sm' | 'md' | 'lg'>('md');
+  const [snapToGrid, setSnapToGrid] = useState(true);
+
+  const PRESET_COLORS = ['#3f3f46', '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff', '#000000'];
+  const GRID_SIZE = 20;
+
+  const getSizeOffset = () => {
+    const sizes = { sm: 40, md: 80, lg: 120 };
+    return sizes[shapeSize];
+  };
+
+  const snapCoord = (value: number) => {
+    if (!snapToGrid) return value;
+    return Math.round(value / GRID_SIZE) * GRID_SIZE;
+  };
+
+  const createAtCenter = (createFn: (left: number, top: number, color: string, size: string) => fabric.Object | null) => {
+    if (!fabricCanvas) return;
+    let cx = fabricCanvas.getWidth() / 2;
+    let cy = fabricCanvas.getHeight() / 2;
+    cx = snapCoord(cx);
+    cy = snapCoord(cy);
+    const obj = createFn(cx, cy, shapeColor, shapeSize);
+    if (!obj) return;
+    // assign id
+    (obj as any).id = `obj_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    fabricCanvas.add(obj);
+    fabricCanvas.setActiveObject(obj);
+    fabricCanvas.renderAll();
+    updateLayersFromCanvas?.();
+    pushHistory?.(JSON.stringify(fabricCanvas.toJSON(['id', 'name', 'imageFill', 'imageFillOpacity'])));
+    setActiveObject?.(obj);
+  };
+
+  const addRect = () => createAtCenter((left, top, color, size) => {
+    const offset = getSizeOffset();
+    return new fabric.Rect({ left: left - offset / 2, top: top - (offset * 0.67) / 2, width: offset, height: offset * 0.67, fill: color, rx: 6, ry: 6 });
+  });
+  const addCircle = () => createAtCenter((left, top, color, size) => {
+    const offset = getSizeOffset();
+    const radius = offset / 2;
+    return new fabric.Circle({ left: left - radius, top: top - radius, radius, fill: color });
+  });
+  const addTriangle = () => createAtCenter((left, top, color, size) => {
+    const offset = getSizeOffset();
+    return new fabric.Triangle({ left: left - offset / 2, top: top - offset / 2, width: offset, height: offset, fill: color });
+  });
+  const addStar = () => createAtCenter((left, top, color, size) => {
+    const offset = getSizeOffset();
+    const r = offset / 2;
+    const points: [number, number][] = [];
+    for (let i = 0; i < 10; i++) {
+      const angle = (i * Math.PI) / 5 - Math.PI / 2;
+      const radius = i % 2 === 0 ? r : r / 2;
+      points.push([left + radius * Math.cos(angle), top + radius * Math.sin(angle)]);
+    }
+    return new fabric.Polygon(points.map(p => ({ x: p[0], y: p[1] })), { fill: color });
+  });
+  const addLine = () => createAtCenter((left, top, color, size) => {
+    const offset = getSizeOffset();
+    return new fabric.Line([left - offset / 2, top, left + offset / 2, top], { stroke: color, strokeWidth: Math.max(2, offset / 20) });
+  });
+  const addRoundedRect = () => createAtCenter((left, top, color, size) => {
+    const offset = getSizeOffset();
+    return new fabric.Rect({ left: left - offset / 2, top: top - (offset * 0.67) / 2, width: offset, height: offset * 0.67, fill: color, rx: offset / 8, ry: offset / 8 });
+  });
 
   return (
     <>
@@ -165,6 +248,68 @@ function NoSelectionControls({
 
       <div className="flex-1" />
 
+      {/* Shape creation controls */}
+      <div className="flex items-center gap-1.5 px-2 shrink-0 border-l border-panel-border">
+        {/* Color picker */}
+        <div className="flex items-center gap-1">
+          <label className="text-xs text-zinc-500">Color</label>
+          <input
+            type="color"
+            value={shapeColor}
+            onChange={(e) => setShapeColor(e.target.value)}
+            className="w-6 h-6 rounded-md cursor-pointer border border-panel-border bg-transparent"
+          />
+          {/* Quick presets */}
+          <div className="flex gap-0.5">
+            {PRESET_COLORS.slice(0, 5).map((c) => (
+              <button
+                key={c}
+                onClick={() => setShapeColor(c)}
+                className="w-4 h-4 rounded border transition-all"
+                style={{ backgroundColor: c, borderColor: shapeColor === c ? '#fff' : 'rgba(255,255,255,0.2)', borderWidth: '1px' }}
+                title={c}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Size selector */}
+        <select
+          value={shapeSize}
+          onChange={(e) => setShapeSize(e.target.value as 'sm' | 'md' | 'lg')}
+          className="input-field h-6 py-0 text-xs px-1 w-16 shrink-0"
+        >
+          <option value="sm">Small</option>
+          <option value="md">Medium</option>
+          <option value="lg">Large</option>
+        </select>
+
+        {/* Snap toggle */}
+        <button
+          onClick={() => setSnapToGrid(!snapToGrid)}
+          className={`px-1.5 py-1 rounded text-xs font-medium transition-all ${
+            snapToGrid
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+              : 'text-zinc-500 hover:text-zinc-300 border border-panel-border'
+          }`}
+          title={`Snap to ${GRID_SIZE}px grid: ${snapToGrid ? 'ON' : 'OFF'}`}
+        >
+          Snap
+        </button>
+      </div>
+
+      <Divider />
+
+      {/* Quick add shapes */}
+      <div className="flex items-center gap-0.5 px-1 shrink-0">
+        <ToolbarBtn icon={<Square className="w-3.5 h-3.5" />} title="Rectangle" onClick={addRect} />
+        <ToolbarBtn icon={<Circle className="w-3.5 h-3.5" />} title="Circle" onClick={addCircle} />
+        <ToolbarBtn icon={<Triangle className="w-3.5 h-3.5" />} title="Triangle" onClick={addTriangle} />
+        <ToolbarBtn icon={<LineIcon className="w-3.5 h-3.5" />} title="Line" onClick={addLine} />
+        <ToolbarBtn icon={<Star className="w-3.5 h-3.5" />} title="Star" onClick={addStar} />
+        <ToolbarBtn icon={<Square className="w-3.5 h-3.5" />} title="Rounded Rect" onClick={addRoundedRect} />
+      </div>
+
       {/* Zoom controls */}
       <ZoomControls zoom={zoom} setZoom={setZoom} />
     </>
@@ -190,9 +335,48 @@ function TextControls({
   duplicateObj: () => void;
   fabricCanvas: fabric.Canvas | null;
 }) {
-  const { zoom, setZoom } = useStore();
+  const { zoom, setZoom, applyImageFillToText, removeImageFillFromText } = useStore();
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showImageFill, setShowImageFill] = useState(false);
+  const [imageFillPos, setImageFillPos] = useState({ left: 0, top: 0 });
+  const [imageFillTab, setImageFillTab] = useState<'uploads' | 'stock'>('uploads');
+  const [uploadedImages, setUploadedImages] = useState<{ url: string; name: string }[]>([]);
+  const [loadingUploads, setLoadingUploads] = useState(false);
+  const imageFillBtnRef = React.useRef<HTMLButtonElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const color = String(obj.fill || '#000000');
+  const hasImageFill = !!(obj as any).imageFill;
+
+  const openImageFill = () => {
+    if (imageFillBtnRef.current) {
+      const r = imageFillBtnRef.current.getBoundingClientRect();
+      setImageFillPos({ left: r.left, top: r.bottom + 6 });
+    }
+    setShowColorPicker(false);
+    setShowImageFill((p) => !p);
+  };
+
+  // Fetch uploaded images whenever the dropdown opens
+  useEffect(() => {
+    if (!showImageFill) return;
+    setLoadingUploads(true);
+    fetch('/api/media/list')
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((data) => setUploadedImages(data.items || []))
+      .catch(() => setUploadedImages([]))
+      .finally(() => setLoadingUploads(false));
+  }, [showImageFill]);
+
+  const handleLocalUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setUploadedImages((prev) => [{ url: dataUrl, name: file.name }, ...prev]);
+      applyImageFillToText(obj, dataUrl, 1);
+      setShowImageFill(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
   return (
     <>
@@ -256,7 +440,161 @@ function TextControls({
         )}
       </div>
 
-      <Divider />
+      {/* Image Fill button — dropdown uses fixed position to escape overflow-x:auto clipping */}
+      <div className="relative shrink-0">
+        <button
+          ref={imageFillBtnRef}
+          onClick={openImageFill}
+          title="Image Fill — apply a photo as your text fill"
+          className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-medium transition-colors ${
+            hasImageFill
+              ? 'bg-violet-500/20 border-violet-400/60 text-violet-300 hover:bg-violet-500/30'
+              : 'border-panel-border bg-panel-light text-zinc-300 hover:border-zinc-500 hover:text-white'
+          }`}
+        >
+          <ImageIcon className="w-3.5 h-3.5" />
+          {hasImageFill ? '✓ Image Fill' : 'Image Fill'}
+        </button>
+      </div>
+
+      {showImageFill && (
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setShowImageFill(false)} />
+          <div
+            className="fixed z-[9999] w-80 rounded-xl border border-panel-border bg-panel shadow-2xl p-3 space-y-3"
+            style={{ left: imageFillPos.left, top: imageFillPos.top }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-white">Image Fill</p>
+                <p className="text-[11px] text-zinc-400 mt-0.5">Fill text characters with a photo</p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {/* Upload from device */}
+                <label
+                  className="flex items-center gap-1 text-[11px] text-zinc-300 hover:text-white px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors border border-white/10 cursor-pointer"
+                  title="Upload image from device"
+                >
+                  <ImageIcon className="w-3 h-3" />
+                  Upload
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleLocalUpload(file);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+                {hasImageFill && (
+                  <button
+                    onClick={() => { removeImageFillFromText(obj); setShowImageFill(false); }}
+                    className="flex items-center gap-1 text-[11px] text-red-400 hover:text-red-300 px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 transition-colors border border-red-500/20"
+                  >
+                    <X className="w-3 h-3" /> Remove
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 p-0.5 bg-slate-800/80 rounded-lg">
+              {(['uploads', 'stock'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setImageFillTab(tab)}
+                  className={`flex-1 py-1 rounded-md text-[11px] font-medium transition-all ${
+                    imageFillTab === tab
+                      ? 'bg-violet-500/30 text-violet-200 border border-violet-500/40'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  {tab === 'uploads' ? 'My Uploads' : 'Stock Photos'}
+                </button>
+              ))}
+            </div>
+
+            {/* Uploads tab */}
+            {imageFillTab === 'uploads' && (
+              <div>
+                {loadingUploads ? (
+                  <div className="flex items-center justify-center h-20 text-zinc-500 text-xs">
+                    Loading uploads…
+                  </div>
+                ) : uploadedImages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-20 gap-2">
+                    <p className="text-zinc-500 text-xs">No uploaded images yet</p>
+                    <label className="text-[11px] text-violet-300 hover:text-violet-200 px-3 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 cursor-pointer transition-colors">
+                      Upload one now
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleLocalUpload(file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-1.5 max-h-48 overflow-y-auto">
+                    {uploadedImages.map((img, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { applyImageFillToText(obj, img.url, 1); setShowImageFill(false); }}
+                        className="group relative overflow-hidden rounded-lg border border-white/10 hover:border-violet-400/60 transition-all aspect-square bg-slate-800"
+                        title={img.name}
+                      >
+                        <img
+                          src={img.url}
+                          alt={img.name}
+                          className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
+                        />
+                        <div className="absolute inset-0 flex items-end justify-center pb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-black/60 to-transparent">
+                          <span className="text-[9px] text-white font-semibold truncate px-1">{img.name}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Stock tab */}
+            {imageFillTab === 'stock' && (
+              <div className="grid grid-cols-4 gap-1.5 max-h-48 overflow-y-auto">
+                {IMAGE_FILL_STOCK.map((img) => (
+                  <button
+                    key={img.url}
+                    onClick={() => { applyImageFillToText(obj, img.url, 1); setShowImageFill(false); }}
+                    className="group relative overflow-hidden rounded-lg border border-white/10 hover:border-violet-400/60 transition-all aspect-square bg-slate-800"
+                    title={img.label}
+                  >
+                    <img
+                      src={img.url}
+                      alt={img.label}
+                      className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
+                    />
+                    <div className="absolute inset-0 flex items-end justify-center pb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-black/60 to-transparent">
+                      <span className="text-[9px] text-white font-semibold">{img.label}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <p className="text-[10px] text-zinc-500 text-center">
+              {hasImageFill ? '✓ Fill active — click another image to swap' : 'Click any image to apply as text fill'}
+            </p>
+          </div>
+        </>
+      )}
 
       {/* Style toggles */}
       <div className="flex items-center gap-0.5 shrink-0">
@@ -584,6 +922,20 @@ function ObjectActions({
 
   return (
     <div className="flex items-center gap-0.5 shrink-0">
+      <ToolbarBtn icon={<RotateCcw className="w-3.5 h-3.5" />} title="Rotate Left" onClick={() => {
+        if (!fabricCanvas || !obj) return;
+        const next = ((obj.angle || 0) - 15) % 360;
+        obj.set({ angle: next });
+        fabricCanvas.renderAll();
+        fabricCanvas.fire('object:modified', { target: obj });
+      }} />
+      <ToolbarBtn icon={<RotateCw className="w-3.5 h-3.5" />} title="Rotate Right" onClick={() => {
+        if (!fabricCanvas || !obj) return;
+        const next = ((obj.angle || 0) + 15) % 360;
+        obj.set({ angle: next });
+        fabricCanvas.renderAll();
+        fabricCanvas.fire('object:modified', { target: obj });
+      }} />
       <ToolbarBtn icon={<Copy className="w-3.5 h-3.5" />} title="Duplicate" onClick={duplicateObj} />
       <ToolbarBtn icon={<ChevronUp className="w-3.5 h-3.5" />} title="Bring Forward" onClick={bringForward} />
       <ToolbarBtn icon={<ChevronDown className="w-3.5 h-3.5" />} title="Send Backward" onClick={sendBackward} />
