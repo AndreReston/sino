@@ -1,435 +1,461 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { Scissors, Trash2, GripVertical } from 'lucide-react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import {
+  Scissors, Trash2, ZoomIn, ZoomOut, Film, Type, Volume2,
+  Music, GripVertical,
+} from 'lucide-react';
 import { useVideoStore } from '../../store/videoStore';
+
+const SNAP_PX = 8;
 
 export default function VideoTimeline() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const rulerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
-  const {
-    project,
-    currentTime,
-    isPlaying,
-    activeClipId,
-    setCurrentTime,
-    setActiveClipId,
-    reorderClip,
-    splitClip,
-    removeClip,
-  } = useVideoStore();
+  const project = useVideoStore(s => s.project);
+  const currentTime = useVideoStore(s => s.currentTime);
+  const isPlaying = useVideoStore(s => s.isPlaying);
+  const activeClipId = useVideoStore(s => s.activeClipId);
+  const activeTextId = useVideoStore(s => s.activeTextId);
+  const setCurrentTime = useVideoStore(s => s.setCurrentTime);
+  const setIsPlaying = useVideoStore(s => s.setIsPlaying);
+  const setActiveClipId = useVideoStore(s => s.setActiveClipId);
+  const setActiveTextId = useVideoStore(s => s.setActiveTextId);
+  const reorderClip = useVideoStore(s => s.reorderClip);
+  const splitClip = useVideoStore(s => s.splitClip);
+  const removeClip = useVideoStore(s => s.removeClip);
+  const updateClip = useVideoStore(s => s.updateClip);
+  const updateTextOverlay = useVideoStore(s => s.updateTextOverlay);
+  const removeTextOverlay = useVideoStore(s => s.removeTextOverlay);
+  const getTotalDuration = useVideoStore(s => s.getTotalDuration);
 
   const [containerWidth, setContainerWidth] = useState(0);
-  const [draggingClipId, setDraggingClipId] = useState<string | null>(null);
-  const [dragStartX, setDragStartX] = useState(0);
-  const [showContextMenu, setShowContextMenu] = useState<{
-    clipId: string;
-    x: number;
-    y: number;
-  } | null>(null);
+  const [timelineZoom, setTimelineZoom] = useState(80);
+  const [dragClipId, setDragClipId] = useState<string | null>(null);
+  const [dragClipStartX, setDragClipStartX] = useState(0);
+  const [trimClipId, setTrimClipId] = useState<{ id: string; side: 'left' | 'right' } | null>(null);
+  const [dragTextId, setDragTextId] = useState<string | null>(null);
+  const [dragTextStartX, setDragTextStartX] = useState(0);
 
   // Measure container width
   useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth);
-      }
+    const update = () => {
+      if (containerRef.current) setContainerWidth(containerRef.current.offsetWidth);
     };
-
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
+    update();
+    const obs = new ResizeObserver(update);
+    if (containerRef.current) obs.observe(containerRef.current);
+    return () => obs.disconnect();
   }, []);
 
-  // Calculate total duration
-  const getTotalDuration = (): number => {
-    if (!project.clips || project.clips.length === 0) return 1;
-    let total = 0;
-    const sortedClips = [...project.clips].sort((a, b) => a.order - b.order);
-    for (const clip of sortedClips) {
-      const effectiveDuration =
-        (clip.duration - (clip.trimStart || 0) - (clip.trimEnd || 0)) /
-        (clip.speed || 1);
-      total += effectiveDuration;
-    }
-    return Math.max(total, 1);
-  };
-
   const totalDuration = getTotalDuration();
-  const pixelsPerSecond =
-    containerWidth > 0 ? containerWidth / totalDuration : 0;
+  const trackWidth = Math.max(containerWidth, totalDuration * timelineZoom + 100);
+  const pps = containerWidth > 0 && totalDuration > 0 ? containerWidth / totalDuration : timelineZoom;
 
-  // Generate ruler marks
-  const getRulerMarks = (): { time: number; label: string }[] => {
+  // Playhead position
+  const playheadX = currentTime * pps;
+
+  // ── Ruler marks ──────────────────────────────────────────────────────
+  const getRulerMarks = () => {
     const marks: { time: number; label: string }[] = [];
-    const interval = Math.ceil(5 / (pixelsPerSecond > 0 ? pixelsPerSecond : 1));
-    const roundedInterval = Math.max(1, Math.ceil(interval / 5) * 5);
-
-    for (let time = 0; time <= totalDuration; time += roundedInterval) {
-      marks.push({
-        time,
-        label: `${Math.floor(time)}s`,
-      });
+    const interval = pps > 60 ? 1 : pps > 20 ? 5 : 10;
+    for (let t = 0; t <= totalDuration; t += interval) {
+      marks.push({ time: t, label: `${Math.floor(t)}s` });
     }
     return marks;
   };
-
   const rulerMarks = getRulerMarks();
 
-  // Calculate clip position and width
-  const getClipMetrics = (clipIndex: number) => {
-    const sortedClips = [...(project.clips || [])].sort((a, b) => a.order - b.order);
-    let positionSeconds = 0;
+  // ── Clip positioning ────────────────────────────────────────────────
+  const sortedClips = React.useMemo(
+    () => [...(project?.clips || [])].sort((a, b) => a.order - b.order),
+    [project?.clips]
+  );
 
-    for (let i = 0; i < clipIndex; i++) {
-      const clip = sortedClips[i];
-      const effectiveDuration =
-        (clip.duration - (clip.trimStart || 0) - (clip.trimEnd || 0)) /
-        (clip.speed || 1);
-      positionSeconds += effectiveDuration;
+  const getClipLeft = (index: number): number => {
+    let sec = 0;
+    for (let i = 0; i < index; i++) {
+      sec += (sortedClips[i].duration - sortedClips[i].trimStart - sortedClips[i].trimEnd) / Math.max(0.25, sortedClips[i].speed);
     }
-
-    const clip = sortedClips[clipIndex];
-    const effectiveDuration =
-      (clip.duration - (clip.trimStart || 0) - (clip.trimEnd || 0)) /
-      (clip.speed || 1);
-
-    return {
-      left: positionSeconds * pixelsPerSecond,
-      width: effectiveDuration * pixelsPerSecond,
-      clip,
-    };
+    return sec * pps;
   };
 
-  // Handle ruler click to seek
-  const handleRulerClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!rulerRef.current) return;
-    const rect = rulerRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const seekTime = (clickX / pixelsPerSecond) * (totalDuration / containerWidth);
-    setCurrentTime(Math.max(0, Math.min(seekTime, totalDuration)));
+  const getClipWidth = (clip: typeof sortedClips[0]): number => {
+    return Math.max(8, ((clip.duration - clip.trimStart - clip.trimEnd) / Math.max(0.25, clip.speed)) * pps);
   };
 
-  // Handle clip selection
-  const handleClipClick = (clipId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setActiveClipId(clipId);
-  };
-
-  // Handle clip double-click to split
-  const handleClipDoubleClick = (
-    clipId: string,
-    trackRect: DOMRect,
-    e: React.MouseEvent
-  ) => {
-    e.stopPropagation();
-    const clickX = e.clientX - trackRect.left;
-    const timeFromStart = (clickX / pixelsPerSecond) * (totalDuration / containerWidth);
-    splitClip(clipId, timeFromStart);
-  };
-
-  // Handle clip right-click context menu
-  const handleClipContextMenu = (
-    clipId: string,
-    e: React.MouseEvent<HTMLDivElement>
-  ) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setShowContextMenu({
-      clipId,
-      x: e.clientX,
-      y: e.clientY,
+  // ── Snap helper ──────────────────────────────────────────────────────
+  const snapValue = (val: number): number => {
+    // Snap to 0 and to clip boundaries
+    const snapPoints = [0];
+    sortedClips.forEach((c, i) => {
+      snapPoints.push(getClipLeft(i) + getClipWidth(c));
     });
-  };
-
-  // Handle clip drag start
-  const handleClipMouseDown = (clipId: string, e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('[data-no-drag]')) {
-      return;
+    for (const pt of snapPoints) {
+      if (Math.abs(val - pt) < SNAP_PX) return pt;
     }
-    e.stopPropagation();
-    setDraggingClipId(clipId);
-    setDragStartX(e.clientX);
+    return val;
   };
 
-  // Handle drag movement and drop
+  // ── Ruler / track click to seek ──────────────────────────────────────
+  const handleTrackMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!trackRef.current) return;
+    const rect = trackRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left + (scrollRef.current?.scrollLeft || 0);
+    const time = Math.max(0, Math.min(totalDuration, x / pps));
+    setCurrentTime(time);
+  }, [pps, totalDuration, setCurrentTime]);
+
+  // ── Playhead drag ────────────────────────────────────────────────────
+  const [draggingPlayhead, setDraggingPlayhead] = useState(false);
   useEffect(() => {
-    if (!draggingClipId) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      // Drag visual feedback is implicit via activeClipId highlighting
+    if (!draggingPlayhead) return;
+    const move = (e: MouseEvent) => {
+      if (!trackRef.current) return;
+      const rect = trackRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left + (scrollRef.current?.scrollLeft || 0);
+      setCurrentTime(Math.max(0, Math.min(totalDuration, x / pps)));
     };
+    const up = () => setDraggingPlayhead(false);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+  }, [draggingPlayhead, pps, totalDuration, setCurrentTime]);
 
-    const handleMouseUp = (e: MouseEvent) => {
-      if (!trackRef.current) {
-        setDraggingClipId(null);
-        return;
-      }
-
-      const sortedClips = [...(project.clips || [])].sort((a, b) => a.order - b.order);
-      const currentIndex = sortedClips.findIndex((c) => c.id === draggingClipId);
-
-      if (currentIndex === -1) {
-        setDraggingClipId(null);
-        return;
-      }
-
+  // ── Clip drag reorder ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!dragClipId) return;
+    const move = (e: MouseEvent) => { /* visual feedback implicit */ };
+    const up = (e: MouseEvent) => {
+      if (!trackRef.current) { setDragClipId(null); return; }
       const rect = trackRef.current.getBoundingClientRect();
       const dropX = e.clientX - rect.left;
-
-      // Calculate which clip the drop happened over
-      let newIndex = currentIndex;
-      let positionSeconds = 0;
-
+      let newIndex = sortedClips.findIndex(c => c.id === dragClipId);
+      let pos = 0;
       for (let i = 0; i < sortedClips.length; i++) {
-        const clip = sortedClips[i];
-        const effectiveDuration =
-          (clip.duration - (clip.trimStart || 0) - (clip.trimEnd || 0)) /
-          (clip.speed || 1);
-        const clipWidth = effectiveDuration * pixelsPerSecond;
-
-        if (dropX < positionSeconds + clipWidth / 2) {
-          newIndex = i;
-          break;
-        }
-        positionSeconds += clipWidth;
-        if (i === sortedClips.length - 1) {
-          newIndex = sortedClips.length - 1;
-        }
+        const w = getClipWidth(sortedClips[i]);
+        if (dropX < pos + w / 2) { newIndex = i; break; }
+        pos += w;
+        if (i === sortedClips.length - 1) newIndex = sortedClips.length - 1;
       }
-
-      if (newIndex !== currentIndex) {
-        reorderClip(draggingClipId, newIndex);
-      }
-
-      setDraggingClipId(null);
+      const oldIndex = sortedClips.findIndex(c => c.id === dragClipId);
+      if (oldIndex !== newIndex && newIndex !== -1) reorderClip(dragClipId, newIndex);
+      setDragClipId(null);
     };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+  }, [dragClipId, sortedClips, pps, reorderClip]);
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [draggingClipId, project.clips, pixelsPerSecond, reorderClip]);
-
-  // Close context menu on click outside
+  // ── Trim handle drag ─────────────────────────────────────────────────
   useEffect(() => {
-    if (!showContextMenu) return;
+    if (!trimClipId) return;
+    const { id, side } = trimClipId;
+    const clip = project?.clips.find(c => c.id === id);
+    if (!clip) return;
 
-    const handleClick = () => {
-      setShowContextMenu(null);
+    const move = (e: MouseEvent) => {
+      if (!trackRef.current) return;
+      const rect = trackRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const time = x / pps;
+      if (side === 'left') {
+        const clipStart = getClipLeft(sortedClips.findIndex(c => c.id === id));
+        const newTrim = Math.max(0, Math.min(clip.duration - clip.trimEnd - 0.1, time - clipStart / pps));
+        // Approximate trim from pixel delta
+        const delta = (e.clientX - rect.left) - clipStart;
+        const newTrimStart = Math.max(0, Math.min(clip.duration - clip.trimEnd - 0.1, delta / pps));
+        updateClip(id, { trimStart: newTrimStart });
+      } else {
+        const clipsEnd = getClipLeft(sortedClips.findIndex(c => c.id === id)) + getClipWidth(clip);
+        const delta = clipsEnd - (e.clientX - rect.left);
+        const newTrimEnd = Math.max(0, Math.min(clip.duration - clip.trimStart - 0.1, delta / pps));
+        updateClip(id, { trimEnd: newTrimEnd });
+      }
     };
+    const up = () => setTrimClipId(null);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+  }, [trimClipId, project?.clips, sortedClips, pps, updateClip]);
 
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, [showContextMenu]);
+  // ── Text overlay drag ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!dragTextId) return;
+    const overlay = project?.textOverlays.find(t => t.id === dragTextId);
+    if (!overlay) return;
+    const origStart = overlay.startTime;
+    const origEnd = overlay.endTime;
+    const startX = dragTextStartX;
 
-  const sortedClips = [...(project.clips || [])].sort((a, b) => a.order - b.order);
-  const playheadX = (currentTime / totalDuration) * containerWidth;
+    const move = (e: MouseEvent) => {
+      const deltaPx = e.clientX - startX;
+      const deltaSec = deltaPx / pps;
+      const duration = origEnd - origStart;
+      const newStart = Math.max(0, origStart + deltaSec);
+      updateTextOverlay(dragTextId, { startTime: newStart, endTime: newStart + duration });
+    };
+    const up = () => setDragTextId(null);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+  }, [dragTextId, dragTextStartX, project?.textOverlays, pps, updateTextOverlay]);
+
+  if (!project) return null;
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full bg-[#0c0c10] border-t border-zinc-800 flex flex-col"
-    >
-      {/* Ruler */}
-      <div
-        ref={rulerRef}
-        onClick={handleRulerClick}
-        className="h-8 bg-[#111115] border-b border-zinc-800 relative cursor-pointer flex items-center"
-      >
-        {rulerMarks.map((mark) => {
-          const markX = (mark.time / totalDuration) * containerWidth;
-          return (
-            <div
-              key={`mark-${mark.time}`}
-              className="absolute flex flex-col items-center"
-              style={{ left: `${markX}px` }}
-            >
-              <div className="w-0.5 h-2 bg-zinc-500" />
-              <span className="text-xs text-zinc-400 mt-0.5 ml-2">
-                {mark.label}
-              </span>
-            </div>
-          );
-        })}
+    <div className="bg-[#0c0c10] border-t border-zinc-800 flex flex-col" style={{ minHeight: 200 }}>
+      {/* Controls bar */}
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-zinc-800/60 shrink-0">
+        <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold mr-1">Timeline</span>
+        <div className="flex-1" />
+        <span className="text-[10px] text-zinc-600">{sortedClips.length} clip{sortedClips.length !== 1 ? 's' : ''}</span>
+        <div className="w-px h-4 bg-zinc-800 mx-1" />
+        <button onClick={() => setTimelineZoom(Math.max(20, timelineZoom - 15))} className="w-6 h-6 flex items-center justify-center rounded text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors">
+          <ZoomOut className="w-3 h-3" />
+        </button>
+        <div className="w-20 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+          <div className="h-full bg-sky-500/40 rounded-full transition-all" style={{ width: `${Math.min(100, ((timelineZoom - 20) / 160) * 100)}%` }} />
+        </div>
+        <button onClick={() => setTimelineZoom(Math.min(180, timelineZoom + 15))} className="w-6 h-6 flex items-center justify-center rounded text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors">
+          <ZoomIn className="w-3 h-3" />
+        </button>
+        <span className="text-[10px] text-zinc-600 w-10 text-center">{Math.round(timelineZoom)}px/s</span>
       </div>
 
-      {/* Text Overlay Indicators Track */}
-      {(project.textOverlays || []).length > 0 && (
-        <div className="h-6 bg-[#0c0c10] relative border-b border-zinc-800/50">
-          {project.textOverlays.map((overlay) => {
-            const startX = (overlay.startTime / totalDuration) * containerWidth;
-            const duration = (overlay.endTime - overlay.startTime) / totalDuration;
-            const width = Math.max(duration * containerWidth, 2);
-
-            return (
-              <div
-                key={overlay.id}
-                className="absolute h-4 bg-amber-500/30 border border-amber-500/50 rounded"
-                style={{
-                  left: `${startX}px`,
-                  width: `${width}px`,
-                  top: '1px',
-                }}
-                title={overlay.text}
-              />
-            );
-          })}
-        </div>
-      )}
-
-      {/* Clips Track */}
-      <div
-        ref={trackRef}
-        className="flex-1 relative bg-[#0c0c10] overflow-hidden"
-      >
-        {sortedClips.map((clip, index) => {
-          const { left, width } = getClipMetrics(index);
-          const isSelected = activeClipId === clip.id;
-          const isDragging = draggingClipId === clip.id;
-
-          return (
-            <div
-              key={clip.id}
-              className={`absolute h-16 rounded border-2 transition-colors ${
-                isSelected
-                  ? 'border-sky-500/40 bg-sky-500/5'
-                  : 'border-zinc-700 bg-zinc-800'
-              } ${isDragging ? 'opacity-75' : 'opacity-100'} group`}
-              style={{
-                left: `${left}px`,
-                width: `${Math.max(width, 4)}px`,
-                top: '8px',
-              }}
-              onClick={(e) => handleClipClick(clip.id, e)}
-              onDoubleClick={(e) =>
-                handleClipDoubleClick(clip.id, trackRef.current!.getBoundingClientRect(), e)
-              }
-              onContextMenu={(e) => handleClipContextMenu(clip.id, e)}
-              onMouseDown={(e) => handleClipMouseDown(clip.id, e)}
-            >
-              {/* Thumbnail background */}
-              {(clip.thumbnails || []).length > 0 && (
-                <div
-                  className="absolute inset-0 rounded bg-cover bg-left opacity-60"
-                  style={{
-                    backgroundImage: `url('${clip.thumbnails[0]}')`,
-                    backgroundSize: 'cover',
-                  }}
-                />
-              )}
-
-              {/* Clip name */}
-              <div className="absolute inset-0 flex items-center justify-center px-2 py-1 rounded">
-                <span className="text-xs font-medium text-white truncate drop-shadow-lg">
-                  {clip.name}
-                </span>
-              </div>
-
-              {/* Hover actions */}
-              <div
-                className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1"
-                data-no-drag="true"
-              >
-                <button
-                  className="p-1 bg-zinc-700 hover:bg-red-600 rounded transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeClip(clip.id);
-                  }}
-                  title="Delete clip"
-                >
-                  <Trash2 size={12} className="text-white" />
-                </button>
-              </div>
-
-              {/* Drag handle */}
-              <div
-                className="absolute left-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                data-no-drag="true"
-              >
-                <GripVertical size={12} className="text-zinc-400" />
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Playhead */}
-        <div
-          className="absolute top-0 bottom-0 w-0.5 bg-sky-400 pointer-events-none z-20"
-          style={{
-            left: `${playheadX}px`,
-            boxShadow: '0 0 2px rgba(56, 189, 248, 0.5)',
-          }}
-        >
-          {/* Playhead triangle */}
+      {/* Timeline area with tracks */}
+      <div ref={containerRef} className="flex-1 overflow-x-auto overflow-y-hidden" style={{ minHeight: 0 }}>
+        <div ref={scrollRef} className="relative" style={{ width: trackWidth, minHeight: 160 }}>
+          {/* Ruler */}
           <div
-            className="absolute -left-1.5 -top-1 w-4 h-2 bg-sky-400"
-            style={{
-              clipPath: 'polygon(0% 0%, 50% 100%, 100% 0%)',
+            className="h-6 border-b border-zinc-800/50 relative cursor-pointer shrink-0"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              setCurrentTime(Math.max(0, Math.min(totalDuration, x / pps)));
             }}
-          />
+          >
+            {rulerMarks.map(m => (
+              <div key={`r-${m.time}`} className="absolute flex flex-col items-center" style={{ left: m.time * pps }}>
+                <div className="w-px h-2 bg-zinc-600" />
+                <span className="text-[9px] text-zinc-600 mt-px">{m.label}</span>
+              </div>
+            ))}
+
+            {/* Playhead on ruler */}
+            <div
+              className="absolute top-0 w-3 h-3 bg-sky-400 -translate-x-1/2 cursor-col-resize z-10"
+              style={{ left: playheadX, clipPath: 'polygon(0% 0%, 50% 100%, 100% 0%)' }}
+              onMouseDown={() => setDraggingPlayhead(true)}
+            />
+          </div>
+
+          {/* ─── Track labels ─────────────────────────────────────── */}
+          <div className="flex">
+            <div className="w-20 shrink-0 border-r border-zinc-800/40 flex flex-col">
+              <div className="h-14 flex items-center gap-1 px-2 border-b border-zinc-800/30">
+                <Film className="w-3 h-3 text-sky-400" />
+                <span className="text-[10px] text-zinc-400 font-medium">Video</span>
+              </div>
+              <div className="h-10 flex items-center gap-1 px-2 border-b border-zinc-800/30">
+                <Type className="w-3 h-3 text-amber-400" />
+                <span className="text-[10px] text-zinc-400 font-medium">Text</span>
+              </div>
+              <div className="h-10 flex items-center gap-1 px-2 border-b border-zinc-800/30">
+                <Music className="w-3 h-3 text-violet-400" />
+                <span className="text-[10px] text-zinc-400 font-medium">Audio</span>
+              </div>
+              <div className="h-10 flex items-center gap-1 px-2">
+                <Volume2 className="w-3 h-3 text-emerald-400" />
+                <span className="text-[10px] text-zinc-400 font-medium">SFX</span>
+              </div>
+            </div>
+
+            {/* ─── Track content area ──────────────────────────────── */}
+            <div ref={trackRef} className="flex-1 relative" onMouseDown={handleTrackMouseDown}>
+
+              {/* VIDEO TRACK */}
+              <div className="h-14 border-b border-zinc-800/30 relative">
+                {sortedClips.map((clip, index) => {
+                  const left = getClipLeft(index);
+                  const width = getClipWidth(clip);
+                  const isActive = activeClipId === clip.id;
+                  const isDragging = dragClipId === clip.id;
+
+                  return (
+                    <div
+                      key={clip.id}
+                      className={`absolute top-1 bottom-1 rounded-lg overflow-hidden cursor-pointer transition-shadow group ${
+                        isActive
+                          ? 'ring-2 ring-sky-400/60 shadow-[0_0_12px_rgba(56,189,248,0.15)]'
+                          : 'hover:ring-1 hover:ring-white/20'
+                      } ${isDragging ? 'opacity-60' : ''}`}
+                      style={{ left, width: Math.max(width, 8) }}
+                      onClick={(e) => { e.stopPropagation(); setActiveClipId(clip.id); }}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        const rect = trackRef.current!.getBoundingClientRect();
+                        const clickX = e.clientX - rect.left;
+                        const clipLeft = getClipLeft(index);
+                        const timeFromStart = (clickX - clipLeft) / pps;
+                        if (timeFromStart > 0.05) splitClip(clip.id, timeFromStart);
+                      }}
+                      onMouseDown={(e) => {
+                        if ((e.target as HTMLElement).closest('[data-trim]')) return;
+                        e.stopPropagation();
+                        setDragClipId(clip.id);
+                        setDragClipStartX(e.clientX);
+                      }}
+                    >
+                      {/* Thumbnail bg */}
+                      {clip.thumbnails[0] && (
+                        <div className="absolute inset-0">
+                          <img src={clip.thumbnails[0]} alt="" className="w-full h-full object-cover opacity-40" draggable={false} />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-r from-sky-900/50 via-sky-800/30 to-sky-900/50" />
+
+                      {/* Effect badge */}
+                      {clip.effect !== 'none' && (
+                        <div className="absolute top-1 left-1 px-1 py-0.5 rounded bg-violet-500/20 text-[8px] text-violet-300 font-bold uppercase">
+                          {clip.effect}
+                        </div>
+                      )}
+
+                      {/* Clip name */}
+                      <div className="absolute inset-0 flex items-center justify-center px-2">
+                        <span className="text-[10px] font-medium text-white truncate drop-shadow-md">{clip.name}</span>
+                      </div>
+
+                      {/* Duration */}
+                      <div className="absolute bottom-0.5 right-1">
+                        <span className="text-[8px] text-sky-200/50 font-mono">{((clip.duration - clip.trimStart - clip.trimEnd) / clip.speed).toFixed(1)}s</span>
+                      </div>
+
+                      {/* Trim handles */}
+                      <div data-trim="left"
+                        className="absolute top-0 bottom-0 left-0 w-2.5 cursor-col-resize hover:bg-sky-400/30 z-10 transition-colors"
+                        onMouseDown={(e) => { e.stopPropagation(); setTrimClipId({ id: clip.id, side: 'left' }); }}
+                      >
+                        <div className="absolute left-0.5 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-white/40 rounded-full" />
+                      </div>
+                      <div data-trim="right"
+                        className="absolute top-0 bottom-0 right-0 w-2.5 cursor-col-resize hover:bg-sky-400/30 z-10 transition-colors"
+                        onMouseDown={(e) => { e.stopPropagation(); setTrimClipId({ id: clip.id, side: 'right' }); }}
+                      >
+                        <div className="absolute right-0.5 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-white/40 rounded-full" />
+                      </div>
+
+                      {/* Hover delete */}
+                      <button
+                        data-trim="del"
+                        className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 p-0.5 rounded bg-zinc-800 hover:bg-red-600 transition-all z-10"
+                        onClick={(e) => { e.stopPropagation(); removeClip(clip.id); }}
+                        title="Delete clip"
+                      >
+                        <Trash2 className="w-2.5 h-2.5 text-white" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* TEXT TRACK */}
+              <div className="h-10 border-b border-zinc-800/30 relative">
+                {project.textOverlays.map(overlay => {
+                  const left = overlay.startTime * pps;
+                  const width = Math.max(8, (overlay.endTime - overlay.startTime) * pps);
+                  const isActive = activeTextId === overlay.id;
+                  return (
+                    <div
+                      key={overlay.id}
+                      className={`absolute top-0.5 bottom-0.5 rounded cursor-pointer transition-shadow ${
+                        isActive ? 'ring-2 ring-amber-400/60 bg-amber-500/20' : 'bg-amber-500/15 hover:bg-amber-500/25'
+                      } border border-amber-500/30`}
+                      style={{ left, width }}
+                      onClick={(e) => { e.stopPropagation(); setActiveTextId(overlay.id); }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        setDragTextId(overlay.id);
+                        setDragTextStartX(e.clientX);
+                      }}
+                    >
+                      <div className="flex items-center h-full px-1.5">
+                        <Type className="w-2.5 h-2.5 text-amber-400 shrink-0 mr-1" />
+                        <span className="text-[9px] text-amber-200 truncate">{overlay.text}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* AUDIO TRACK */}
+              <div className="h-10 border-b border-zinc-800/30 relative">
+                {project.audioTracks.map(track => {
+                  const left = track.startTime * pps;
+                  const width = 40;
+                  return (
+                    <div
+                      key={track.id}
+                      className="absolute top-0.5 bottom-0.5 rounded bg-violet-500/15 border border-violet-500/30 px-1.5 flex items-center"
+                      style={{ left, width }}
+                    >
+                      <Music className="w-2.5 h-2.5 text-violet-400 shrink-0 mr-1" />
+                      <span className="text-[9px] text-violet-200 truncate">{track.name}</span>
+                    </div>
+                  );
+                })}
+                {project.backgroundMusic && (
+                  <div className="absolute top-0.5 bottom-0.5 left-0 right-0 rounded bg-emerald-500/10 border border-emerald-500/20 px-1.5 flex items-center">
+                    <Volume2 className="w-2.5 h-2.5 text-emerald-400 shrink-0 mr-1" />
+                    <span className="text-[9px] text-emerald-200 truncate">{project.backgroundMusic.name}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* SUBTITLES TRACK */}
+              <div className="h-10 relative">
+                {project.subtitles.map(sub => {
+                  const left = sub.startTime * pps;
+                  const width = Math.max(8, (sub.endTime - sub.startTime) * pps);
+                  return (
+                    <div
+                      key={sub.id}
+                      className="absolute top-0.5 bottom-0.5 rounded bg-rose-500/15 border border-rose-500/30 px-1.5 flex items-center"
+                      style={{ left, width }}
+                    >
+                      <span className="text-[9px] text-rose-200 truncate">{sub.text}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* PLAYHEAD */}
+              <div
+                className="absolute top-0 bottom-0 w-px bg-sky-400 pointer-events-none z-20"
+                style={{ left: playheadX, transition: draggingPlayhead ? 'none' : 'left 0.05s linear' }}
+              >
+                <div className="absolute -top-0.5 -left-1 w-2.5 h-2 bg-sky-400 rounded-sm shadow-md" />
+              </div>
+            </div>
+          </div>
+
+          {/* Empty state */}
+          {sortedClips.length === 0 && project.textOverlays.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <span className="text-xs text-zinc-600">Drop video clips here or use the sidebar to start editing</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Subtitle Indicators Track */}
-      {(project.subtitles || []).length > 0 && (
-        <div className="h-6 bg-[#0c0c10] relative border-t border-zinc-800/50">
-          {project.subtitles.map((subtitle) => {
-            const startX = (subtitle.startTime / totalDuration) * containerWidth;
-            const duration = (subtitle.endTime - subtitle.startTime) / totalDuration;
-            const width = Math.max(duration * containerWidth, 2);
-
-            return (
-              <div
-                key={subtitle.id}
-                className="absolute h-4 bg-violet-500/30 border border-violet-500/50 rounded"
-                style={{
-                  left: `${startX}px`,
-                  width: `${width}px`,
-                  top: '1px',
-                }}
-                title={subtitle.text}
-              />
-            );
-          })}
-        </div>
-      )}
-
-      {/* Context Menu */}
-      {showContextMenu && (
-        <div
-          className="fixed bg-zinc-800 border border-zinc-700 rounded shadow-lg z-30"
-          style={{
-            left: `${showContextMenu.x}px`,
-            top: `${showContextMenu.y}px`,
-          }}
-        >
-          <button
-            className="w-full px-4 py-2 text-sm text-white hover:bg-zinc-700 flex items-center gap-2 whitespace-nowrap"
-            onClick={() => {
-              splitClip(showContextMenu.clipId, currentTime);
-              setShowContextMenu(null);
-            }}
-          >
-            <Scissors size={14} />
-            Split at playhead
-          </button>
-          <button
-            className="w-full px-4 py-2 text-sm text-red-400 hover:bg-zinc-700 flex items-center gap-2 whitespace-nowrap border-t border-zinc-700"
-            onClick={() => {
-              removeClip(showContextMenu.clipId);
-              setShowContextMenu(null);
-            }}
-          >
-            <Trash2 size={14} />
-            Delete
-          </button>
-        </div>
-      )}
+      {/* Keyboard hint */}
+      <div className="flex items-center gap-3 px-3 py-1 border-t border-zinc-800/40 shrink-0">
+        <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">Space</kbd> Play</span>
+        <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">S</kbd> Split</span>
+        <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">Del</kbd> Remove</span>
+        <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">Ctrl+Z</kbd> Undo</span>
+      </div>
     </div>
   );
-};
+}

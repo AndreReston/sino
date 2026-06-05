@@ -5,6 +5,13 @@ import { create } from 'zustand';
 export type AspectRatio = '16:9' | '9:16' | '1:1';
 export type TransitionType = 'none' | 'fade' | 'crossfade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'wipe-left' | 'wipe-right';
 export type CaptionStyle = 'karaoke' | 'pop-up' | 'tiktok' | 'minimal' | 'bold-highlight';
+export type ClipEffect = 'none' | 'shake' | 'zoom-in' | 'zoom-out' | 'fade-in' | 'fade-out' | 'blur-in' | 'blur-out' | 'vhs' | 'glitch';
+
+export interface Keyframe {
+  time: number;    // seconds from clip start
+  property: 'x' | 'y' | 'scale' | 'rotation' | 'opacity';
+  value: number;
+}
 
 export interface VideoClip {
   id: string;
@@ -20,6 +27,8 @@ export interface VideoClip {
   transitionIn: TransitionType;
   thumbnails: string[];   // data URLs of frame snapshots
   order: number;
+  effect: ClipEffect;
+  keyframes: Keyframe[];
 }
 
 export interface VideoFilters {
@@ -114,7 +123,7 @@ export interface VideoStoreActions {
   loadFromLocalStorage: () => void;
 
   // Clips
-  addClip: (clip: Omit<VideoClip, 'id' | 'order' | 'thumbnails' | 'filters' | 'transitionIn' | 'speed' | 'muted'> & { url: string; name: string; duration: number; trimStart?: number; trimEnd?: number; volume?: number }) => void;
+  addClip: (clip: Omit<VideoClip, 'id' | 'order' | 'thumbnails' | 'filters' | 'transitionIn' | 'speed' | 'muted' | 'effect' | 'keyframes'> & { url: string; name: string; duration: number; trimStart?: number; trimEnd?: number; volume?: number }) => void;
   removeClip: (id: string) => void;
   updateClip: (id: string, updates: Partial<VideoClip>) => void;
   reorderClip: (id: string, newIndex: number) => void;
@@ -122,6 +131,9 @@ export interface VideoStoreActions {
   autoSplitClip: (id: string, intervalSeconds: number) => void;
   setClipFilter: (id: string, filter: keyof VideoFilters, value: number) => void;
   resetClipFilters: (id: string) => void;
+  setClipEffect: (id: string, effect: ClipEffect) => void;
+  addKeyframe: (id: string, keyframe: Keyframe) => void;
+  removeKeyframe: (id: string, time: number, property: Keyframe['property']) => void;
   generateThumbnails: (id: string) => void;
 
   // Text overlays
@@ -275,6 +287,8 @@ export const useVideoStore = create<VStore>((set, get) => ({
       transitionIn: 'none',
       thumbnails: [],
       order: project.clips.length,
+      effect: 'none',
+      keyframes: [],
     };
     const clips = [...project.clips, clip];
     set({ project: { ...project, clips }, activeClipId: clip.id });
@@ -379,6 +393,37 @@ export const useVideoStore = create<VStore>((set, get) => ({
     const clips = project.clips.map(c =>
       c.id === id ? { ...c, filters: { ...DEFAULT_FILTERS } } : c
     );
+    set({ project: { ...project, clips } });
+    get().pushHistory();
+  },
+
+  setClipEffect: (id, effect) => {
+    const { project } = get();
+    if (!project) return;
+    const clips = project.clips.map(c => c.id === id ? { ...c, effect } : c);
+    set({ project: { ...project, clips } });
+    get().pushHistory();
+  },
+
+  addKeyframe: (id, keyframe) => {
+    const { project } = get();
+    if (!project) return;
+    const clips = project.clips.map(c => {
+      if (c.id !== id) return c;
+      const existing = c.keyframes.filter(k => !(k.time === keyframe.time && k.property === keyframe.property));
+      return { ...c, keyframes: [...existing, keyframe].sort((a, b) => a.time - b.time) };
+    });
+    set({ project: { ...project, clips } });
+    get().pushHistory();
+  },
+
+  removeKeyframe: (id, time, property) => {
+    const { project } = get();
+    if (!project) return;
+    const clips = project.clips.map(c => {
+      if (c.id !== id) return c;
+      return { ...c, keyframes: c.keyframes.filter(k => !(k.time === time && k.property === property)) };
+    });
     set({ project: { ...project, clips } });
     get().pushHistory();
   },

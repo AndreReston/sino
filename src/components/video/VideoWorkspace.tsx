@@ -6,7 +6,7 @@ import VideoProperties from './VideoProperties';
 import VideoTimeline from './VideoTimeline';
 import PlaybackControls from './PlaybackControls';
 import VideoTopBar from './VideoTopBar';
-import { ArrowLeft, Film, Upload, FolderOpen } from 'lucide-react';
+import { ArrowLeft, Film, Upload } from 'lucide-react';
 
 interface Props {
   onSave?: () => void;
@@ -14,35 +14,127 @@ interface Props {
 }
 
 export default function VideoWorkspace({ onSave, onBack }: Props) {
-  const { project, createProject, addClip, setIsPlaying, setCurrentTime, getTotalDuration } = useVideoStore();
-  const [prompt, setPrompt] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const project = useVideoStore(s => s.project);
+  const createProject = useVideoStore(s => s.createProject);
+  const addClip = useVideoStore(s => s.addClip);
+  const setCurrentTime = useVideoStore(s => s.setCurrentTime);
+  const setIsPlaying = useVideoStore(s => s.setIsPlaying);
+  const splitClip = useVideoStore(s => s.splitClip);
+  const removeClip = useVideoStore(s => s.removeClip);
+  const undo = useVideoStore(s => s.undo);
+  const redo = useVideoStore(s => s.redo);
+  const activeClipId = useVideoStore(s => s.activeClipId);
 
-  // Playback loop
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Playback loop — hooks must be at top level
   const rafRef = useRef<number>(0);
   const lastTickRef = useRef<number>(0);
   const isPlaying = useVideoStore(s => s.isPlaying);
   const playbackSpeed = useVideoStore(s => s.playbackSpeed);
+  const currentTime = useVideoStore(s => s.currentTime);
 
+  // Autosave on changes
+  useEffect(() => {
+    if (!project) return;
+    const timer = setTimeout(() => {
+      useVideoStore.getState().saveToLocalStorage();
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [project?.clips, project?.textOverlays, project?.subtitles, project?.audioTracks, project?.title, project?.aspectRatio]);
+
+  // Playback RAF loop
   useEffect(() => {
     if (!isPlaying) { cancelAnimationFrame(rafRef.current); return; }
     lastTickRef.current = performance.now();
     const tick = (now: number) => {
       const delta = (now - lastTickRef.current) / 1000;
       lastTickRef.current = now;
-      const total = useVideoStore.getState().getTotalDuration();
-      const next = useVideoStore.getState().currentTime + delta * playbackSpeed;
+      const st = useVideoStore.getState();
+      const total = st.getTotalDuration();
+      const next = st.currentTime + delta * playbackSpeed;
       if (next >= total) {
-        useVideoStore.getState().setCurrentTime(0);
-        useVideoStore.getState().setIsPlaying(false);
+        st.setCurrentTime(0);
+        st.setIsPlaying(false);
         return;
       }
-      useVideoStore.getState().setCurrentTime(next);
+      st.setCurrentTime(next);
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
   }, [isPlaying, playbackSpeed]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+
+      const st = useVideoStore.getState();
+
+      // Space = play/pause
+      if (e.key === ' ') {
+        e.preventDefault();
+        st.setIsPlaying(!st.isPlaying);
+      }
+
+      // S = split at playhead
+      if (e.key === 's' || e.key === 'S') {
+        if (!e.ctrlKey && !e.metaKey && st.activeClipId) {
+          e.preventDefault();
+          const clip = st.project?.clips.find(c => c.id === st.activeClipId);
+          if (clip) {
+            const sortedClips = [...(st.project?.clips || [])].sort((a, b) => a.order - b.order);
+            const idx = sortedClips.findIndex(c => c.id === clip.id);
+            let timeFromStart = st.currentTime;
+            for (let i = 0; i < idx; i++) {
+              const c = sortedClips[i];
+              timeFromStart -= (c.duration - c.trimStart - c.trimEnd) / Math.max(0.25, c.speed);
+            }
+            if (timeFromStart > 0) {
+              st.splitClip(st.activeClipId, timeFromStart);
+            }
+          }
+        }
+      }
+
+      // Delete/Backspace = remove selected clip
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (st.activeClipId) {
+          e.preventDefault();
+          st.removeClip(st.activeClipId);
+        }
+      }
+
+      // Ctrl+Z = undo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        st.undo();
+      }
+
+      // Ctrl+Y / Ctrl+Shift+Z = redo
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        st.redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
+
+  const handleVideoUpload = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      if (!useVideoStore.getState().project) createProject();
+      addClip({ url, name: file.name, duration: video.duration, trimStart: 0, trimEnd: 0, volume: 1 });
+    };
+    video.src = url;
+  };
 
   // No project: creation screen
   if (!project) {
@@ -85,15 +177,7 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (!file) return;
-                  const url = URL.createObjectURL(file);
-                  const video = document.createElement('video');
-                  video.preload = 'metadata';
-                  video.onloadedmetadata = () => {
-                    if (!useVideoStore.getState().project) createProject();
-                    addClip({ url, name: file.name, duration: video.duration, trimStart: 0, trimEnd: 0, volume: 1 });
-                  };
-                  video.src = url;
+                  if (file) handleVideoUpload(file);
                   e.target.value = '';
                 }}
               />
@@ -103,8 +187,6 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
       </div>
     );
   }
-
-  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Full editor workspace
   return (

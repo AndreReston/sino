@@ -1,23 +1,35 @@
 import { useState, useRef } from 'react';
-import { Film, Type, Sliders, Volume2, Wand2, Files as Subtitles, LayoutTemplate, Download, Upload, Plus, Trash2, Music, Mic, ArrowLeft, ArrowRight } from 'lucide-react';
-import { useVideoStore, DEFAULT_FILTERS, VideoFilters, TransitionType, CaptionStyle } from '../../store/videoStore';
+import { Film, Type, Sliders, Volume2, Wand2, Download, Upload, Plus, Trash2, Music, Mic, ArrowLeft, ArrowRight, Sparkles, Layers } from 'lucide-react';
+import { useVideoStore, DEFAULT_FILTERS, VideoFilters, TransitionType, CaptionStyle, ClipEffect } from '../../store/videoStore';
 
-type Panel = 'clips' | 'text' | 'filters' | 'audio' | 'transitions' | 'subtitles' | 'templates' | 'export';
+type Panel = 'clips' | 'text' | 'filters' | 'effects' | 'audio' | 'transitions' | 'subtitles' | 'export';
 
 const PANELS: { id: Panel; icon: React.ReactNode; label: string }[] = [
   { id: 'clips', icon: <Film className="w-4 h-4" />, label: 'Clips' },
   { id: 'text', icon: <Type className="w-4 h-4" />, label: 'Text' },
   { id: 'filters', icon: <Sliders className="w-4 h-4" />, label: 'Filters' },
+  { id: 'effects', icon: <Sparkles className="w-4 h-4" />, label: 'Effects' },
   { id: 'audio', icon: <Volume2 className="w-4 h-4" />, label: 'Audio' },
-  { id: 'transitions', icon: <Wand2 className="w-4 h-4" />, label: 'Transitions' },
-  { id: 'subtitles', icon: <Subtitles className="w-4 h-4" />, label: 'Subtitles' },
-  { id: 'templates', icon: <LayoutTemplate className="w-4 h-4" />, label: 'Templates' },
+  { id: 'transitions', icon: <Wand2 className="w-4 h-4" />, label: 'Trans.' },
+  { id: 'subtitles', icon: <Layers className="w-4 h-4" />, label: 'Subs' },
   { id: 'export', icon: <Download className="w-4 h-4" />, label: 'Export' },
 ];
 
 const TRANSITIONS: TransitionType[] = ['none', 'fade', 'crossfade', 'slide-left', 'slide-right', 'slide-up', 'slide-down', 'wipe-left', 'wipe-right'];
 const CAPTION_STYLES: CaptionStyle[] = ['karaoke', 'pop-up', 'tiktok', 'minimal', 'bold-highlight'];
-const FONT_OPTIONS = ['Inter', 'Georgia', 'Times New Roman', 'Arial', 'Courier New', 'Impact'];
+
+const EFFECTS: { id: ClipEffect; label: string; desc: string }[] = [
+  { id: 'none', label: 'None', desc: 'No effect applied' },
+  { id: 'shake', label: 'Shake', desc: 'Subtle camera shake' },
+  { id: 'zoom-in', label: 'Zoom In', desc: 'Zoom from small to full' },
+  { id: 'zoom-out', label: 'Zoom Out', desc: 'Zoom from large to normal' },
+  { id: 'fade-in', label: 'Fade In', desc: 'Opacity 0 to 100%' },
+  { id: 'fade-out', label: 'Fade Out', desc: 'Opacity 100 to 0%' },
+  { id: 'blur-in', label: 'Blur In', desc: 'Blur to sharp' },
+  { id: 'blur-out', label: 'Blur Out', desc: 'Sharp to blur' },
+  { id: 'vhs', label: 'VHS', desc: 'Retro VHS look' },
+  { id: 'glitch', label: 'Glitch', desc: 'Digital glitch effect' },
+];
 
 const STOCK_VIDEOS = [
   { url: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?w=300', label: 'Team' },
@@ -26,13 +38,6 @@ const STOCK_VIDEOS = [
   { url: 'https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg?w=300', label: 'City' },
   { url: 'https://images.pexels.com/photos/1261728/pexels-photo-1261728.jpeg?w=300', label: 'Forest' },
   { url: 'https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?w=300', label: 'Galaxy' },
-];
-
-const TEMPLATES = [
-  { name: 'Vlog', aspectRatio: '16:9' as const, desc: 'Travel/lifestyle vlog' },
-  { name: 'TikTok Edit', aspectRatio: '9:16' as const, desc: 'Short-form vertical' },
-  { name: 'Cinematic', aspectRatio: '16:9' as const, desc: 'Film look & feel' },
-  { name: 'Square Post', aspectRatio: '1:1' as const, desc: 'Instagram post' },
 ];
 
 export default function VideoSidebar() {
@@ -44,8 +49,8 @@ export default function VideoSidebar() {
     addTextOverlay, removeTextOverlay, updateTextOverlay,
     addSubtitle, removeSubtitle, updateSubtitle,
     setClipFilter, resetClipFilters, addAudioTrack, removeAudioTrack, setBackgroundMusic,
-    setActiveClipId, setActiveTextId, setActiveSubtitleId,
-    updateProject, startExport, isExporting, exportProgress,
+    setActiveClipId, setActiveTextId, activeTextId,
+    updateProject, startExport, isExporting, exportProgress, setClipEffect,
   } = useVideoStore();
 
   const activeClip = project?.clips.find(c => c.id === activeClipId);
@@ -103,88 +108,41 @@ export default function VideoSidebar() {
                 {sortedClips.map((clip, index) => (
                   <div
                     key={clip.id}
-                    className={`w-full rounded-2xl border px-3 py-3 mb-2 transition-all ${
+                    className={`w-full rounded-xl border px-3 py-2 mb-1.5 transition-all cursor-pointer ${
                       activeClipId === clip.id ? 'border-sky-500/40 bg-sky-500/10 text-sky-200' : 'border-white/[0.06] bg-[#151519] text-zinc-300 hover:border-white/[0.12]'}
                     `}
+                    onClick={() => setActiveClipId(clip.id)}
                   >
-                    <div className="flex items-start gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setActiveClipId(clip.id)}
-                        className="flex items-center gap-3 flex-1 text-left"
-                      >
-                        <div className="w-16 h-10 rounded-lg overflow-hidden bg-zinc-900 flex items-center justify-center shrink-0">
-                          {clip.thumbnails[0] ? (
-                            <img
-                              src={clip.thumbnails[0]}
-                              alt={clip.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Film className="w-5 h-5 text-zinc-500" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold truncate">{clip.name}</p>
-                          <p className="text-[10px] text-zinc-500 mt-1">
-                            {(clip.duration - clip.trimStart - clip.trimEnd).toFixed(1)}s trimmed • {clip.duration.toFixed(1)}s source
-                          </p>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeClip(clip.id)}
-                        className="p-2 rounded-lg bg-zinc-800 text-zinc-400 hover:bg-red-600 hover:text-white transition-colors"
-                        title="Delete clip"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-3 gap-2 text-[10px] text-zinc-300">
-                      <button
-                        type="button"
-                        onClick={() => updateClip(clip.id, { muted: !clip.muted })}
-                        className="rounded-xl bg-zinc-900 px-2 py-2 text-left hover:bg-zinc-800"
-                      >
-                        {clip.muted ? 'Unmute' : 'Mute'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateClip(clip.id, { speed: Math.max(0.25, clip.speed - 0.25) })}
-                        className="rounded-xl bg-zinc-900 px-2 py-2 text-left hover:bg-zinc-800"
-                      >
-                        - Speed
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateClip(clip.id, { speed: Math.min(2, clip.speed + 0.25) })}
-                        className="rounded-xl bg-zinc-900 px-2 py-2 text-left hover:bg-zinc-800"
-                      >
-                        + Speed
-                      </button>
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-between gap-2 text-[10px] text-zinc-400">
-                      <span className="rounded-full bg-zinc-900 px-2 py-1">#{index + 1}</span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => reorderClip(clip.id, Math.max(0, index - 1))}
-                          className="rounded-full p-2 bg-zinc-900 hover:bg-zinc-800"
-                          title="Move clip left"
-                        >
-                          <ArrowLeft className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => reorderClip(clip.id, Math.min(sortedClips.length - 1, index + 1))}
-                          className="rounded-full p-2 bg-zinc-900 hover:bg-zinc-800"
-                          title="Move clip right"
-                        >
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
+                    <div className="flex items-center gap-2">
+                      <div className="w-12 h-8 rounded-lg overflow-hidden bg-zinc-900 flex items-center justify-center shrink-0">
+                        {clip.thumbnails[0] ? (
+                          <img src={clip.thumbnails[0]} alt={clip.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Film className="w-4 h-4 text-zinc-600" />
+                        )}
                       </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium truncate">{clip.name}</p>
+                        <p className="text-[9px] text-zinc-500">{((clip.duration - clip.trimStart - clip.trimEnd) / clip.speed).toFixed(1)}s</p>
+                      </div>
+                      {clip.effect !== 'none' && <span className="text-[8px] px-1 py-0.5 rounded bg-violet-500/20 text-violet-300 font-bold">{clip.effect}</span>}
+                      <button onClick={(e) => { e.stopPropagation(); removeClip(clip.id); }} className="p-1 rounded hover:bg-red-600 text-zinc-500 hover:text-white transition-colors">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1 mt-1.5">
+                      <button onClick={(e) => { e.stopPropagation(); reorderClip(clip.id, Math.max(0, index - 1)); }} className="p-1 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-200 transition-colors">
+                        <ArrowLeft className="w-3 h-3" />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); reorderClip(clip.id, Math.min(sortedClips.length - 1, index + 1)); }} className="p-1 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-200 transition-colors">
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); updateClip(clip.id, { muted: !clip.muted }); }} className={`text-[9px] px-1.5 py-0.5 rounded ${clip.muted ? 'bg-red-500/20 text-red-300' : 'bg-zinc-800 text-zinc-400'}`}>
+                        {clip.muted ? 'Muted' : 'Mute'}
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); updateClip(clip.id, { speed: Math.min(2, clip.speed + 0.25) }); }} className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
+                        {clip.speed.toFixed(2)}x
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -211,12 +169,18 @@ export default function VideoSidebar() {
                 <Plus className="w-4 h-4" /> Add Text Overlay
               </button>
               {project?.textOverlays.map(t => (
-                <button key={t.id} onClick={() => setActiveTextId(t.id)}
-                  className="w-full text-left px-3 py-2 rounded-lg bg-[#151519] border border-white/[0.06] hover:border-white/[0.12] transition-all text-xs text-zinc-300">
-                  <span className="font-medium truncate block">{t.text}</span>
-                  <span className="text-zinc-500 text-[10px]">{t.startTime.toFixed(1)}s – {t.endTime.toFixed(1)}s</span>
-                </button>
+                <div key={t.id} onClick={() => setActiveTextId(t.id)}
+                  className={`w-full text-left px-3 py-2 rounded-lg border transition-all cursor-pointer ${
+                    activeTextId === t.id ? 'border-amber-500/40 bg-amber-500/10' : 'border-white/[0.06] bg-[#151519] hover:border-white/[0.12]'
+                  }`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-zinc-200 font-medium truncate">{t.text}</span>
+                    <button onClick={(e) => { e.stopPropagation(); removeTextOverlay(t.id); }} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                  </div>
+                  <span className="text-[10px] text-zinc-500">{t.startTime.toFixed(1)}s – {t.endTime.toFixed(1)}s</span>
+                </div>
               ))}
+              <p className="text-[10px] text-zinc-600 text-center pt-2">Drag text overlays on the timeline or preview to reposition</p>
             </div>
           )}
 
@@ -228,7 +192,7 @@ export default function VideoSidebar() {
               ) : (
                 <>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-zinc-400 font-medium">Filters for: {activeClip.name.slice(0, 20)}</span>
+                    <span className="text-xs text-zinc-400 font-medium truncate max-w-[140px]">{activeClip.name}</span>
                     <button onClick={() => resetClipFilters(activeClip.id)} className="text-[10px] text-zinc-500 hover:text-sky-300 transition-colors">Reset</button>
                   </div>
                   {(Object.keys(DEFAULT_FILTERS) as (keyof VideoFilters)[]).map(key => {
@@ -255,6 +219,41 @@ export default function VideoSidebar() {
             </div>
           )}
 
+          {/* Effects Panel */}
+          {activePanel === 'effects' && (
+            <div className="space-y-2">
+              {!activeClip ? (
+                <p className="text-xs text-zinc-600 text-center py-8">Select a clip to apply effects</p>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-zinc-400 font-medium truncate max-w-[140px]">{activeClip.name}</span>
+                    <span className="text-[10px] text-zinc-500">Current: {activeClip.effect}</span>
+                  </div>
+                  {EFFECTS.map(eff => (
+                    <button
+                      key={eff.id}
+                      onClick={() => setClipEffect(activeClip.id, eff.id)}
+                      className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all ${
+                        activeClip.effect === eff.id
+                          ? 'border-violet-500/40 bg-violet-500/10'
+                          : 'border-white/[0.06] bg-[#151519] hover:border-violet-500/20'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Sparkles className={`w-3.5 h-3.5 ${activeClip.effect === eff.id ? 'text-violet-400' : 'text-zinc-500'}`} />
+                        <div>
+                          <p className={`text-xs font-medium ${activeClip.effect === eff.id ? 'text-violet-300' : 'text-zinc-200'}`}>{eff.label}</p>
+                          <p className="text-[10px] text-zinc-500">{eff.desc}</p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+
           {/* Audio Panel */}
           {activePanel === 'audio' && (
             <div className="space-y-4">
@@ -274,7 +273,6 @@ export default function VideoSidebar() {
                   </div>
                 )}
               </div>
-
               <div>
                 <p className="text-[11px] text-zinc-500 mb-2">Audio Tracks</p>
                 {project?.audioTracks.map(track => (
@@ -292,7 +290,7 @@ export default function VideoSidebar() {
           {activePanel === 'transitions' && (
             <div className="space-y-3">
               <p className="text-[11px] text-zinc-500 mb-2">Clip Transitions</p>
-              {project?.clips.map((clip, i) => (
+              {project?.clips.map((clip) => (
                 <div key={clip.id} className="space-y-1.5">
                   <p className="text-[11px] text-zinc-400 truncate">{clip.name.slice(0, 25)}</p>
                   <select value={clip.transitionIn}
@@ -330,20 +328,6 @@ export default function VideoSidebar() {
                     </select>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {/* Templates Panel */}
-          {activePanel === 'templates' && (
-            <div className="space-y-2">
-              <p className="text-[11px] text-zinc-500 mb-2">Quick Start Templates</p>
-              {TEMPLATES.map(t => (
-                <button key={t.name} onClick={() => updateProject({ aspectRatio: t.aspectRatio })}
-                  className="w-full text-left px-4 py-3 rounded-xl bg-[#151519] border border-white/[0.06] hover:border-sky-500/30 transition-all">
-                  <p className="text-sm font-medium text-zinc-200">{t.name}</p>
-                  <p className="text-[11px] text-zinc-500">{t.desc} · {t.aspectRatio}</p>
-                </button>
               ))}
             </div>
           )}

@@ -115,7 +115,7 @@ export default function App() {
             if (savedProject?.id) {
               useVideoStore.getState().loadProject(savedProject);
             } else {
-              useVideoStore.getState().createProject(design.title, '');
+              useVideoStore.getState().createProject(design.title);
             }
             setView('video-workspace');
             return;
@@ -190,7 +190,7 @@ export default function App() {
   const handleCreateDesign = (mode: ProjectMode = 'photo') => {
     if (mode === 'video') {
       useVideoStore.getState().resetStore();
-      useVideoStore.getState().createProject('Untitled Video', '');
+      useVideoStore.getState().createProject('Untitled Video');
       persistActiveDesign(null);
       persistView('video-workspace');
     } else {
@@ -208,7 +208,7 @@ export default function App() {
       if (savedProject?.id) {
         useVideoStore.getState().loadProject(savedProject);
       } else {
-        useVideoStore.getState().createProject(design.title, '');
+        useVideoStore.getState().createProject(design.title);
       }
       persistActiveDesign(design);
       persistView('video-workspace');
