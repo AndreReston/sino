@@ -4,6 +4,7 @@ import {
   Music, GripVertical,
 } from 'lucide-react';
 import { useVideoStore } from '../../store/videoStore';
+import { Bookmark } from 'lucide-react';
 
 const SNAP_PX = 8;
 
@@ -28,6 +29,8 @@ export default function VideoTimeline() {
   const updateTextOverlay = useVideoStore(s => s.updateTextOverlay);
   const removeTextOverlay = useVideoStore(s => s.removeTextOverlay);
   const getTotalDuration = useVideoStore(s => s.getTotalDuration);
+  const showBeatMarkers = useVideoStore(s => s.showBeatMarkers);
+  const jumpToMarker = useVideoStore(s => s.jumpToMarker);
 
   const [containerWidth, setContainerWidth] = useState(0);
   const [timelineZoom, setTimelineZoom] = useState(80);
@@ -239,6 +242,27 @@ export default function VideoTimeline() {
               <div key={`r-${m.time}`} className="absolute flex flex-col items-center" style={{ left: m.time * pps }}>
                 <div className="w-px h-2 bg-zinc-600" />
                 <span className="text-[9px] text-zinc-600 mt-px">{m.label}</span>
+              </div>
+            ))}
+
+            {/* Beat markers on ruler */}
+            {showBeatMarkers && (project?.beatMarkers || []).map((beat, i) => (
+              <div key={`beat-${i}`} className="absolute top-0 bottom-0 w-px pointer-events-none"
+                style={{ left: beat.time * pps, backgroundColor: `rgba(251,191,36,${beat.intensity * 0.6 + 0.2})` }} />
+            ))}
+
+            {/* Scene markers on ruler */}
+            {(project?.sceneMarkers || []).map(marker => (
+              <div key={marker.id} className="absolute top-0 flex flex-col items-center cursor-pointer z-10 group"
+                style={{ left: marker.time * pps }}
+                onClick={e => { e.stopPropagation(); jumpToMarker(marker.id); }}
+                title={marker.label}>
+                <div className="w-0 h-0" style={{ borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderTop: `8px solid ${marker.color}` }} />
+                <div className="w-px flex-1" style={{ backgroundColor: marker.color }} />
+                <div className="absolute top-8 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap px-1.5 py-0.5 rounded text-[8px] font-medium text-white"
+                  style={{ backgroundColor: marker.color }}>
+                  {marker.label}
+                </div>
               </div>
             ))}
 

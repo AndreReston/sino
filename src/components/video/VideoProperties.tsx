@@ -1,5 +1,5 @@
-import { Trash2, Scissors, RotateCcw, Volume2, VolumeX, Gauge, Sparkles, Diamond } from 'lucide-react';
-import { useVideoStore, VideoFilters, ClipEffect, Keyframe, VideoClip, TextOverlay, SubtitleEntry } from '../../store/videoStore';
+import { Trash2, Scissors, RotateCcw, Volume2, VolumeX, Gauge, Sparkles, Diamond, Layers, Activity, Zap } from 'lucide-react';
+import { useVideoStore, VideoFilters, ClipEffect, Keyframe, VideoClip, TextOverlay, SubtitleEntry, MotionPreset } from '../../store/videoStore';
 
 const EFFECTS: { id: ClipEffect; label: string }[] = [
   { id: 'none', label: 'None' }, { id: 'shake', label: 'Shake' },
@@ -7,6 +7,17 @@ const EFFECTS: { id: ClipEffect; label: string }[] = [
   { id: 'fade-in', label: 'Fade In' }, { id: 'fade-out', label: 'Fade Out' },
   { id: 'blur-in', label: 'Blur In' }, { id: 'blur-out', label: 'Blur Out' },
   { id: 'vhs', label: 'VHS' }, { id: 'glitch', label: 'Glitch' },
+];
+
+const MOTION_PRESETS: { id: MotionPreset; label: string }[] = [
+  { id: 'fade-in', label: 'Fade In' },
+  { id: 'fade-out', label: 'Fade Out' },
+  { id: 'zoom-in', label: 'Zoom In' },
+  { id: 'zoom-out', label: 'Zoom Out' },
+  { id: 'slide-left', label: 'Slide Left' },
+  { id: 'slide-right', label: 'Slide Right' },
+  { id: 'bounce', label: 'Bounce' },
+  { id: 'elastic', label: 'Elastic' },
 ];
 
 export default function VideoProperties() {
@@ -59,6 +70,10 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
   const splitClip = useVideoStore(s => s.splitClip);
   const removeClip = useVideoStore(s => s.removeClip);
   const currentTime = useVideoStore(s => s.currentTime);
+  const addEffectToStack = useVideoStore(s => s.addEffectToStack);
+  const removeEffectFromStack = useVideoStore(s => s.removeEffectFromStack);
+  const updateEffectInStack = useVideoStore(s => s.updateEffectInStack);
+  const applyMotionPreset = useVideoStore(s => s.applyMotionPreset);
 
   const effectiveDuration = (clip.duration - clip.trimStart - clip.trimEnd) / clip.speed;
 
@@ -192,6 +207,107 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
       </div>
 
       <SectionDivider />
+
+      {/* Effect Stack */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+          <Layers className="w-3.5 h-3.5 text-violet-400" /> Effect Stack
+        </h3>
+        {(clip.effectStack || []).length === 0 ? (
+          <p className="text-xs text-zinc-600">No stacked effects.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {(clip.effectStack || []).map(layer => (
+              <div key={layer.id} className="bg-zinc-900 border border-zinc-700 rounded p-2 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => updateEffectInStack(clip.id, layer.id, { enabled: !layer.enabled })}
+                    className={`w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center ${layer.enabled ? 'bg-violet-500 text-white' : 'bg-zinc-700 text-zinc-500'}`}
+                  >{layer.enabled ? '✓' : '○'}</button>
+                  <span className="text-xs text-zinc-300 flex-1 capitalize">{layer.effect.replace('-', ' ')}</span>
+                  <button onClick={() => removeEffectFromStack(clip.id, layer.id)} className="text-zinc-600 hover:text-red-400">
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <label className="text-xs text-zinc-400">Intensity</label>
+                    <span className="text-xs text-zinc-300">{layer.intensity}%</span>
+                  </div>
+                  <input type="range" min={0} max={100} value={layer.intensity}
+                    onChange={e => updateEffectInStack(clip.id, layer.id, { intensity: Number(e.target.value) })}
+                    className="w-full h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-violet-500" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <select
+          defaultValue=""
+          onChange={e => { if (e.target.value) { addEffectToStack(clip.id, e.target.value as ClipEffect); e.target.value = ''; } }}
+          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 text-sm focus:outline-none focus:border-sky-500"
+        >
+          <option value="" disabled>+ Add to stack</option>
+          {EFFECTS.filter(e => e.id !== 'none').map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
+        </select>
+      </div>
+
+      <SectionDivider />
+
+      {/* Motion Presets */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+          <Zap className="w-3.5 h-3.5 text-amber-400" /> Motion Presets
+        </h3>
+        <div className="grid grid-cols-2 gap-1.5">
+          {MOTION_PRESETS.map(mp => (
+            <button key={mp.id} onClick={() => applyMotionPreset(clip.id, mp.id)}
+              className="px-2 py-2 rounded bg-zinc-900 border border-zinc-700 text-xs text-zinc-300 hover:border-amber-500/40 hover:text-amber-300 hover:bg-amber-500/5 transition-all text-center">
+              {mp.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <SectionDivider />
+
+      {/* Clip Health */}
+      {(clip.resolution || clip.fps || clip.bitrate) && (
+        <>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+              <Activity className="w-3.5 h-3.5 text-emerald-400" /> Clip Health
+            </h3>
+            <div className="bg-zinc-900 border border-zinc-700 rounded p-3 space-y-1.5">
+              {clip.resolution && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-400">Resolution</span>
+                  <span className={`font-medium ${clip.resolution.includes('⚠') ? 'text-amber-300' : 'text-emerald-300'}`}>{clip.resolution}</span>
+                </div>
+              )}
+              {clip.fps && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-400">FPS</span>
+                  <span className="text-zinc-300">{clip.fps}</span>
+                </div>
+              )}
+              {clip.bitrate && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-400">Bitrate</span>
+                  <span className={`font-medium ${clip.bitrate.includes('⚠') ? 'text-amber-300' : 'text-zinc-300'}`}>{clip.bitrate}</span>
+                </div>
+              )}
+              {clip.codec && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-400">Codec</span>
+                  <span className="text-zinc-300">{clip.codec}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <SectionDivider />
+        </>
+      )}
 
       {/* Filters */}
       <div className="space-y-2">

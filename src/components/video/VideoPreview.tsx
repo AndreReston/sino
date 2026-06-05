@@ -6,6 +6,12 @@ interface Props {
   videoRef: React.RefObject<HTMLVideoElement>;
 }
 
+const SAFE_ZONE_GUIDES = [
+  { label: 'TikTok Safe', top: '15%', bottom: '15%', left: '5%', right: '5%', color: 'rgba(56,189,248,0.5)' },
+  { label: 'YouTube Safe', top: '5%', bottom: '5%', left: '5%', right: '5%', color: 'rgba(250,204,21,0.5)' },
+  { label: 'IG Safe', top: '10%', bottom: '10%', left: '10%', right: '10%', color: 'rgba(167,139,250,0.5)' },
+];
+
 export default function VideoPreview({ videoRef }: Props) {
   const project = useVideoStore(s => s.project);
   const activeClipId = useVideoStore(s => s.activeClipId);
@@ -16,19 +22,24 @@ export default function VideoPreview({ videoRef }: Props) {
   const setActiveClipId = useVideoStore(s => s.setActiveClipId);
   const setActiveTextId = useVideoStore(s => s.setActiveTextId);
   const updateTextOverlay = useVideoStore(s => s.updateTextOverlay);
+  const showSafeZones = useVideoStore(s => s.showSafeZones);
+  const updateStickerOverlay = useVideoStore(s => s.updateStickerOverlay);
+  const setActiveStickerOverlayId = useVideoStore(s => s.setActiveStickerOverlayId);
+  const activeStickerOverlayId = useVideoStore(s => s.activeStickerOverlayId);
 
   const activeClip = project?.clips.find(c => c.id === activeClipId) ?? null;
 
   // Drag state for text overlays
   const [draggingTextId, setDraggingTextId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  // Drag state for sticker overlays
+  const [draggingStickerData, setDraggingStickerData] = useState<{ id: string; ox: number; oy: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Sync video src when active clip changes
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-
     if (activeClip) {
       if (video.src !== activeClip.url) {
         video.src = activeClip.url;
@@ -41,7 +52,6 @@ export default function VideoPreview({ videoRef }: Props) {
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !activeClip) return;
-
     if (isPlaying) {
       video.play().catch(() => {});
     } else {
@@ -81,10 +91,8 @@ export default function VideoPreview({ videoRef }: Props) {
     e.preventDefault();
     setActiveTextId(overlayId);
     setDraggingTextId(overlayId);
-
     const overlay = project?.textOverlays.find(t => t.id === overlayId);
     if (!overlay || !containerRef.current) return;
-
     const rect = containerRef.current.getBoundingClientRect();
     const pxX = (overlay.x / 100) * rect.width;
     const pxY = (overlay.y / 100) * rect.height;
@@ -93,7 +101,6 @@ export default function VideoPreview({ videoRef }: Props) {
 
   useEffect(() => {
     if (!draggingTextId) return;
-
     const handleMove = (e: MouseEvent) => {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
@@ -101,9 +108,7 @@ export default function VideoPreview({ videoRef }: Props) {
       const y = Math.max(0, Math.min(100, ((e.clientY - rect.top - dragOffset.y) / rect.height) * 100));
       updateTextOverlay(draggingTextId, { x, y });
     };
-
     const handleUp = () => setDraggingTextId(null);
-
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
     return () => {
@@ -112,10 +117,46 @@ export default function VideoPreview({ videoRef }: Props) {
     };
   }, [draggingTextId, dragOffset, updateTextOverlay]);
 
+  // ── Drag sticker overlay positioning ──────────────────────────────────
+  const handleStickerMouseDown = useCallback((e: React.MouseEvent, stickerId: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setActiveStickerOverlayId(stickerId);
+    if (!containerRef.current) return;
+    const sticker = project?.stickerOverlays?.find(s => s.id === stickerId);
+    if (!sticker) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const ox = e.clientX - rect.left - (sticker.x / 100) * rect.width;
+    const oy = e.clientY - rect.top - (sticker.y / 100) * rect.height;
+    setDraggingStickerData({ id: stickerId, ox, oy });
+  }, [project?.stickerOverlays, setActiveStickerOverlayId]);
+
+  useEffect(() => {
+    if (!draggingStickerData) return;
+    const handleMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.min(100, ((e.clientX - rect.left - draggingStickerData.ox) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((e.clientY - rect.top - draggingStickerData.oy) / rect.height) * 100));
+      updateStickerOverlay(draggingStickerData.id, { x, y });
+    };
+    const handleUp = () => setDraggingStickerData(null);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [draggingStickerData, updateStickerOverlay]);
+
   // Active overlays and subtitles at current time
   const activeOverlays = project?.textOverlays.filter(
     o => currentTime >= o.startTime && currentTime <= o.endTime
   ) ?? [];
+
+  const activeStickers = (project?.stickerOverlays ?? []).filter(
+    s => currentTime >= s.startTime && currentTime <= s.endTime
+  );
 
   const activeSubtitles = project?.subtitles.filter(
     s => currentTime >= s.startTime && currentTime <= s.endTime
@@ -240,69 +281,108 @@ export default function VideoPreview({ videoRef }: Props) {
           onTimeUpdate={handleTimeUpdate}
         />
 
-      {/* Text overlays — draggable */}
-      {activeOverlays.map(overlay => (
-        <div
-          key={overlay.id}
-          className="absolute pointer-events-auto cursor-grab active:cursor-grabbing"
-          style={{
-            left: `${overlay.x}%`,
-            top: `${overlay.y}%`,
-            transform: 'translate(-50%, -50%)',
-            opacity: overlay.opacity,
-          }}
-          onMouseDown={(e) => handleTextMouseDown(e, overlay.id)}
-          onClick={(e) => { e.stopPropagation(); setActiveTextId(overlay.id); }}
-        >
-          <div
-            className="text-overlay"
-            style={{
-              fontFamily: overlay.fontFamily,
-              fontSize: `${overlay.fontSize}px`,
-              fontWeight: overlay.fontWeight,
-              color: overlay.color,
-              backgroundColor: overlay.backgroundColor !== 'transparent' ? overlay.backgroundColor : undefined,
-              padding: overlay.backgroundColor !== 'transparent' ? '8px 12px' : '0px',
-              borderRadius: overlay.backgroundColor !== 'transparent' ? '4px' : '0px',
-              backdropFilter: overlay.backgroundOpacity > 0 ? 'blur(2px)' : undefined,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {overlay.text}
+        {/* Safe zones overlay */}
+        {showSafeZones && (
+          <div className="absolute inset-0 pointer-events-none z-30">
+            {SAFE_ZONE_GUIDES.map(guide => (
+              <div key={guide.label} className="absolute" style={{
+                top: guide.top, bottom: guide.bottom, left: guide.left, right: guide.right,
+                border: `1px dashed ${guide.color}`,
+              }}>
+                <span className="absolute -top-4 left-0 text-[8px] font-bold px-1 py-0.5 rounded"
+                  style={{ color: guide.color, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+                  {guide.label}
+                </span>
+              </div>
+            ))}
           </div>
-        </div>
-      ))}
+        )}
 
-      {/* Subtitles */}
-      {activeSubtitles.length > 0 && (
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-full px-4 flex flex-col items-center gap-2 pointer-events-none">
-          {activeSubtitles.map(subtitle => (
+        {/* Sticker overlays — draggable */}
+        {activeStickers.map(sticker => (
+          <div
+            key={sticker.id}
+            className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing select-none z-20 ${
+              activeStickerOverlayId === sticker.id ? 'ring-2 ring-sky-400/60 rounded' : ''
+            }`}
+            style={{
+              left: `${sticker.x}%`,
+              top: `${sticker.y}%`,
+              transform: `translate(-50%, -50%) scale(${sticker.scale}) rotate(${sticker.rotation}deg)`,
+              fontSize: sticker.type === 'emoji' ? '2rem' : sticker.type === 'shape' || sticker.type === 'arrow' ? '1.75rem' : '2rem',
+              lineHeight: 1,
+              color: sticker.type !== 'emoji' ? sticker.color : undefined,
+            }}
+            onMouseDown={e => handleStickerMouseDown(e, sticker.id)}
+            onClick={e => { e.stopPropagation(); setActiveStickerOverlayId(sticker.id); }}
+          >
+            {sticker.content}
+          </div>
+        ))}
+
+        {/* Text overlays — draggable */}
+        {activeOverlays.map(overlay => (
+          <div
+            key={overlay.id}
+            className="absolute pointer-events-auto cursor-grab active:cursor-grabbing z-10"
+            style={{
+              left: `${overlay.x}%`,
+              top: `${overlay.y}%`,
+              transform: 'translate(-50%, -50%)',
+              opacity: overlay.opacity,
+            }}
+            onMouseDown={(e) => handleTextMouseDown(e, overlay.id)}
+            onClick={(e) => { e.stopPropagation(); setActiveTextId(overlay.id); }}
+          >
             <div
-              key={subtitle.id}
-              className={`text-white text-center ${getSubtitleStyleClasses(subtitle.style)}`}
+              className="text-overlay"
+              style={{
+                fontFamily: overlay.fontFamily,
+                fontSize: `${overlay.fontSize}px`,
+                fontWeight: overlay.fontWeight,
+                color: overlay.color,
+                backgroundColor: overlay.backgroundColor !== 'transparent' ? overlay.backgroundColor : undefined,
+                padding: overlay.backgroundColor !== 'transparent' ? '8px 12px' : '0px',
+                borderRadius: overlay.backgroundColor !== 'transparent' ? '4px' : '0px',
+                backdropFilter: overlay.backgroundOpacity > 0 ? 'blur(2px)' : undefined,
+                whiteSpace: 'nowrap',
+              }}
             >
-              {subtitle.text}
+              {overlay.text}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
 
-      {/* Keyframe animation styles */}
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translate(0, 0); }
-          25% { transform: translate(-3px, 2px); }
-          50% { transform: translate(3px, -2px); }
-          75% { transform: translate(-2px, -1px); }
-        }
-        @keyframes glitch {
-          0%, 100% { transform: translate(0); filter: none; }
-          20% { transform: translate(-2px, 1px); filter: hue-rotate(90deg); }
-          40% { transform: translate(2px, -1px); filter: saturate(2); }
-          60% { transform: translate(-1px, -2px); filter: hue-rotate(180deg); }
-          80% { transform: translate(1px, 2px); filter: saturate(0.5); }
-        }
-      `}</style>
+        {/* Subtitles */}
+        {activeSubtitles.length > 0 && (
+          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-full px-4 flex flex-col items-center gap-2 pointer-events-none z-10">
+            {activeSubtitles.map(subtitle => (
+              <div
+                key={subtitle.id}
+                className={`text-white text-center ${getSubtitleStyleClasses(subtitle.style)}`}
+              >
+                {subtitle.text}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Keyframe animation styles */}
+        <style>{`
+          @keyframes shake {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(-3px, 2px); }
+            50% { transform: translate(3px, -2px); }
+            75% { transform: translate(-2px, -1px); }
+          }
+          @keyframes glitch {
+            0%, 100% { transform: translate(0); filter: none; }
+            20% { transform: translate(-2px, 1px); filter: hue-rotate(90deg); }
+            40% { transform: translate(2px, -1px); filter: saturate(2); }
+            60% { transform: translate(-1px, -2px); filter: hue-rotate(180deg); }
+            80% { transform: translate(1px, 2px); filter: saturate(0.5); }
+          }
+        `}</style>
       </div>
     </div>
   );
