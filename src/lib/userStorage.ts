@@ -71,7 +71,7 @@ export const getUserProfile = async (userId: string): Promise<{ username: string
 export const getUserDesigns = async (userId: string): Promise<SavedDesign[]> => {
   const { data, error } = await supabase
     .from('designs')
-    .select('id, title, canvas_width, canvas_height, canvas_background, created_at, updated_at, design_pages(id, page_order, canvas_data, thumbnail)')
+    .select('id, title, canvas_width, canvas_height, canvas_background, project_mode, created_at, updated_at, design_pages(id, page_order, canvas_data, thumbnail)')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false });
 
@@ -83,6 +83,7 @@ export const getUserDesigns = async (userId: string): Promise<SavedDesign[]> => 
     canvasWidth: d.canvas_width,
     canvasHeight: d.canvas_height,
     canvasBackground: d.canvas_background,
+    projectMode: d.project_mode === 'video' ? 'video' : 'photo',
     canvasName: d.title,
     createdAt: d.created_at,
     updatedAt: d.updated_at,
@@ -104,6 +105,7 @@ export const saveUserDesign = async (userId: string, design: SavedDesign): Promi
     canvas_width: design.canvasWidth,
     canvas_height: design.canvasHeight,
     canvas_background: design.canvasBackground,
+    project_mode: design.projectMode || 'photo',
     updated_at: new Date().toISOString(),
   };
 

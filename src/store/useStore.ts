@@ -5,6 +5,7 @@ export type ToolMode = 'select' | 'text' | 'rectangle' | 'circle' | 'triangle' |
 export type SidebarTab = 'shapes' | 'text' | 'uploads' | 'templates' | 'layers' | 'magicTools' | 'adjustments';
 export type BlendMode = 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'colorDodge' | 'colorBurn' | 'hardLight' | 'softLight' | 'difference' | 'exclusion' | 'hue' | 'saturation' | 'color' | 'luminosity';
 export type PageTransition = 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'zoom-in' | 'zoom-out' | 'rotate' | 'wipe-left' | 'wipe-right';
+export type ProjectMode = 'photo' | 'video';
 
 export interface ImageAdjustments {
   brightness: number; // -100 to 100
@@ -55,6 +56,7 @@ export interface SavedDesign {
   canvasHeight: number;
   canvasBackground: string;
   canvasName: string;
+  projectMode: ProjectMode;
   createdAt: string;
   updatedAt: string;
 }
@@ -96,6 +98,8 @@ export interface CanvasState {
   // Video timeline
   videoTrack: VideoTrackState;
   activeVideoClipId: string | null;
+  // Project mode
+  projectMode: ProjectMode;
 }
 
 export interface CanvasActions {
@@ -158,6 +162,8 @@ export interface CanvasActions {
   setVideoCurrentTime: (time: number) => void;
   setVideoTimelineZoom: (zoom: number) => void;
   setActiveVideoClip: (clipId: string | null) => void;
+  // Project mode
+  setProjectMode: (mode: ProjectMode) => void;
 }
 
 type Store = CanvasState & CanvasActions;
@@ -223,6 +229,7 @@ export const useStore = create<Store>((set, get) => ({
     zoom: 80, // px per second
   },
   activeVideoClipId: null,
+  projectMode: 'photo',
 
   setFabricCanvas: (canvas) => set({ fabricCanvas: canvas }),
   togglePageSelection: (pageId) =>
@@ -266,6 +273,7 @@ export const useStore = create<Store>((set, get) => ({
         zoom: 80,
       },
       activeVideoClipId: null,
+      projectMode: 'photo',
     });
   },
   setToolMode: (mode) => set({ toolMode: mode }),
@@ -282,7 +290,7 @@ export const useStore = create<Store>((set, get) => ({
   },
   setCanvasName: (name) => set({ canvasName: name }),
   exportDesign: () => {
-    const { pages, canvasWidth, canvasHeight, canvasBackground, canvasName, designId } = get();
+    const { pages, canvasWidth, canvasHeight, canvasBackground, canvasName, designId, projectMode } = get();
     const now = new Date().toISOString();
     return {
       id: designId ?? `design_${Date.now()}`,
@@ -292,6 +300,7 @@ export const useStore = create<Store>((set, get) => ({
       canvasHeight,
       canvasBackground,
       canvasName,
+      projectMode,
       createdAt: now,
       updatedAt: now,
     };
@@ -308,6 +317,7 @@ export const useStore = create<Store>((set, get) => ({
       history: [],
       historyIndex: -1,
       selectedPageIds: [],
+      projectMode: design.projectMode || 'photo',
     });
 
     const fabricCanvas = get().fabricCanvas;
@@ -895,6 +905,18 @@ export const useStore = create<Store>((set, get) => ({
 
   setActiveVideoClip: (clipId) => {
     set({ activeVideoClipId: clipId });
+  },
+
+  // ── Project mode ──────────────────────────────────────────────────────
+  setProjectMode: (mode) => {
+    set({ projectMode: mode });
+    // When switching to photo mode, stop any video playback
+    if (mode === 'photo') {
+      set((state) => ({
+        videoTrack: { ...state.videoTrack, isPlaying: false },
+        activeVideoClipId: null,
+      }));
+    }
   },
 }));
 

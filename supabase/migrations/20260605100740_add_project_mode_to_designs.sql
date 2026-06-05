@@ -1,0 +1,1 @@
+ALTER TABLE designs ADD COLUMN IF NOT EXISTS project_mode text DEFAULT 'photo' NOT NULL;

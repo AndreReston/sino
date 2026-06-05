@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
-import { useStore, SavedDesign } from './store/useStore';
+import { useStore, SavedDesign, ProjectMode } from './store/useStore';
 import LandingPage from './components/LandingPage';
 import AuthPage from './components/AuthPage';
 import Dashboard from './components/Dashboard';
@@ -115,8 +115,9 @@ export default function App() {
     store.resetWorkspace();
   };
 
-  const handleCreateDesign = () => {
+  const handleCreateDesign = (mode: ProjectMode = 'photo') => {
     store.resetWorkspace();
+    store.setProjectMode(mode);
     setActiveDesign(null);
     setView('workspace');
   };
@@ -172,6 +173,8 @@ export default function App() {
     );
   }
 
+  const isVideoMode = store.projectMode === 'video';
+
   return (
     <div className="flex h-screen bg-canvas-bg overflow-hidden select-none">
       <LeftSidebar />
@@ -180,7 +183,7 @@ export default function App() {
           <TopBar onSave={handleSaveDesign} onBack={openDashboard} />
           <ContextualToolbar />
           <CanvasWorkspace />
-          <VideoTimeline />
+          {isVideoMode && <VideoTimeline />}
         </div>
         <RightPanel />
       </div>

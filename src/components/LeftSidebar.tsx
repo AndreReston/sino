@@ -113,6 +113,7 @@ export default function LeftSidebar() {
     setCanvasSize,
     selectedPageIds,
     exportPagesAsZip,
+    projectMode,
   } = useStore();
 
   const [editingName, setEditingName] = useState(false);
@@ -328,6 +329,14 @@ export default function LeftSidebar() {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-panel-border shrink-0">
           <div className="flex items-center gap-2 min-w-0">
+            {/* Mode badge */}
+            <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+              projectMode === 'video'
+                ? 'bg-sky-500/15 text-sky-400 border border-sky-500/25'
+                : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
+            }`}>
+              {projectMode === 'video' ? 'Video' : 'Photo'}
+            </span>
             {editingName ? (
               <input
                 autoFocus
@@ -634,7 +643,8 @@ function UploadsPanel({
   const [sessionUploads, setSessionUploads] = useState<{ url: string; name: string; type?: string; thumbnailUrl?: string; duration?: number }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { addVideoClip, videoTrack } = useStore();
+  const { addVideoClip, videoTrack, projectMode } = useStore();
+  const isVideoMode = projectMode === 'video';
 
   const fetchUploads = async () => {
     try {
@@ -689,6 +699,13 @@ function UploadsPanel({
     setUploading(true);
     setError(null);
     const isVideo = file.type.startsWith('video/');
+
+    // Only allow videos in video mode
+    if (isVideo && !isVideoMode) {
+      setError('Video files require a Video Project. Create one from your dashboard.');
+      setUploading(false);
+      return;
+    }
 
     try {
       const body = new FormData();
@@ -773,17 +790,21 @@ function UploadsPanel({
         <div className="flex items-center justify-between mb-2 gap-3">
           <div>
             <p className="text-xs text-zinc-500">Upload Media</p>
-            <p className="text-[11px] text-zinc-500">Images and videos are accepted.</p>
+            <p className="text-[11px] text-zinc-500">
+              {isVideoMode ? 'Images and video files are accepted.' : 'PNG, JPG, SVG, WEBP files.'}
+            </p>
           </div>
           <span className="text-xs text-zinc-400">{uploading ? 'Uploading...' : 'Ready'}</span>
         </div>
         <label className="relative flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-dashed border-panel-border hover:border-zinc-500 bg-panel-light cursor-pointer transition-all group">
           <Upload className="w-6 h-6 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
           <span className="text-sm text-zinc-500 group-hover:text-zinc-300 transition-colors">Click to upload</span>
-          <span className="text-xs text-zinc-600">PNG, JPG, SVG, WEBP, MP4, MOV, WEBM</span>
+          <span className="text-xs text-zinc-600">
+            {isVideoMode ? 'PNG, JPG, SVG, WEBP, MP4, MOV, WEBM' : 'PNG, JPG, SVG, WEBP'}
+          </span>
           <input
             type="file"
-            accept="image/png,image/jpeg,image/svg+xml,image/webp,video/mp4,video/quicktime,video/webm,video/x-msvideo"
+            accept={isVideoMode ? 'image/png,image/jpeg,image/svg+xml,image/webp,video/mp4,video/quicktime,video/webm,video/x-msvideo' : 'image/png,image/jpeg,image/svg+xml,image/webp'}
             className="absolute inset-0 opacity-0 cursor-pointer"
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -809,7 +830,9 @@ function UploadsPanel({
               No uploaded assets yet.
             </div>
           ) : (
-            [...sessionUploads, ...uploads].map((asset) => {
+            [...sessionUploads, ...uploads]
+              .filter((asset) => isVideoMode || asset.type !== 'video')
+              .map((asset) => {
               const isVideoAsset = asset.type === 'video';
               return (
                 <button
