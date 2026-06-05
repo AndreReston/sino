@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useStore, SavedDesign, ProjectMode } from './store/useStore';
+import { useVideoStore } from './store/videoStore';
 import LandingPage from './components/LandingPage';
 import AuthPage from './components/AuthPage';
 import Dashboard from './components/Dashboard';
@@ -10,6 +11,7 @@ import RightPanel from './components/RightPanel';
 import ContextualToolbar from './components/ContextualToolbar';
 import CanvasWorkspace from './components/CanvasWorkspace';
 import VideoTimeline from './components/VideoTimeline';
+import VideoWorkspace from './components/video/VideoWorkspace';
 import {
   getCurrentUser,
   getUserDesigns,
@@ -21,7 +23,7 @@ import {
   onAuthStateChange,
 } from './lib/userStorage';
 
-type AppView = 'landing' | 'auth' | 'dashboard' | 'workspace';
+type AppView = 'landing' | 'auth' | 'dashboard' | 'workspace' | 'video-workspace';
 
 export default function App() {
   const [view, setView] = useState<AppView>('landing');
@@ -116,16 +118,28 @@ export default function App() {
   };
 
   const handleCreateDesign = (mode: ProjectMode = 'photo') => {
-    store.resetWorkspace();
-    store.setProjectMode(mode);
-    setActiveDesign(null);
-    setView('workspace');
+    if (mode === 'video') {
+      useVideoStore.getState().resetStore();
+      useVideoStore.getState().createProject('Untitled Video', '');
+      setView('video-workspace');
+    } else {
+      store.resetWorkspace();
+      store.setProjectMode(mode);
+      setActiveDesign(null);
+      setView('workspace');
+    }
   };
 
   const handleOpenDesign = (design: SavedDesign) => {
-    setActiveDesign(design);
-    store.loadDesign(design);
-    setView('workspace');
+    if (design.projectMode === 'video') {
+      useVideoStore.getState().resetStore();
+      useVideoStore.getState().createProject(design.title, '');
+      setView('video-workspace');
+    } else {
+      setActiveDesign(design);
+      store.loadDesign(design);
+      setView('workspace');
+    }
   };
 
   const handleSaveDesign = async () => {
@@ -169,6 +183,15 @@ export default function App() {
         onCreate={handleCreateDesign}
         onOpen={handleOpenDesign}
         onLogout={handleLogout}
+      />
+    );
+  }
+
+  if (view === 'video-workspace') {
+    return (
+      <VideoWorkspace
+        onSave={handleSaveDesign}
+        onBack={openDashboard}
       />
     );
   }
