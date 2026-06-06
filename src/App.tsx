@@ -27,6 +27,7 @@ type AppView = 'landing' | 'auth' | 'dashboard' | 'workspace' | 'video-workspace
 
 const LAST_VIEW_KEY = 'sino:lastView';
 const LAST_DESIGN_KEY = 'sino:lastDesignId';
+const VIDEO_PROJECT_STORAGE_KEY = 'designforge_video_project';
 
 export default function App() {
   const [view, setView] = useState<AppView>('landing');
@@ -41,6 +42,10 @@ export default function App() {
     setView(nextView);
     try {
       localStorage.setItem(LAST_VIEW_KEY, nextView);
+      // Eagerly save the video project when entering/leaving the video workspace
+      if (nextView === 'video-workspace') {
+        useVideoStore.getState().saveToLocalStorage();
+      }
     } catch {
       // Ignore storage errors
     }
@@ -92,14 +97,20 @@ export default function App() {
         const lastView = localStorage.getItem(LAST_VIEW_KEY);
         const lastDesignId = localStorage.getItem(LAST_DESIGN_KEY);
 
-        if (lastView === 'workspace' && lastDesignId) {
-          const design = savedDesigns.find(d => d.id === lastDesignId);
-          if (design) {
-            setActiveDesign(design);
-            await store.loadDesign(design);
-            setView('workspace');
-            return;
+        if (lastView === 'workspace') {
+          if (lastDesignId) {
+            const design = savedDesigns.find(d => d.id === lastDesignId);
+            if (design) {
+              setActiveDesign(design);
+              await store.loadDesign(design);
+              setView('workspace');
+              return;
+            }
           }
+          // New unsaved workspace — restore canvas state from store's own localStorage
+          store.resetWorkspace();
+          setView('workspace');
+          return;
         }
 
         if (lastView === 'dashboard') {
@@ -107,20 +118,43 @@ export default function App() {
           return;
         }
 
-        if (lastView === 'video-workspace' && lastDesignId) {
-          const design = savedDesigns.find(d => d.id === lastDesignId && d.projectMode === 'video');
-          if (design) {
-            setActiveDesign(design);
-            useVideoStore.getState().resetStore();
-            const savedProject = design.pages[0]?.canvas_data as any;
-            if (savedProject?.id) {
-              useVideoStore.getState().loadProject(savedProject);
-            } else {
-              useVideoStore.getState().createProject(design.title);
+        if (lastView === 'video-workspace') {
+          // Try to restore from a saved design first
+          if (lastDesignId) {
+            const design = savedDesigns.find(d => d.id === lastDesignId && d.projectMode === 'video');
+            if (design) {
+              setActiveDesign(design);
+              useVideoStore.getState().resetStore();
+              const savedProject = design.pages[0]?.canvas_data as any;
+              if (savedProject?.id) {
+                useVideoStore.getState().loadProject(savedProject);
+              } else {
+                useVideoStore.getState().createProject(design.title);
+              }
+              setView('video-workspace');
+              return;
             }
-            setView('video-workspace');
-            return;
           }
+          // Fall back to the in-progress video project stored directly in localStorage
+          const rawProject = localStorage.getItem(VIDEO_PROJECT_STORAGE_KEY);
+          if (rawProject) {
+            try {
+              const parsed = JSON.parse(rawProject);
+              useVideoStore.getState().resetStore();
+              if (parsed?.id) {
+                useVideoStore.getState().loadProject(parsed);
+              } else {
+                useVideoStore.getState().createProject('Untitled Video');
+              }
+              setView('video-workspace');
+              return;
+            } catch { /* fall through */ }
+          }
+          // No project data — open a fresh video workspace
+          useVideoStore.getState().resetStore();
+          useVideoStore.getState().createProject('Untitled Video');
+          setView('video-workspace');
+          return;
         }
 
         setView('dashboard');
