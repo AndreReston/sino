@@ -4,6 +4,7 @@ import {
   ChevronDown, Layers, Monitor,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 const PRESETS = [
   { name: 'Instagram Post', w: 1080, h: 1080 },
@@ -199,6 +200,25 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
 
       {/* Right Actions */}
       <div className="flex items-center gap-2">
+        {(() => {
+          const { isInstallable, isInstalled, installApp } = usePWAInstall();
+          if (isInstalled) return (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] text-zinc-500 bg-panel-light border border-panel-border">
+              <Monitor className="w-3 h-3" /> App
+            </span>
+          );
+          if (isInstallable) return (
+            <button
+              type="button"
+              onClick={installApp}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-emerald-300 border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 transition-all cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Install
+            </button>
+          );
+          return null;
+        })()}
         {onBack && (
           <button
             type="button"

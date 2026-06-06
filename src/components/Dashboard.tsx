@@ -1,9 +1,10 @@
 import React from 'react';
 import {
   Layers, LogOut, Clock,
-  FileStack, ArrowRight, Image, Film, Download,
+  FileStack, ArrowRight, Image, Film, Download, Monitor,
 } from 'lucide-react';
 import { SavedDesign, ProjectMode } from '../store/useStore';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 type Props = {
   user: string;
@@ -17,6 +18,7 @@ type Props = {
 export default function Dashboard({ user, designs, onCreate, onOpen, onDownload, onLogout }: Props) {
   const photoDesigns = designs.filter((d) => d.projectMode !== 'video');
   const videoProjects = designs.filter((d) => d.projectMode === 'video');
+  const { isInstallable, isInstalled, installApp } = usePWAInstall();
 
   return (
     <div className="min-h-screen bg-[#07070a] text-white">
@@ -33,7 +35,24 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onDownload,
           </div>
           <span className="text-lg font-bold tracking-tight">DesignForge</span>
         </div>
-        <button
+        <div className="flex items-center gap-3">
+          {isInstallable && !isInstalled && (
+            <button
+              type="button"
+              onClick={installApp}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 text-sm font-semibold hover:bg-emerald-500/20 hover:border-emerald-500/60 transition-all"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Install App
+            </button>
+          )}
+          {isInstalled && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-800 text-zinc-400 text-xs font-medium">
+              <Monitor className="w-3.5 h-3.5" />
+              Installed
+            </span>
+          )}
+          <button
           type="button"
           onClick={onLogout}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-800 bg-zinc-900/80 text-sm text-zinc-400 hover:text-white hover:border-zinc-600 transition-all"
@@ -41,6 +60,7 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onDownload,
           <LogOut className="w-3.5 h-3.5" />
           Log out
         </button>
+        </div>
       </nav>
 
       {/* Main content */}

@@ -1,7 +1,8 @@
 import {
   Layers, Palette, Download, LayoutGrid,
-  MousePointer2, ArrowRight, Sparkles, PenLine,
+  MousePointer2, ArrowRight, Sparkles, PenLine, Monitor,
 } from 'lucide-react';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 type Props = {
   onLogin: () => void;
@@ -43,6 +44,31 @@ const FEATURES = [
   },
 ];
 
+function InstallButton({ className = '' }: { className?: string }) {
+  const { isInstallable, isInstalled, installApp } = usePWAInstall();
+
+  if (isInstalled) {
+    return (
+      <span className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-800 text-zinc-400 text-sm font-medium ${className}`}>
+        <Monitor className="w-4 h-4" />
+        Installed
+      </span>
+    );
+  }
+
+  if (!isInstallable) return null;
+
+  return (
+    <button
+      onClick={installApp}
+      className={`group inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 font-semibold text-sm hover:bg-emerald-500/20 hover:border-emerald-500/60 transition-all hover:shadow-[0_4px_20px_rgba(16,185,129,0.2)] ${className}`}
+    >
+      <Download className="w-4 h-4" />
+      Install App
+    </button>
+  );
+}
+
 export default function LandingPage({ onLogin, onRegister }: Props) {
   return (
     <div className="min-h-screen bg-[#07070a] text-white overflow-x-hidden">
@@ -61,6 +87,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
           <span className="text-lg font-bold tracking-tight">DesignForge</span>
         </div>
         <div className="flex items-center gap-3">
+          <InstallButton />
           <button
             onClick={onLogin}
             className="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white transition-colors"
@@ -104,6 +131,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
               Start designing for free
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </button>
+            <InstallButton className="hidden sm:inline-flex" />
             <button
               onClick={onLogin}
               className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full border border-zinc-700 bg-zinc-900/80 text-zinc-200 font-medium text-sm hover:border-zinc-500 hover:bg-zinc-800 transition-all"
@@ -206,6 +234,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
               Create free account
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </button>
+            <InstallButton />
           </div>
         </div>
       </section>
