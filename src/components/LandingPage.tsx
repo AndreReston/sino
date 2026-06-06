@@ -56,12 +56,11 @@ function InstallButton({ className = '' }: { className?: string }) {
     );
   }
 
-  if (!isInstallable) return null;
-
   return (
     <button
       onClick={installApp}
-      className={`group inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 font-semibold text-sm hover:bg-emerald-500/20 hover:border-emerald-500/60 transition-all hover:shadow-[0_4px_20px_rgba(16,185,129,0.2)] ${className}`}
+      disabled={!isInstallable}
+      className={`group inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 font-semibold text-sm hover:bg-emerald-500/20 hover:border-emerald-500/60 transition-all hover:shadow-[0_4px_20px_rgba(16,185,129,0.2)] disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
     >
       <Download className="w-4 h-4" />
       Install App
