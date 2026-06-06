@@ -20,8 +20,8 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Playback loop — hooks must be at top level
   const rafRef = useRef<number>(0);
   const lastTickRef = useRef<number>(0);
   const isPlaying = useVideoStore(s => s.isPlaying);
@@ -58,6 +58,40 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
     return () => cancelAnimationFrame(rafRef.current);
   }, [isPlaying, playbackSpeed]);
 
+  // Background music audio element sync
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const bgMusic = project?.backgroundMusic;
+    if (!bgMusic?.url) {
+      audio.pause();
+      audio.src = '';
+      return;
+    }
+    if (audio.src !== bgMusic.url) {
+      audio.src = bgMusic.url;
+      audio.load();
+    }
+    audio.volume = Math.max(0, Math.min(1, bgMusic.volume ?? 0.8));
+    if (isPlaying) {
+      audio.play().catch(() => {});
+    } else {
+      audio.pause();
+    }
+  }, [project?.backgroundMusic?.url, project?.backgroundMusic?.volume, isPlaying]);
+
+  // Seek audio to match current time when playback starts
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !project?.backgroundMusic?.url) return;
+    if (isPlaying) {
+      const st = useVideoStore.getState();
+      if (Math.abs(audio.currentTime - st.currentTime) > 0.3) {
+        audio.currentTime = st.currentTime;
+      }
+    }
+  }, [isPlaying]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -66,47 +100,36 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
 
       const st = useVideoStore.getState();
 
-      // Space = play/pause
       if (e.key === ' ') {
         e.preventDefault();
         st.setIsPlaying(!st.isPlaying);
       }
 
-      // S = split at playhead
-      if (e.key === 's' || e.key === 'S') {
-        if (!e.ctrlKey && !e.metaKey && st.activeClipId) {
-          e.preventDefault();
-          const clip = st.project?.clips.find(c => c.id === st.activeClipId);
-          if (clip) {
-            const sortedClips = [...(st.project?.clips || [])].sort((a, b) => a.order - b.order);
-            const idx = sortedClips.findIndex(c => c.id === clip.id);
-            let timeFromStart = st.currentTime;
-            for (let i = 0; i < idx; i++) {
-              const c = sortedClips[i];
-              timeFromStart -= (c.duration - c.trimStart - c.trimEnd) / Math.max(0.25, c.speed);
-            }
-            if (timeFromStart > 0) {
-              st.splitClip(st.activeClipId, timeFromStart);
-            }
+      if ((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey && st.activeClipId) {
+        e.preventDefault();
+        const clip = st.project?.clips.find(c => c.id === st.activeClipId);
+        if (clip) {
+          const sorted = [...(st.project?.clips || [])].sort((a, b) => a.order - b.order);
+          const idx = sorted.findIndex(c => c.id === clip.id);
+          let timeFromStart = st.currentTime;
+          for (let i = 0; i < idx; i++) {
+            const c = sorted[i];
+            timeFromStart -= (c.duration - c.trimStart - c.trimEnd) / Math.max(0.25, c.speed);
           }
+          if (timeFromStart > 0) st.splitClip(st.activeClipId, timeFromStart);
         }
       }
 
-      // Delete/Backspace = remove selected clip
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (st.activeClipId) {
-          e.preventDefault();
-          st.removeClip(st.activeClipId);
-        }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && st.activeClipId) {
+        e.preventDefault();
+        st.removeClip(st.activeClipId);
       }
 
-      // Ctrl+Z = undo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         st.undo();
       }
 
-      // Ctrl+Y / Ctrl+Shift+Z = redo
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
         e.preventDefault();
         st.redo();
@@ -128,7 +151,6 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
     video.src = url;
   };
 
-  // No project: creation screen
   if (!project) {
     return (
       <div className="flex h-screen bg-[#07070a] text-white">
@@ -180,9 +202,10 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
     );
   }
 
-  // Full editor workspace
   return (
     <div className="flex h-screen bg-[#07070a] text-white overflow-hidden select-none">
+      {/* Hidden audio element for background music */}
+      <audio ref={audioRef} loop />
       <VideoSidebar />
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
         <VideoTopBar onSave={onSave} onBack={onBack} />
