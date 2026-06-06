@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useCanvas } from '../hooks/useCanvas';
 import { useStore } from '../store/useStore';
 import PageNavigator from './PageNavigator';
 
 export default function Workspace() {
   const { canvasRef, containerRef } = useCanvas();
-  const { zoom, setZoom, canvasWidth, canvasHeight } = useStore();
+  const { zoom, canvasWidth, canvasHeight } = useStore();
 
   // ── Keyboard shortcuts ──────────────────────────────────────────────────
   useEffect(() => {

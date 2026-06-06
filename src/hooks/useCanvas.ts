@@ -75,7 +75,7 @@ export function useCanvas() {
 
     const clearGuides = () => setGuides([]);
 
-    const updateGuides = (opt: fabric.IEvent<MouseEvent>) => {
+    const updateGuides = (opt: any) => {
       const target = opt.target as fabric.Object | null;
       if (!target) {
         setGuides([]);
@@ -220,7 +220,7 @@ export function useCanvas() {
       fabricCanvas.defaultCursor = 'crosshair';
     }
 
-    const handleMouseDown = (opt: fabric.IEvent<MouseEvent>) => {
+    const handleMouseDown = (opt: any) => {
       if (toolMode === 'select' || toolMode === 'pen') return;
 
       const pointer = fabricCanvas.getPointer(opt.e);

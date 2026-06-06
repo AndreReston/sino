@@ -5,7 +5,7 @@ import PageNavigator from './PageNavigator';
 
 export default function CanvasWorkspace() {
   const { canvasRef, containerRef, guides } = useCanvas();
-  const { zoom, fabricCanvas, activeObject, canvasWidth, canvasHeight, isPageTransitioning, pageTransitionType } = useStore();
+  const { zoom, activeObject, canvasWidth, canvasHeight, isPageTransitioning, pageTransitionType } = useStore();
   const setZoom = useStore((state) => state.setZoom);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [autoFit, setAutoFit] = useState(true);

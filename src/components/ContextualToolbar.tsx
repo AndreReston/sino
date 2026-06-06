@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  MousePointer2, Bold, Italic, Underline, Strikethrough,
-  AlignLeft, AlignCenter, AlignRight, AlignJustify,
+  Bold, Italic, Underline, Strikethrough,
+  AlignLeft, AlignCenter, AlignRight,
   ChevronUp, ChevronDown, Copy, Trash2,
-  FlipHorizontal, FlipVertical, Minus, Plus,
-  Image as ImageIcon, Sliders, RotateCcw, RotateCw,
-  Square, Circle, Triangle, Minus as LineIcon, Star,
-  Lock, Unlock, X,
+  FlipHorizontal, FlipVertical, Plus, Minus,
+  Image as ImageIcon, RotateCcw, RotateCw,
+  Square, Circle, Triangle, Star,
+  X,
   Film, Volume2, VolumeX,
 } from 'lucide-react';
 import { useStore, VideoClip } from '../store/useStore';
@@ -32,14 +32,12 @@ const FONT_FAMILIES = [
   'Courier New', 'Trebuchet MS', 'Verdana', 'Impact',
 ];
 
-const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64, 72, 96, 128];
-
 // ─────────────────────────────────────────────
 // Main toolbar
 // ─────────────────────────────────────────────
 
 export default function ContextualToolbar() {
-  const { activeObject, fabricCanvas, zoom, setZoom, historyIndex, history, undo, redo } = useStore();
+  const { activeObject, fabricCanvas, zoom, setZoom } = useStore();
   const [, forceUpdate] = useState(0);
   const refresh = useCallback(() => forceUpdate((n) => n + 1), []);
 
@@ -197,20 +195,20 @@ function NoSelectionControls({
     setActiveObject?.(obj);
   };
 
-  const addRect = () => createAtCenter((left, top, color, size) => {
+  const addRect = () => createAtCenter((left, top, color) => {
     const offset = getSizeOffset();
     return new fabric.Rect({ left: left - offset / 2, top: top - (offset * 0.67) / 2, width: offset, height: offset * 0.67, fill: color, rx: 6, ry: 6 });
   });
-  const addCircle = () => createAtCenter((left, top, color, size) => {
+  const addCircle = () => createAtCenter((left, top, color) => {
     const offset = getSizeOffset();
     const radius = offset / 2;
     return new fabric.Circle({ left: left - radius, top: top - radius, radius, fill: color });
   });
-  const addTriangle = () => createAtCenter((left, top, color, size) => {
+  const addTriangle = () => createAtCenter((left, top, color) => {
     const offset = getSizeOffset();
     return new fabric.Triangle({ left: left - offset / 2, top: top - offset / 2, width: offset, height: offset, fill: color });
   });
-  const addStar = () => createAtCenter((left, top, color, size) => {
+  const addStar = () => createAtCenter((left, top, color) => {
     const offset = getSizeOffset();
     const r = offset / 2;
     const points: [number, number][] = [];
@@ -221,11 +219,11 @@ function NoSelectionControls({
     }
     return new fabric.Polygon(points.map(p => ({ x: p[0], y: p[1] })), { fill: color });
   });
-  const addLine = () => createAtCenter((left, top, color, size) => {
+  const addLine = () => createAtCenter((left, top, color) => {
     const offset = getSizeOffset();
     return new fabric.Line([left - offset / 2, top, left + offset / 2, top], { stroke: color, strokeWidth: Math.max(2, offset / 20) });
   });
-  const addRoundedRect = () => createAtCenter((left, top, color, size) => {
+  const addRoundedRect = () => createAtCenter((left, top, color) => {
     const offset = getSizeOffset();
     return new fabric.Rect({ left: left - offset / 2, top: top - (offset * 0.67) / 2, width: offset, height: offset * 0.67, fill: color, rx: offset / 8, ry: offset / 8 });
   });
@@ -319,7 +317,7 @@ function NoSelectionControls({
         <ToolbarBtn icon={<Square className="w-3.5 h-3.5" />} title="Rectangle" onClick={addRect} />
         <ToolbarBtn icon={<Circle className="w-3.5 h-3.5" />} title="Circle" onClick={addCircle} />
         <ToolbarBtn icon={<Triangle className="w-3.5 h-3.5" />} title="Triangle" onClick={addTriangle} />
-        <ToolbarBtn icon={<LineIcon className="w-3.5 h-3.5" />} title="Line" onClick={addLine} />
+        <ToolbarBtn icon={<Minus className="w-3.5 h-3.5" />} title="Line" onClick={addLine} />
         <ToolbarBtn icon={<Star className="w-3.5 h-3.5" />} title="Star" onClick={addStar} />
         <ToolbarBtn icon={<Square className="w-3.5 h-3.5" />} title="Rounded Rect" onClick={addRoundedRect} />
       </div>
@@ -763,7 +761,7 @@ function ShapeControls({
               min={0}
               max={60}
               value={(obj as fabric.Rect).rx || 0}
-              onChange={(e) => setProp({ rx: Number(e.target.value), ry: Number(e.target.value) })}
+              onChange={(e) => setProp({ rx: Number(e.target.value), ry: Number(e.target.value) } as any)}
               className="w-20 accent-emerald-500"
             />
             <span className="text-xs text-zinc-300 w-4 tabular-nums">{(obj as fabric.Rect).rx || 0}</span>

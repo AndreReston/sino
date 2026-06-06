@@ -1,9 +1,9 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import {
-  Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
-  ZoomIn, ZoomOut, Trash2, Film, Scissors,
+  Play, Pause, SkipBack, SkipForward,
+  ZoomIn, ZoomOut, Film,
 } from 'lucide-react';
-import { useStore, VideoClip } from '../store/useStore';
+import { useStore } from '../store/useStore';
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -20,8 +20,6 @@ export default function VideoTimeline() {
     setVideoCurrentTime,
     setVideoTimelineZoom,
     addVideoClip,
-    removeVideoClip,
-    updateVideoClip,
     setActiveVideoClip,
   } = useStore();
 
@@ -86,7 +84,6 @@ export default function VideoTimeline() {
     if (!dragClipId) return;
     const clip = clips.find((c) => c.id === dragClipId);
     if (!clip) return;
-    const startX = clip.startTime;
     const handleMove = (e: MouseEvent) => {
       if (!trackRef.current) return;
       const rect = trackRef.current.getBoundingClientRect();

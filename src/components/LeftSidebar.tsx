@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Shapes, Type, Upload, LayoutTemplate,
   Square, Circle, Triangle, Minus, Star,
-  Bold, Italic, AlignLeft, AlignCenter, AlignRight,
-  Image as ImageIcon, Folder, ChevronRight,
   MousePointer2, PenLine, Layers, Sparkles, Sliders, Eraser,
   Undo2, Redo2,
   Download, Monitor, ChevronDown,
@@ -40,15 +38,6 @@ const STOCK_IMAGES = [
   { url: 'https://images.pexels.com/photos/7376/startup-photos.jpg?w=300', label: 'Startup' },
   { url: 'https://images.pexels.com/photos/3183197/pexels-photo-3183197.jpeg?w=300', label: 'People' },
   { url: 'https://images.pexels.com/photos/1181244/pexels-photo-1181244.jpeg?w=300', label: 'Tech' },
-];
-
-const TEMPLATE_PRESETS = [
-  { name: 'Minimal Dark', bg: '#18181b', accent: '#22c55e', desc: '1080×1080' },
-  { name: 'Ocean', bg: '#0c4a6e', accent: '#38bdf8', desc: '1080×1080' },
-  { name: 'Sunset', bg: '#7c2d12', accent: '#f59e0b', desc: '1080×1080' },
-  { name: 'Pure White', bg: '#ffffff', accent: '#18181b', desc: '1920×1080' },
-  { name: 'Forest', bg: '#14532d', accent: '#86efac', desc: '1080×1920' },
-  { name: 'Rose', bg: '#881337', accent: '#fda4af', desc: '1200×675' },
 ];
 
 const PRESETS = [
@@ -105,11 +94,11 @@ function starPoints(cx: number, cy: number, spikes: number, outerR: number, inne
 export default function LeftSidebar() {
   const {
     sidebarTab, setSidebarTab,
-    fabricCanvas, setCanvasBackground,
+    fabricCanvas,
     toolMode, setToolMode,
     undo, redo, historyIndex, history,
     canvasName, setCanvasName,
-    zoom, setZoom, canvasWidth, canvasHeight,
+    canvasWidth, canvasHeight,
     setCanvasSize,
     selectedPageIds,
     exportPagesAsZip,
@@ -202,18 +191,6 @@ export default function LeftSidebar() {
     setToolMode('select');
   };
 
-  const applyTemplate = (bg: string, w?: number, h?: number) => {
-    setCanvasBackground(bg);
-    if (w && h) {
-      setCanvasSize(w, h);
-      if (fabricCanvas) {
-        fabricCanvas.setWidth(w);
-        fabricCanvas.setHeight(h);
-        fabricCanvas.renderAll();
-      }
-    }
-  };
-
   const applyPreset = (w: number, h: number) => {
     setCanvasSize(w, h);
     setShowPresets(false);
@@ -252,9 +229,9 @@ export default function LeftSidebar() {
     }
 
     if (target === 'selected') {
-      await exportPagesAsZip(selectedPageIds, format);
+      await exportPagesAsZip(selectedPageIds, (format === 'svg' ? 'png' : format) as 'png' | 'jpg');
     } else {
-      await exportPagesAsZip(undefined, format);
+      await exportPagesAsZip(undefined, (format === 'svg' ? 'png' : format) as 'png' | 'jpg');
     }
   };
 
@@ -472,8 +449,8 @@ export default function LeftSidebar() {
               setSelectedFont={setSelectedFont}
             />
           )}
-          {sidebarTab === 'uploads' && <UploadsPanel addImage={addImage} fabricCanvas={fabricCanvas} />}
-          {sidebarTab === 'templates' && <TemplatesPanel applyTemplate={applyTemplate} />}
+          {sidebarTab === 'uploads' && <UploadsPanel addImage={addImage} />}
+          {sidebarTab === 'templates' && <TemplatesPanel />}
           {sidebarTab === 'layers' && <LayersPanel />}
           {sidebarTab === 'magicTools' && <MagicToolsPanel />}
           {sidebarTab === 'adjustments' && <AdjustmentsPanel />}
@@ -634,10 +611,8 @@ function TextPanel({
 
 function UploadsPanel({
   addImage,
-  fabricCanvas,
 }: {
   addImage: (url: string) => void;
-  fabricCanvas: fabric.Canvas | null;
 }) {
   const [uploads, setUploads] = useState<{ url: string; name: string; type?: string }[]>([]);
   const [sessionUploads, setSessionUploads] = useState<{ url: string; name: string; type?: string; thumbnailUrl?: string; duration?: number }[]>([]);
@@ -956,7 +931,7 @@ function LayersPanel() {
   const toggleLayerVisibility = (obj: fabric.Object) => {
     obj.set({ visible: !obj.visible });
     fabricCanvas?.renderAll();
-    setLayers((prev) => [...(fabricCanvas?.getObjects().reverse() ?? [])]);
+    setLayers([...(fabricCanvas?.getObjects().reverse() ?? [])]);
   };
 
   const toggleLayerLock = (obj: fabric.Object) => {
@@ -970,13 +945,13 @@ function LayersPanel() {
       selectable: locked,
     });
     fabricCanvas?.renderAll();
-    setLayers((prev) => [...(fabricCanvas?.getObjects().reverse() ?? [])]);
+    setLayers([...(fabricCanvas?.getObjects().reverse() ?? [])]);
   };
 
   const deleteLayer = (obj: fabric.Object) => {
     fabricCanvas?.remove(obj);
     fabricCanvas?.renderAll();
-    setLayers((prev) => [...(fabricCanvas?.getObjects().reverse() ?? [])]);
+    setLayers([...(fabricCanvas?.getObjects().reverse() ?? [])]);
   };
 
   const moveLayer = (obj: fabric.Object, direction: 'up' | 'down') => {
@@ -1153,11 +1128,7 @@ function AdjustmentsPanel() {
   );
 }
 
-function TemplatesPanel({
-  applyTemplate,
-}: {
-  applyTemplate: (bg: string, w?: number, h?: number) => void;
-}) {
+function TemplatesPanel() {
   const { fabricCanvas, setToolMode } = useStore();
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1279,22 +1250,3 @@ function TemplatesPanel({
   );
 }
 
-function CanvasBgPicker() {
-  const { canvasBackground, setCanvasBackground } = useStore();
-  return (
-    <div className="flex items-center gap-3 p-3 rounded-xl bg-panel-light border border-panel-border">
-      <input
-        type="color"
-        value={canvasBackground}
-        onChange={(e) => setCanvasBackground(e.target.value)}
-        className="w-9 h-9 rounded-lg cursor-pointer border border-panel-border bg-transparent"
-      />
-      <input
-        type="text"
-        value={canvasBackground}
-        onChange={(e) => setCanvasBackground(e.target.value)}
-        className="input-field flex-1 font-mono text-sm"
-      />
-    </div>
-  );
-}

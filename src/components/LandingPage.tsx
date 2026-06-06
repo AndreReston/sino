@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Layers, Palette, Download, LayoutGrid,
   MousePointer2, ArrowRight, Sparkles, PenLine,

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { Plus, Copy, Trash2, Check } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
@@ -26,7 +26,6 @@ export default function PageNavigator() {
     togglePageSelection,
     clearPageSelection,
     fabricCanvas,
-    saveCurrentPage,
     pageTransitionType,
     setPageTransitionType,
   } = useStore();

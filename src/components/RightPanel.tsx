@@ -3,7 +3,6 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Bold, Italic, Underline, Strikethrough,
   ChevronUp, ChevronDown, Trash2, Copy, FlipHorizontal, FlipVertical,
-  RotateCcw, Maximize2, Minimize2, Palette,
   AlignHorizontalSpaceAround, AlignVerticalSpaceAround,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
@@ -417,7 +416,7 @@ export default function RightPanel() {
                     min={0}
                     max={60}
                     value={(obj as fabric.Rect).rx || 0}
-                    onChange={(e) => setProp({ rx: Number(e.target.value), ry: Number(e.target.value) })}
+                    onChange={(e) => setProp({ rx: Number(e.target.value), ry: Number(e.target.value) } as any)}
                     className="flex-1 accent-neon-green"
                   />
                   <span className="text-xs text-zinc-400 w-6 text-right">{(obj as fabric.Rect).rx || 0}</span>

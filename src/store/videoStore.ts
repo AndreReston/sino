@@ -341,7 +341,6 @@ function saveVersionsToStorage(versions: ProjectVersion[]) {
 // Beat detection simulation — real implementation would use Web Audio API
 async function detectBeats(audioUrl: string): Promise<BeatMarker[]> {
   return new Promise((resolve) => {
-    const audio = new Audio(audioUrl);
     const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContext) {
       // Fallback: generate dummy beats every ~0.5s
@@ -490,12 +489,11 @@ export const useVideoStore = create<VStore>((set, get) => ({
   loadProject: (project) => {
     // Migrate old projects that lack new fields
     const migrated: VideoProject = {
-      stickerOverlays: [],
-      sceneMarkers: [],
-      beatMarkers: [],
       ...project,
+      stickerOverlays: project.stickerOverlays || [],
+      sceneMarkers: project.sceneMarkers || [],
+      beatMarkers: project.beatMarkers || [],
       clips: project.clips.map(c => ({
-        effectStack: [],
         ...c,
       })),
     };
@@ -540,16 +538,16 @@ export const useVideoStore = create<VStore>((set, get) => ({
       if (raw) {
         const project = JSON.parse(raw) as VideoProject;
         const migratedClips = project.clips.map(clip => ({
-          effect: 'none' as ClipEffect,
-          keyframes: [] as Keyframe[],
-          effectStack: [] as EffectLayer[],
           ...clip,
+          effect: clip.effect || ('none' as ClipEffect),
+          keyframes: clip.keyframes || ([] as Keyframe[]),
+          effectStack: clip.effectStack || ([] as EffectLayer[]),
         }));
         const migratedProject: VideoProject = {
-          stickerOverlays: [],
-          sceneMarkers: [],
-          beatMarkers: [],
           ...project,
+          stickerOverlays: project.stickerOverlays || [],
+          sceneMarkers: project.sceneMarkers || [],
+          beatMarkers: project.beatMarkers || [],
           clips: migratedClips,
         };
         set({ project: migratedProject, history: [raw], historyIndex: 0 });
@@ -807,15 +805,13 @@ export const useVideoStore = create<VStore>((set, get) => ({
     video.src = clip.url;
     video.onloadedmetadata = () => {
       const w = video.videoWidth;
-      const h = video.videoHeight;
-      let resolution = 'Unknown';
       let quality: string;
 
-      if (w >= 3840) { resolution = '4K'; quality = '4K'; }
-      else if (w >= 1920) { resolution = '1080p'; quality = '1080p'; }
-      else if (w >= 1280) { resolution = '720p'; quality = '720p'; }
-      else if (w >= 854) { resolution = '480p'; quality = '480p ⚠'; }
-      else { resolution = `${w}p`; quality = `${w}p ⚠`; }
+      if (w >= 3840) { quality = '4K'; }
+      else if (w >= 1920) { quality = '1080p'; }
+      else if (w >= 1280) { quality = '720p'; }
+      else if (w >= 854) { quality = '480p ⚠'; }
+      else { quality = `${w}p ⚠`; }
 
       // Estimate bitrate from file size if possible
       const fps = 24; // default estimate

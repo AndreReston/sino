@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useCanvas } from '../hooks/useCanvas';
 import { useStore } from '../store/useStore';
 
 export default function CanvasArea() {
   const { canvasRef, containerRef } = useCanvas();
-  const { zoom, setZoom, fabricCanvas, canvasWidth, canvasHeight } = useStore();
+  const { zoom, setZoom, canvasWidth, canvasHeight } = useStore();
 
   // Keyboard shortcuts
   useEffect(() => {

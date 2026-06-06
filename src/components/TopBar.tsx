@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Undo2, Redo2, ZoomIn, ZoomOut, Download, Save,
-  ChevronDown, Layers, Eye, Monitor, Smartphone, Tablet,
+  ChevronDown, Layers, Monitor,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
@@ -85,7 +85,8 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
       return;
     }
 
-    await exportPagesAsZip(target === 'selected' ? selectedPageIds : undefined, format);
+    const zipFormat = format as 'png' | 'jpg';
+    await exportPagesAsZip(target === 'selected' ? selectedPageIds : undefined, zipFormat);
   };
 
   return (

@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Layers, Plus, LogOut, FolderOpen, Clock,
+  Layers, LogOut, Clock,
   FileStack, ArrowRight, Image, Film,
 } from 'lucide-react';
 import { SavedDesign, ProjectMode } from '../store/useStore';

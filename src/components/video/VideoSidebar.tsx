@@ -180,11 +180,11 @@ export default function VideoSidebar() {
 
   const {
     project, activeClipId, updateClip, addClip, removeClip, reorderClip,
-    addTextOverlay, removeTextOverlay, updateTextOverlay,
+    addTextOverlay, removeTextOverlay,
     addSubtitle, removeSubtitle, updateSubtitle,
     setClipFilter, resetClipFilters, addAudioTrack, removeAudioTrack, setBackgroundMusic,
     setActiveClipId, setActiveTextId, activeTextId,
-    updateProject, startExport, isExporting, exportProgress, setClipEffect,
+    startExport, isExporting, exportProgress, setClipEffect,
     addStickerOverlay, removeStickerOverlay,
     addSceneMarker, removeSceneMarker, updateSceneMarker, jumpToMarker,
     currentTime, showSafeZones, setShowSafeZones,

@@ -1,12 +1,9 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
-  Scissors, Trash2, ZoomIn, ZoomOut, Film, Type, Volume2,
-  Music, GripVertical,
+  Trash2, ZoomIn, ZoomOut, Film, Type, Volume2,
+  Music,
 } from 'lucide-react';
 import { useVideoStore } from '../../store/videoStore';
-import { Bookmark } from 'lucide-react';
-
-const SNAP_PX = 8;
 
 export default function VideoTimeline() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -15,11 +12,9 @@ export default function VideoTimeline() {
 
   const project = useVideoStore(s => s.project);
   const currentTime = useVideoStore(s => s.currentTime);
-  const isPlaying = useVideoStore(s => s.isPlaying);
   const activeClipId = useVideoStore(s => s.activeClipId);
   const activeTextId = useVideoStore(s => s.activeTextId);
   const setCurrentTime = useVideoStore(s => s.setCurrentTime);
-  const setIsPlaying = useVideoStore(s => s.setIsPlaying);
   const setActiveClipId = useVideoStore(s => s.setActiveClipId);
   const setActiveTextId = useVideoStore(s => s.setActiveTextId);
   const reorderClip = useVideoStore(s => s.reorderClip);
@@ -27,7 +22,6 @@ export default function VideoTimeline() {
   const removeClip = useVideoStore(s => s.removeClip);
   const updateClip = useVideoStore(s => s.updateClip);
   const updateTextOverlay = useVideoStore(s => s.updateTextOverlay);
-  const removeTextOverlay = useVideoStore(s => s.removeTextOverlay);
   const getTotalDuration = useVideoStore(s => s.getTotalDuration);
   const showBeatMarkers = useVideoStore(s => s.showBeatMarkers);
   const jumpToMarker = useVideoStore(s => s.jumpToMarker);
@@ -35,7 +29,6 @@ export default function VideoTimeline() {
   const [containerWidth, setContainerWidth] = useState(0);
   const [timelineZoom, setTimelineZoom] = useState(80);
   const [dragClipId, setDragClipId] = useState<string | null>(null);
-  const [dragClipStartX, setDragClipStartX] = useState(0);
   const [trimClipId, setTrimClipId] = useState<{ id: string; side: 'left' | 'right' } | null>(null);
   const [dragTextId, setDragTextId] = useState<string | null>(null);
   const [dragTextStartX, setDragTextStartX] = useState(0);
@@ -87,19 +80,6 @@ export default function VideoTimeline() {
     return Math.max(8, ((clip.duration - clip.trimStart - clip.trimEnd) / Math.max(0.25, clip.speed)) * pps);
   };
 
-  // ── Snap helper ──────────────────────────────────────────────────────
-  const snapValue = (val: number): number => {
-    // Snap to 0 and to clip boundaries
-    const snapPoints = [0];
-    sortedClips.forEach((c, i) => {
-      snapPoints.push(getClipLeft(i) + getClipWidth(c));
-    });
-    for (const pt of snapPoints) {
-      if (Math.abs(val - pt) < SNAP_PX) return pt;
-    }
-    return val;
-  };
-
   // ── Ruler / track click to seek ──────────────────────────────────────
   const handleTrackMouseDown = useCallback((e: React.MouseEvent) => {
     if (!trackRef.current) return;
@@ -128,7 +108,7 @@ export default function VideoTimeline() {
   // ── Clip drag reorder ────────────────────────────────────────────────
   useEffect(() => {
     if (!dragClipId) return;
-    const move = (e: MouseEvent) => { /* visual feedback implicit */ };
+    const move = () => { /* visual feedback implicit */ };
     const up = (e: MouseEvent) => {
       if (!trackRef.current) { setDragClipId(null); return; }
       const rect = trackRef.current.getBoundingClientRect();
@@ -160,11 +140,8 @@ export default function VideoTimeline() {
     const move = (e: MouseEvent) => {
       if (!trackRef.current) return;
       const rect = trackRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const time = x / pps;
       if (side === 'left') {
         const clipStart = getClipLeft(sortedClips.findIndex(c => c.id === id));
-        const newTrim = Math.max(0, Math.min(clip.duration - clip.trimEnd - 0.1, time - clipStart / pps));
         // Approximate trim from pixel delta
         const delta = (e.clientX - rect.left) - clipStart;
         const newTrimStart = Math.max(0, Math.min(clip.duration - clip.trimEnd - 0.1, delta / pps));
@@ -328,7 +305,6 @@ export default function VideoTimeline() {
                         if ((e.target as HTMLElement).closest('[data-trim]')) return;
                         e.stopPropagation();
                         setDragClipId(clip.id);
-                        setDragClipStartX(e.clientX);
                       }}
                     >
                       {/* Thumbnail bg */}

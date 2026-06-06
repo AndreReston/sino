@@ -2,7 +2,6 @@ import React from 'react';
 import {
   MousePointer2, Type, Square, Circle, Triangle,
   Minus, PenLine, Image, LayoutTemplate, Layers,
-  Shapes,
 } from 'lucide-react';
 import { useStore, ToolMode } from '../store/useStore';
 
@@ -30,8 +29,8 @@ export default function ToolSidebar() {
   const handleTool = (id: ToolMode) => {
     setToolMode(id);
     if (id === 'text') setLeftPanelTab('text');
-    else if (['rectangle', 'circle', 'triangle', 'line'].includes(id)) setLeftPanelTab('elements');
-    else if (id === 'image') setLeftPanelTab('images');
+    else if (['rectangle', 'circle', 'triangle', 'line'].includes(id)) setLeftPanelTab('shapes');
+    else if (id === 'image') setLeftPanelTab('uploads');
   };
 
   return (
@@ -72,7 +71,7 @@ export default function ToolSidebar() {
       </button>
       <button
         title="Images"
-        onClick={() => setLeftPanelTab('images')}
+        onClick={() => setLeftPanelTab('uploads')}
         className="tool-btn"
       >
         <Image className="w-5 h-5" />

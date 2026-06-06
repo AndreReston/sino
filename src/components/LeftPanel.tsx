@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import {
   LayoutTemplate, Shapes, Type, Image, Layers,
-  ChevronRight, Eye, EyeOff, Trash2, Lock, Unlock,
-  Upload, Search,
+  Eye, EyeOff, Trash2, Lock, Unlock,
+  Upload,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { fabric } from 'fabric';
 
-type Tab = 'templates' | 'elements' | 'text' | 'images' | 'layers';
+type SidebarTabLocal = 'templates' | 'shapes' | 'text' | 'uploads' | 'layers';
 
-const TABS: { id: Tab; icon: React.ReactNode; label: string }[] = [
+const TABS: { id: SidebarTabLocal; icon: React.ReactNode; label: string }[] = [
   { id: 'templates', icon: <LayoutTemplate className="w-4 h-4" />, label: 'Templates' },
-  { id: 'elements', icon: <Shapes className="w-4 h-4" />, label: 'Elements' },
+  { id: 'shapes', icon: <Shapes className="w-4 h-4" />, label: 'Elements' },
   { id: 'text', icon: <Type className="w-4 h-4" />, label: 'Text' },
-  { id: 'images', icon: <Image className="w-4 h-4" />, label: 'Media' },
+  { id: 'uploads', icon: <Image className="w-4 h-4" />, label: 'Media' },
   { id: 'layers', icon: <Layers className="w-4 h-4" />, label: 'Layers' },
 ];
 
@@ -47,8 +47,7 @@ const TEMPLATE_STYLES = [
 ];
 
 export default function LeftPanel() {
-  const { leftPanelTab, setLeftPanelTab, fabricCanvas, setCanvasBackground } = useStore();
-  const [search, setSearch] = useState('');
+  const { sidebarTab, setLeftPanelTab, fabricCanvas, setCanvasBackground } = useStore();
   const [layers, setLayers] = useState<fabric.Object[]>([]);
 
   const refreshLayers = () => {
@@ -160,7 +159,7 @@ export default function LeftPanel() {
             key={tab.id}
             onClick={() => { setLeftPanelTab(tab.id); if (tab.id === 'layers') refreshLayers(); }}
             className={`flex flex-col items-center gap-1 px-3 py-2.5 text-xs font-medium shrink-0 border-b-2 transition-all
-              ${leftPanelTab === tab.id
+              ${sidebarTab === tab.id
                 ? 'border-neon-green text-neon-green'
                 : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
           >
@@ -173,7 +172,7 @@ export default function LeftPanel() {
       {/* Panel content */}
       <div className="flex-1 overflow-y-auto p-3">
         {/* Templates */}
-        {leftPanelTab === 'templates' && (
+        {sidebarTab === 'templates' && (
           <div className="space-y-3 animate-fade-in">
             <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Canvas Themes</p>
             <div className="grid grid-cols-2 gap-2">
@@ -201,7 +200,7 @@ export default function LeftPanel() {
         )}
 
         {/* Elements */}
-        {leftPanelTab === 'elements' && (
+        {sidebarTab === 'shapes' && (
           <div className="space-y-4 animate-fade-in">
             <div>
               <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-2">Shapes</p>
@@ -241,7 +240,7 @@ export default function LeftPanel() {
         )}
 
         {/* Text */}
-        {leftPanelTab === 'text' && (
+        {sidebarTab === 'text' && (
           <div className="space-y-2 animate-fade-in">
             <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-3">Text Styles</p>
             {TEXT_STYLES.map((ts) => (
@@ -263,7 +262,7 @@ export default function LeftPanel() {
         )}
 
         {/* Images / Media */}
-        {leftPanelTab === 'images' && (
+        {sidebarTab === 'uploads' && (
           <div className="space-y-3 animate-fade-in">
             <div className="flex items-center gap-2 p-2 bg-panel-light rounded-lg border border-panel-border border-dashed hover:border-neon-green/50 cursor-pointer transition-colors group">
               <Upload className="w-4 h-4 text-zinc-500 group-hover:text-neon-green transition-colors" />
@@ -311,7 +310,7 @@ export default function LeftPanel() {
         )}
 
         {/* Layers */}
-        {leftPanelTab === 'layers' && (
+        {sidebarTab === 'layers' && (
           <div className="space-y-1 animate-fade-in">
             <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-2">
               Layers ({layers.length})

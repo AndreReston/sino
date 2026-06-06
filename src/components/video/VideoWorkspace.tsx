@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { useVideoStore } from '../../store/videoStore';
 import VideoSidebar from './VideoSidebar';
 import VideoPreview from './VideoPreview';
@@ -17,13 +17,6 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
   const project = useVideoStore(s => s.project);
   const createProject = useVideoStore(s => s.createProject);
   const addClip = useVideoStore(s => s.addClip);
-  const setCurrentTime = useVideoStore(s => s.setCurrentTime);
-  const setIsPlaying = useVideoStore(s => s.setIsPlaying);
-  const splitClip = useVideoStore(s => s.splitClip);
-  const removeClip = useVideoStore(s => s.removeClip);
-  const undo = useVideoStore(s => s.undo);
-  const redo = useVideoStore(s => s.redo);
-  const activeClipId = useVideoStore(s => s.activeClipId);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -33,7 +26,6 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
   const lastTickRef = useRef<number>(0);
   const isPlaying = useVideoStore(s => s.isPlaying);
   const playbackSpeed = useVideoStore(s => s.playbackSpeed);
-  const currentTime = useVideoStore(s => s.currentTime);
 
   // Autosave on changes
   useEffect(() => {
