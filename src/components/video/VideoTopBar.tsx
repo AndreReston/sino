@@ -89,16 +89,16 @@ export default function VideoTopBar({ onSave, onBack }: Props) {
 
       <div className="flex-1" />
 
-      {/* Save & Export */}
+      {/* Save & Download & Export */}
       {onSave && (
         <button onClick={onSave} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-zinc-400 hover:text-white hover:bg-white/5 border border-white/[0.06] transition-colors">
           <Save className="w-3.5 h-3.5" /> Save
         </button>
       )}
       <button onClick={startExport} disabled={isExporting}
-        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-sky-500 text-white text-xs font-semibold hover:bg-sky-400 transition-all disabled:opacity-50">
+        className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-sky-500 text-white text-xs font-semibold hover:bg-sky-400 hover:shadow-[0_4px_20px_rgba(56,189,248,0.3)] transition-all disabled:opacity-50">
         <Download className="w-3.5 h-3.5" />
-        {isExporting ? `${exportProgress}%` : 'Export'}
+        {isExporting ? `${exportProgress}%` : 'Download'}
       </button>
     </div>
   );

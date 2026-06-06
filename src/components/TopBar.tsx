@@ -217,14 +217,31 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
           Save
         </button>
 
-        {/* Export */}
+        {/* Quick Download — exports current page as PNG immediately */}
+        <button
+          type="button"
+          onClick={() => {
+            if (!fabricCanvas) return;
+            const dataURL = fabricCanvas.toDataURL({ format: 'png', quality: 0.95, multiplier: 1 });
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = `${canvasName}.png`;
+            a.click();
+          }}
+          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-500 text-zinc-950 text-xs font-semibold hover:bg-emerald-400 hover:shadow-[0_4px_20px_rgba(16,185,129,0.3)] transition-all cursor-pointer"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Download
+        </button>
+
+        {/* Export dropdown */}
         <div className="relative">
           <button
             onClick={() => setShowExport(!showExport)}
-            className="flex items-center gap-1.5 neon-btn text-sm px-3 py-1.5"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-300 hover:text-zinc-100 hover:bg-panel-hover border border-panel-border transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
-            Export
+            More formats
             <ChevronDown className="w-3 h-3" />
           </button>
           {showExport && (

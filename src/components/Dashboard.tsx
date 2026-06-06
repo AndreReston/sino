@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Layers, LogOut, Clock,
-  FileStack, ArrowRight, Image, Film,
+  FileStack, ArrowRight, Image, Film, Download,
 } from 'lucide-react';
 import { SavedDesign, ProjectMode } from '../store/useStore';
 
@@ -10,10 +10,11 @@ type Props = {
   designs: SavedDesign[];
   onCreate: (mode: ProjectMode) => void;
   onOpen: (design: SavedDesign) => void;
+  onDownload: (design: SavedDesign) => void;
   onLogout: () => void;
 };
 
-export default function Dashboard({ user, designs, onCreate, onOpen, onLogout }: Props) {
+export default function Dashboard({ user, designs, onCreate, onOpen, onDownload, onLogout }: Props) {
   const photoDesigns = designs.filter((d) => d.projectMode !== 'video');
   const videoProjects = designs.filter((d) => d.projectMode === 'video');
 
@@ -100,6 +101,7 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onLogout }:
           accent="emerald"
           designs={photoDesigns}
           onOpen={onOpen}
+          onDownload={onDownload}
         />
 
         {/* Video projects section */}
@@ -109,6 +111,7 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onLogout }:
           accent="sky"
           designs={videoProjects}
           onOpen={onOpen}
+          onDownload={onDownload}
         />
       </div>
     </div>
@@ -121,12 +124,14 @@ function DesignSection({
   accent,
   designs,
   onOpen,
+  onDownload,
 }: {
   title: string;
   icon: React.ReactNode;
   accent: 'emerald' | 'sky';
   designs: SavedDesign[];
   onOpen: (design: SavedDesign) => void;
+  onDownload: (design: SavedDesign) => void;
 }) {
   const accentBg = accent === 'emerald' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-sky-500/15 text-sky-400';
   const ringColor = accent === 'emerald' ? 'hover:ring-emerald-500/20' : 'hover:ring-sky-500/20';
@@ -176,8 +181,16 @@ function DesignSection({
                   <div className={`absolute top-3 left-3 ${accentBg} px-2 py-0.5 rounded-full text-[10px] font-semibold border ${accent === 'emerald' ? 'border-emerald-500/20' : 'border-sky-500/20'}`}>
                     {isVideo ? 'Video' : 'Photo'}
                   </div>
-                  {/* Hover open action */}
-                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Hover actions */}
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onDownload(design); }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/80 text-white text-[11px] font-semibold backdrop-blur-sm hover:bg-emerald-400 transition-colors"
+                    >
+                      <Download className="w-3 h-3" />
+                      Download
+                    </button>
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-white text-[11px] font-medium backdrop-blur-sm">
                       Open <ArrowRight className="w-3 h-3" />
                     </span>

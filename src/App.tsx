@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
+import { fabric } from 'fabric';
 import { useStore, SavedDesign, ProjectMode } from './store/useStore';
 import { useVideoStore } from './store/videoStore';
 import LandingPage from './components/LandingPage';
@@ -219,6 +220,37 @@ export default function App() {
     }
   };
 
+  const handleDownloadDesign = async (design: SavedDesign) => {
+    if (design.projectMode === 'video') {
+      // For video designs, just open them — actual video export happens in the workspace
+      handleOpenDesign(design);
+      return;
+    }
+
+    // Export the first page as PNG using a temporary off-screen canvas
+    const page = design.pages[0];
+    if (!page?.canvas_data) return;
+
+    const c = document.createElement('canvas');
+    c.width = design.canvasWidth;
+    c.height = design.canvasHeight;
+    const off = new fabric.Canvas(c, { renderOnAddRemove: false });
+
+    await new Promise<void>((resolve) => {
+      off.loadFromJSON(page.canvas_data, () => {
+        off.renderAll();
+        resolve();
+      });
+    });
+
+    const dataURL = off.toDataURL({ format: 'png', quality: 0.95, multiplier: 1 });
+    const a = document.createElement('a');
+    a.href = dataURL;
+    a.download = `${design.title || 'design'}.png`;
+    a.click();
+    off.dispose();
+  };
+
   const handleSaveDesign = async () => {
     if (!user) return;
 
@@ -286,6 +318,7 @@ export default function App() {
         designs={designs}
         onCreate={handleCreateDesign}
         onOpen={handleOpenDesign}
+        onDownload={handleDownloadDesign}
         onLogout={handleLogout}
       />
     );
