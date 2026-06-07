@@ -191,9 +191,13 @@ export type UserMedia = {
 };
 
 export const getUserMedia = async (): Promise<UserMedia[]> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from('user_media')
     .select('id, name, url, type, thumbnail_url, duration, created_at')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
   if (error || !data) return [];
