@@ -666,6 +666,3 @@ export default function VideoTimeline() {
     </div>
   );
 }
-
-
-export default VideoTimeline
