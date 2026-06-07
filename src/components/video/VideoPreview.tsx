@@ -85,13 +85,27 @@ export default function VideoPreview({ videoRef }: Props) {
     }
   }, [isPlaying, activeClip?.id]);
 
-  // Sync seek when not playing — seek video to clip-local position
+  // Sync seek — both during playback (when user manually scrubs) and when paused
+  const lastExpectedTimeRef = useRef(videoSeekTime);
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !activeClip || isPlaying) return;
+    if (!video || !activeClip) return;
+
+    // Detect if this is a manual seek (large jump from expected position)
+    const drift = Math.abs(videoSeekTime - lastExpectedTimeRef.current);
+    const isManualSeek = drift > 0.3;
+
+    // During playback, only force-seek on large jumps (manual scrub)
+    // Small drift is normal playback — the video drives itself
+    if (isPlaying && !isManualSeek) {
+      lastExpectedTimeRef.current = videoSeekTime;
+      return;
+    }
+
     if (Math.abs(video.currentTime - videoSeekTime) > 0.1) {
       video.currentTime = videoSeekTime;
     }
+    lastExpectedTimeRef.current = videoSeekTime;
   }, [currentTime, isPlaying, activeClip?.id]);
 
   // Sync speed and volume
