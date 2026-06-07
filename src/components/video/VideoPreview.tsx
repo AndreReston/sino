@@ -22,6 +22,7 @@ export default function VideoPreview({ videoRef }: Props) {
   const setActiveClipId = useVideoStore(s => s.setActiveClipId);
   const setActiveTextId = useVideoStore(s => s.setActiveTextId);
   const updateTextOverlay = useVideoStore(s => s.updateTextOverlay);
+  const updateClip = useVideoStore(s => s.updateClip);
   const showSafeZones = useVideoStore(s => s.showSafeZones);
   const updateStickerOverlay = useVideoStore(s => s.updateStickerOverlay);
   const setActiveStickerOverlayId = useVideoStore(s => s.setActiveStickerOverlayId);
@@ -175,21 +176,22 @@ export default function VideoPreview({ videoRef }: Props) {
 
   // ── Clip resize for overlay mode ──────────────────────────────────────
   useEffect(() => {
-    if (!resizing) return;
+    if (!resizing || !activeClip) return;
+    const currentActiveClip = activeClip; // Capture for closure
     const handleMove = (e: MouseEvent) => {
       const deltaX = (e.clientX - resizing.startX) / 300; // sensitivity
       const deltaY = (e.clientY - resizing.startY) / 300;
       const { corner } = resizing;
 
       if (corner.includes('e')) {
-        updateClip(activeClip.id, { scaleX: Math.max(0.1, Math.min(2, activeClip.scaleX + deltaX)) });
+        updateClip(currentActiveClip.id, { scaleX: Math.max(0.1, Math.min(2, currentActiveClip.scaleX + deltaX)) });
       } else if (corner.includes('w')) {
-        updateClip(activeClip.id, { scaleX: Math.max(0.1, Math.min(2, activeClip.scaleX - deltaX)) });
+        updateClip(currentActiveClip.id, { scaleX: Math.max(0.1, Math.min(2, currentActiveClip.scaleX - deltaX)) });
       }
       if (corner.includes('s')) {
-        updateClip(activeClip.id, { scaleY: Math.max(0.1, Math.min(2, activeClip.scaleY + deltaY)) });
+        updateClip(currentActiveClip.id, { scaleY: Math.max(0.1, Math.min(2, currentActiveClip.scaleY + deltaY)) });
       } else if (corner.includes('n')) {
-        updateClip(activeClip.id, { scaleY: Math.max(0.1, Math.min(2, activeClip.scaleY - deltaY)) });
+        updateClip(currentActiveClip.id, { scaleY: Math.max(0.1, Math.min(2, currentActiveClip.scaleY - deltaY)) });
       }
     };
     const handleUp = () => setResizing(null);
@@ -199,7 +201,7 @@ export default function VideoPreview({ videoRef }: Props) {
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
     };
-  }, [resizing, activeClip.id, updateClip, activeClip.scaleX, activeClip.scaleY]);
+  }, [resizing, activeClip, updateClip]);
 
   // Active overlays and subtitles at current time
   const activeOverlays = project?.textOverlays.filter(
