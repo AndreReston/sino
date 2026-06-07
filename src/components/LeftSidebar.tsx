@@ -10,6 +10,7 @@ import {
 import { useStore, SidebarTab, ToolMode } from '../store/useStore';
 import { fabric } from 'fabric';
 import { supabase } from '../lib/supabase';
+import { getUserMedia, saveUserMedia, UserMedia } from '../lib/userStorage';
 
 // ─────────────────────────────────────────────
 // Static data
@@ -614,8 +615,7 @@ function UploadsPanel({
 }: {
   addImage: (url: string) => void;
 }) {
-  const [uploads, setUploads] = useState<{ url: string; name: string; type?: string }[]>([]);
-  const [sessionUploads, setSessionUploads] = useState<{ url: string; name: string; type?: string; thumbnailUrl?: string; duration?: number }[]>([]);
+  const [uploads, setUploads] = useState<UserMedia[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { addVideoClip, videoTrack, projectMode } = useStore();
@@ -623,12 +623,8 @@ function UploadsPanel({
 
   const fetchUploads = async () => {
     try {
-      const res = await fetch('/api/media/list');
-      if (!res.ok) {
-        throw new Error('Uploads endpoint missing');
-      }
-      const payload = await res.json();
-      setUploads(payload.items || []);
+      const media = await getUserMedia();
+      setUploads(media);
     } catch (err) {
       setError('Unable to load uploads');
     }
@@ -683,6 +679,7 @@ function UploadsPanel({
     }
 
     try {
+      // Upload file to server first
       const body = new FormData();
       body.append('file', file);
       const res = await fetch('/api/media/upload', {
@@ -693,56 +690,49 @@ function UploadsPanel({
         throw new Error('Upload failed');
       }
       const payload = await res.json();
-      if (payload.url) {
-        setUploads((prev) => [{ url: payload.url, name: payload.name, type: isVideo ? 'video' : 'image' }, ...prev]);
-        if (isVideo) {
-          const { thumbnailUrl, duration } = await extractVideoThumbnail(file);
-          addVideoClip({
-            name: payload.name,
-            url: payload.url,
-            thumbnailUrl,
-            duration,
-            startTime: videoTrack.currentTime,
-            trimStart: 0,
-            trimEnd: 0,
-            volume: 1,
-          });
-        } else {
-          addImage(payload.url);
-        }
-        return;
+      if (!payload.url) {
+        throw new Error('No upload URL returned');
       }
-      throw new Error('No upload URL returned');
-    } catch (_err) {
-      try {
-        const reader = new FileReader();
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = () => reject(new Error('File read failed'));
-          reader.readAsDataURL(file);
+
+      // For videos, extract thumbnail and duration
+      let thumbnailUrl: string | undefined;
+      let duration: number | undefined;
+      if (isVideo) {
+        const extracted = await extractVideoThumbnail(file);
+        thumbnailUrl = extracted.thumbnailUrl;
+        duration = extracted.duration;
+      }
+
+      // Save to Supabase
+      const savedMedia = await saveUserMedia({
+        name: payload.name,
+        url: payload.url,
+        type: isVideo ? 'video' : 'image',
+        thumbnailUrl,
+        duration,
+      });
+
+      if (savedMedia) {
+        setUploads((prev) => [savedMedia, ...prev]);
+      }
+
+      // Add to canvas or timeline
+      if (isVideo) {
+        addVideoClip({
+          name: payload.name,
+          url: payload.url,
+          thumbnailUrl: thumbnailUrl || '',
+          duration: duration || 5,
+          startTime: videoTrack.currentTime,
+          trimStart: 0,
+          trimEnd: 0,
+          volume: 1,
         });
-        if (isVideo) {
-          const { thumbnailUrl, duration } = await extractVideoThumbnail(file);
-          const sessionItem = { url: dataUrl, name: file.name, type: 'video' as const, thumbnailUrl, duration };
-          setSessionUploads((prev) => [sessionItem, ...prev]);
-          addVideoClip({
-            name: file.name,
-            url: dataUrl,
-            thumbnailUrl,
-            duration,
-            startTime: videoTrack.currentTime,
-            trimStart: 0,
-            trimEnd: 0,
-            volume: 1,
-          });
-        } else {
-          const sessionItem = { url: dataUrl, name: file.name, type: 'image' as const };
-          setSessionUploads((prev) => [sessionItem, ...prev]);
-          addImage(dataUrl);
-        }
-      } catch (readError) {
-        setError('Upload failed.');
+      } else {
+        addImage(payload.url);
       }
+    } catch (err) {
+      setError('Upload failed. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -800,25 +790,25 @@ function UploadsPanel({
           >Refresh</button>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          {uploads.length + sessionUploads.length === 0 ? (
+          {uploads.length === 0 ? (
             <div className="col-span-2 rounded-xl border border-panel-border bg-panel-light p-4 text-center text-xs text-zinc-500">
               No uploaded assets yet.
             </div>
           ) : (
-            [...sessionUploads, ...uploads]
+            uploads
               .filter((asset) => isVideoMode || asset.type !== 'video')
               .map((asset) => {
               const isVideoAsset = asset.type === 'video';
               return (
                 <button
-                  key={asset.url}
+                  key={asset.id}
                   onClick={() => {
                     if (isVideoAsset) {
                       addVideoClip({
                         name: asset.name,
                         url: asset.url,
-                        thumbnailUrl: (asset as any).thumbnailUrl || '',
-                        duration: (asset as any).duration || 5,
+                        thumbnailUrl: asset.thumbnailUrl || '',
+                        duration: asset.duration || 5,
                         startTime: videoTrack.currentTime,
                         trimStart: 0,
                         trimEnd: 0,
@@ -829,14 +819,19 @@ function UploadsPanel({
                     }
                   }}
                   draggable={isVideoAsset}
-                  onDragStart={(e) => isVideoAsset && handleVideoDragStart(e, asset as any)}
+                  onDragStart={(e) => isVideoAsset && handleVideoDragStart(e, {
+                    url: asset.url,
+                    name: asset.name,
+                    thumbnailUrl: asset.thumbnailUrl,
+                    duration: asset.duration,
+                  })}
                   className="group relative aspect-video rounded-xl overflow-hidden border border-panel-border hover:border-zinc-500 transition-all"
                 >
                   {isVideoAsset ? (
                     <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
-                      {(asset as any).thumbnailUrl ? (
+                      {asset.thumbnailUrl ? (
                         <img
-                          src={(asset as any).thumbnailUrl}
+                          src={asset.thumbnailUrl}
                           alt={asset.name}
                           className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
                         />
@@ -846,9 +841,9 @@ function UploadsPanel({
                       <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-sky-500/80 text-[9px] text-white font-semibold">
                         MP4
                       </div>
-                      {(asset as any).duration != null && (
+                      {asset.duration != null && (
                         <div className="absolute bottom-1 right-1.5 px-1 py-0.5 rounded bg-black/60 text-[9px] text-zinc-300 font-mono">
-                          {(asset as any).duration.toFixed(1)}s
+                          {asset.duration.toFixed(1)}s
                         </div>
                       )}
                     </div>

@@ -177,3 +177,80 @@ export const deleteUserDesign = async (designId: string) => {
     console.error('Failed to delete design:', error);
   }
 };
+
+// ── User Media ────────────────────────────────────────────────────────
+
+export type UserMedia = {
+  id: string;
+  name: string;
+  url: string;
+  type: 'image' | 'video';
+  thumbnailUrl?: string;
+  duration?: number;
+  createdAt: string;
+};
+
+export const getUserMedia = async (): Promise<UserMedia[]> => {
+  const { data, error } = await supabase
+    .from('user_media')
+    .select('id, name, url, type, thumbnail_url, duration, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((m: any) => ({
+    id: m.id,
+    name: m.name,
+    url: m.url,
+    type: m.type,
+    thumbnailUrl: m.thumbnail_url ?? undefined,
+    duration: m.duration ?? undefined,
+    createdAt: m.created_at,
+  }));
+};
+
+export const saveUserMedia = async (media: {
+  name: string;
+  url: string;
+  type: 'image' | 'video';
+  thumbnailUrl?: string;
+  duration?: number;
+}): Promise<UserMedia | null> => {
+  const { data, error } = await supabase
+    .from('user_media')
+    .insert({
+      name: media.name,
+      url: media.url,
+      type: media.type,
+      thumbnail_url: media.thumbnailUrl ?? null,
+      duration: media.duration ?? null,
+    })
+    .select('id, name, url, type, thumbnail_url, duration, created_at')
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error('Failed to save media:', error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    name: data.name,
+    url: data.url,
+    type: data.type,
+    thumbnailUrl: data.thumbnail_url ?? undefined,
+    duration: data.duration ?? undefined,
+    createdAt: data.created_at,
+  };
+};
+
+export const deleteUserMedia = async (mediaId: string) => {
+  const { error } = await supabase
+    .from('user_media')
+    .delete()
+    .eq('id', mediaId);
+
+  if (error) {
+    console.error('Failed to delete media:', error);
+  }
+};
