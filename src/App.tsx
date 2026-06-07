@@ -162,9 +162,78 @@ export default function App() {
     })();
 
     // Listen for auth state changes (login/logout from other tabs, etc.)
-    const { data: { subscription } } = onAuthStateChange((newUser, event) => {
-      // TOKEN_REFRESHED and INITIAL_SESSION fire on tab focus — don't redirect, just keep state fresh
-      if (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+    const { data: { subscription } } = onAuthStateChange(async (newUser, event) => {
+      // On tab focus (INITIAL_SESSION), restore the last viewed workspace
+      if (event === 'INITIAL_SESSION') {
+        if (newUser) {
+          setUser(newUser);
+          await fetchUsername(newUser.id);
+          const savedDesigns = await fetchDesigns(newUser.id);
+
+          const lastView = localStorage.getItem(LAST_VIEW_KEY);
+          const lastDesignId = localStorage.getItem(LAST_DESIGN_KEY);
+
+          if (lastView === 'workspace') {
+            if (lastDesignId) {
+              const design = savedDesigns.find(d => d.id === lastDesignId);
+              if (design) {
+                setActiveDesign(design);
+                await store.loadDesign(design);
+                setView('workspace');
+                return;
+              }
+            }
+            store.resetWorkspace();
+            setView('workspace');
+            return;
+          }
+
+          if (lastView === 'video-workspace') {
+            if (lastDesignId) {
+              const design = savedDesigns.find(d => d.id === lastDesignId && d.projectMode === 'video');
+              if (design) {
+                setActiveDesign(design);
+                useVideoStore.getState().resetStore();
+                const savedProject = design.pages[0]?.canvas_data as any;
+                if (savedProject?.id) {
+                  useVideoStore.getState().loadProject(savedProject);
+                } else {
+                  useVideoStore.getState().createProject(design.title);
+                }
+                setView('video-workspace');
+                return;
+              }
+            }
+            const rawProject = localStorage.getItem(VIDEO_PROJECT_STORAGE_KEY);
+            if (rawProject) {
+              try {
+                const parsed = JSON.parse(rawProject);
+                useVideoStore.getState().resetStore();
+                if (parsed?.id) {
+                  useVideoStore.getState().loadProject(parsed);
+                } else {
+                  useVideoStore.getState().createProject('Untitled Video');
+                }
+                setView('video-workspace');
+                return;
+              } catch { /* fall through */ }
+            }
+            useVideoStore.getState().resetStore();
+            useVideoStore.getState().createProject('Untitled Video');
+            setView('video-workspace');
+            return;
+          }
+
+          if (lastView === 'dashboard') {
+            setView('dashboard');
+            return;
+          }
+        }
+        return;
+      }
+
+      // TOKEN_REFRESHED just keeps session fresh
+      if (event === 'TOKEN_REFRESHED') {
         if (newUser) {
           setUser(newUser);
           fetchUsername(newUser.id);
