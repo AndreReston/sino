@@ -49,9 +49,9 @@ export const logoutUser = async () => {
   await supabase.auth.signOut();
 };
 
-export const onAuthStateChange = (callback: (user: User | null) => void) => {
-  return supabase.auth.onAuthStateChange((_event, session) => {
-    callback(session?.user ?? null);
+export const onAuthStateChange = (callback: (user: User | null, event: string) => void) => {
+  return supabase.auth.onAuthStateChange((event, session) => {
+    callback(session?.user ?? null, event);
   });
 };
 

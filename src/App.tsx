@@ -162,12 +162,24 @@ export default function App() {
     })();
 
     // Listen for auth state changes (login/logout from other tabs, etc.)
-    const { data: { subscription } } = onAuthStateChange((newUser) => {
+    const { data: { subscription } } = onAuthStateChange((newUser, event) => {
+      // TOKEN_REFRESHED and INITIAL_SESSION fire on tab focus — don't redirect, just keep state fresh
+      if (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+        if (newUser) {
+          setUser(newUser);
+          fetchUsername(newUser.id);
+        }
+        return;
+      }
       if (newUser) {
+        // Only redirect to dashboard on a real sign-in, not a session restore
+        const alreadyAuthed = !!user;
         setUser(newUser);
         fetchUsername(newUser.id);
         fetchDesigns(newUser.id);
-        persistView('dashboard');
+        if (!alreadyAuthed) {
+          persistView('dashboard');
+        }
       } else {
         setUser(null);
         setUsername('Guest');
