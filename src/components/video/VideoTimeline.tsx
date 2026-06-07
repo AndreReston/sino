@@ -602,10 +602,17 @@ export default function VideoTimeline() {
                 {project.audioTracks.map(track => {
                   const left = track.startTime * pps;
                   const width = track.duration > 0 ? track.duration * pps : Math.max(60, totalDuration * pps * 0.3);
+                  const isSelected = useVideoStore.getState().activeAudioTrackId === track.id;
                   return (
                     <div key={track.id} data-noseek="1"
-                      className="absolute top-0.5 bottom-0.5 rounded bg-violet-500/15 border border-violet-500/30 flex items-center px-1.5 cursor-grab active:cursor-grabbing select-none"
+                      className={`absolute top-0.5 bottom-0.5 rounded flex items-center px-1.5 cursor-grab active:cursor-grabbing select-none ${
+                        isSelected ? 'bg-violet-500/25 border-2 border-violet-400/60' : 'bg-violet-500/15 border border-violet-500/30'
+                      }`}
                       style={{ left, width }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        useVideoStore.getState().setActiveAudioTrackId(track.id);
+                      }}
                       onMouseDown={(e) => {
                         e.stopPropagation();
                         const startX = e.clientX;

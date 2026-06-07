@@ -41,6 +41,12 @@ export interface VideoClip {
   effect: ClipEffect;
   effectStack: EffectLayer[];
   keyframes: Keyframe[];
+  // Clip transform (resize/position for overlay)
+  scaleX: number;        // 0.1 – 2, default 1
+  scaleY: number;        // 0.1 – 2, default 1
+  clipX: number;         // percentage 0-100, default 50 (center)
+  clipY: number;         // percentage 0-100, default 50 (center)
+  overlayMode: 'full' | 'overlay';  // full = fill frame, overlay = positioned
   // health data
   resolution?: string;
   bitrate?: string;
@@ -175,6 +181,7 @@ export interface VideoStoreState {
   activeTextId: string | null;
   activeSubtitleId: string | null;
   activeStickerOverlayId: string | null;
+  activeAudioTrackId: string | null;
   currentTime: number;
   isPlaying: boolean;
   playbackSpeed: number;
@@ -204,7 +211,7 @@ export interface VideoStoreActions {
   loadFromLocalStorage: () => void;
 
   // Clips
-  addClip: (clip: Omit<VideoClip, 'id' | 'order' | 'thumbnails' | 'filters' | 'transitionIn' | 'speed' | 'muted' | 'effect' | 'keyframes' | 'effectStack'> & { url: string; name: string; duration: number; trimStart?: number; trimEnd?: number; volume?: number }) => void;
+  addClip: (clip: Omit<VideoClip, 'id' | 'order' | 'thumbnails' | 'filters' | 'transitionIn' | 'speed' | 'muted' | 'effect' | 'keyframes' | 'effectStack' | 'scaleX' | 'scaleY' | 'clipX' | 'clipY' | 'overlayMode' | 'transitionDuration' | 'effectDuration'> & { url: string; name: string; duration: number; trimStart?: number; trimEnd?: number; volume?: number }) => void;
   removeClip: (id: string) => void;
   updateClip: (id: string, updates: Partial<VideoClip>) => void;
   reorderClip: (id: string, newIndex: number) => void;
@@ -245,6 +252,7 @@ export interface VideoStoreActions {
   addAudioTrack: (url: string, name: string) => void;
   removeAudioTrack: (id: string) => void;
   updateAudioTrack: (id: string, updates: Partial<AudioTrack>) => void;
+  splitAudioTrack: (id: string, timeFromStart: number) => void;
   setBackgroundMusic: (track: AudioTrack | null) => void;
 
   // Scene markers
@@ -286,6 +294,7 @@ export interface VideoStoreActions {
   setActiveTextId: (id: string | null) => void;
   setActiveSubtitleId: (id: string | null) => void;
   setActiveStickerOverlayId: (id: string | null) => void;
+  setActiveAudioTrackId: (id: string | null) => void;
   setRightPanel: (panel: VideoStoreState['rightPanel']) => void;
 
   // History
@@ -445,6 +454,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
   activeTextId: null,
   activeSubtitleId: null,
   activeStickerOverlayId: null,
+  activeAudioTrackId: null,
   currentTime: 0,
   isPlaying: false,
   playbackSpeed: 1,
@@ -556,6 +566,11 @@ export const useVideoStore = create<VStore>((set, get) => ({
           effectStack: clip.effectStack || ([] as EffectLayer[]),
           transitionDuration: (clip as any).transitionDuration ?? 0.5,
           effectDuration: (clip as any).effectDuration ?? 0,
+          scaleX: (clip as any).scaleX ?? 1,
+          scaleY: (clip as any).scaleY ?? 1,
+          clipX: (clip as any).clipX ?? 50,
+          clipY: (clip as any).clipY ?? 50,
+          overlayMode: (clip as any).overlayMode ?? 'full',
         }));
         const migratedProject: VideoProject = {
           ...project,
@@ -593,6 +608,11 @@ export const useVideoStore = create<VStore>((set, get) => ({
       effect: 'none',
       effectStack: [],
       keyframes: [],
+      scaleX: 1,
+      scaleY: 1,
+      clipX: 50,
+      clipY: 50,
+      overlayMode: 'full',
     };
     const clips = [...project.clips, clip];
     set({ project: { ...project, clips }, activeClipId: clip.id });
@@ -1020,9 +1040,31 @@ export const useVideoStore = create<VStore>((set, get) => ({
   },
 
   removeAudioTrack: (id) => {
+    const { project, activeAudioTrackId } = get();
+    if (!project) return;
+    set({
+      project: { ...project, audioTracks: project.audioTracks.filter(a => a.id !== id) },
+      activeAudioTrackId: activeAudioTrackId === id ? null : activeAudioTrackId,
+    });
+    get().pushHistory();
+  },
+
+  splitAudioTrack: (id, timeFromStart) => {
     const { project } = get();
     if (!project) return;
-    set({ project: { ...project, audioTracks: project.audioTracks.filter(a => a.id !== id) } });
+    const track = project.audioTracks.find(a => a.id === id);
+    if (!track || timeFromStart <= 0 || timeFromStart >= track.duration) return;
+    const first: AudioTrack = { ...track, duration: timeFromStart };
+    const second: AudioTrack = {
+      ...track,
+      id: `audio_${uid()}`,
+      name: `${track.name} (split)`,
+      startTime: track.startTime + timeFromStart,
+      duration: track.duration - timeFromStart,
+    };
+    const audioTracks = project.audioTracks.map(a => a.id === id ? first : a);
+    audioTracks.push(second);
+    set({ project: { ...project, audioTracks } });
     get().pushHistory();
   },
 
@@ -1217,10 +1259,11 @@ export const useVideoStore = create<VStore>((set, get) => ({
 
   // ─── UI ──────────────────────────────────────────────────────────
 
-  setActiveClipId: (id) => set({ activeClipId: id, activeTextId: null, activeSubtitleId: null, activeStickerOverlayId: null }),
-  setActiveTextId: (id) => set({ activeTextId: id, activeClipId: null, activeSubtitleId: null, activeStickerOverlayId: null }),
-  setActiveSubtitleId: (id) => set({ activeSubtitleId: id, activeClipId: null, activeTextId: null, activeStickerOverlayId: null }),
-  setActiveStickerOverlayId: (id) => set({ activeStickerOverlayId: id, activeClipId: null, activeTextId: null, activeSubtitleId: null }),
+  setActiveClipId: (id) => set({ activeClipId: id, activeTextId: null, activeSubtitleId: null, activeStickerOverlayId: null, activeAudioTrackId: null }),
+  setActiveTextId: (id) => set({ activeTextId: id, activeClipId: null, activeSubtitleId: null, activeStickerOverlayId: null, activeAudioTrackId: null }),
+  setActiveSubtitleId: (id) => set({ activeSubtitleId: id, activeClipId: null, activeTextId: null, activeStickerOverlayId: null, activeAudioTrackId: null }),
+  setActiveStickerOverlayId: (id) => set({ activeStickerOverlayId: id, activeClipId: null, activeTextId: null, activeSubtitleId: null, activeAudioTrackId: null }),
+  setActiveAudioTrackId: (id) => set({ activeAudioTrackId: id, activeClipId: null, activeTextId: null, activeSubtitleId: null, activeStickerOverlayId: null }),
   setRightPanel: (panel) => set({ rightPanel: panel }),
 
   // ─── History ──────────────────────────────────────────────────────

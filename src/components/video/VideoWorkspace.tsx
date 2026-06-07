@@ -235,7 +235,7 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
     };
   }, []);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts — context-aware based on what's selected
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -243,36 +243,63 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
 
       const st = useVideoStore.getState();
 
+      // Space = play/pause (always available)
       if (e.key === ' ') {
         e.preventDefault();
         st.setIsPlaying(!st.isPlaying);
       }
 
-      if ((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey && st.activeClipId) {
-        e.preventDefault();
-        const clip = st.project?.clips.find(c => c.id === st.activeClipId);
-        if (clip) {
-          const sorted = [...(st.project?.clips || [])].sort((a, b) => a.order - b.order);
-          const idx = sorted.findIndex(c => c.id === clip.id);
-          let timeFromStart = st.currentTime;
-          for (let i = 0; i < idx; i++) {
-            const c = sorted[i];
-            timeFromStart -= (c.duration - c.trimStart - c.trimEnd) / Math.max(0.25, c.speed);
+      // S = split (clip or audio track depending on what's selected)
+      if ((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey) {
+        if (st.activeClipId) {
+          e.preventDefault();
+          const clip = st.project?.clips.find(c => c.id === st.activeClipId);
+          if (clip) {
+            const sorted = [...(st.project?.clips || [])].sort((a, b) => a.order - b.order);
+            const idx = sorted.findIndex(c => c.id === clip.id);
+            let timeFromStart = st.currentTime;
+            for (let i = 0; i < idx; i++) {
+              const c = sorted[i];
+              timeFromStart -= (c.duration - c.trimStart - c.trimEnd) / Math.max(0.25, c.speed);
+            }
+            if (timeFromStart > 0) st.splitClip(st.activeClipId, timeFromStart);
           }
-          if (timeFromStart > 0) st.splitClip(st.activeClipId, timeFromStart);
+        } else if (st.activeAudioTrackId) {
+          e.preventDefault();
+          const track = st.project?.audioTracks.find(a => a.id === st.activeAudioTrackId);
+          if (track) {
+            const audioTime = st.currentTime - track.startTime;
+            if (audioTime > 0 && audioTime < track.duration) {
+              st.splitAudioTrack(st.activeAudioTrackId, audioTime);
+            }
+          }
         }
       }
 
-      if ((e.key === 'Delete' || e.key === 'Backspace') && st.activeClipId) {
-        e.preventDefault();
-        st.removeClip(st.activeClipId);
+      // Delete/Backspace = remove selected item
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (st.activeClipId) {
+          e.preventDefault();
+          st.removeClip(st.activeClipId);
+        } else if (st.activeAudioTrackId) {
+          e.preventDefault();
+          st.removeAudioTrack(st.activeAudioTrackId);
+        } else if (st.activeTextId) {
+          e.preventDefault();
+          st.removeTextOverlay(st.activeTextId);
+        } else if (st.activeSubtitleId) {
+          e.preventDefault();
+          st.removeSubtitle(st.activeSubtitleId);
+        }
       }
 
+      // Ctrl+Z = undo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         st.undo();
       }
 
+      // Ctrl+Y / Ctrl+Shift+Z = redo
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
         e.preventDefault();
         st.redo();

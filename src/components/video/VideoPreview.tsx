@@ -294,17 +294,37 @@ export default function VideoPreview({ videoRef }: Props) {
         <video
           ref={videoRef}
           key={activeClip.id}
-          className="absolute inset-0 w-full h-full object-cover"
+          className={activeClip.overlayMode === 'overlay' ? 'absolute object-cover' : 'absolute inset-0 w-full h-full object-cover'}
           src={activeClip.url}
           preload="metadata"
           playsInline
           muted={activeClip.muted}
           style={{
+            ...(activeClip.overlayMode === 'overlay' ? {
+              left: `${activeClip.clipX}%`,
+              top: `${activeClip.clipY}%`,
+              transform: 'translate(-50%, -50%)',
+              width: `${activeClip.scaleX * 50}%`,
+              height: `${activeClip.scaleY * 50}%`,
+            } : {}),
             filter: buildFilterString(),
             ...buildEffectAnimation(),
           }}
           onTimeUpdate={handleTimeUpdate}
         />
+
+        {/* Resize handles for overlay mode */}
+        {activeClip.overlayMode === 'overlay' && (
+          <div
+            className="absolute border-2 border-dashed border-sky-400/50 pointer-events-none"
+            style={{
+              left: `${activeClip.clipX - activeClip.scaleX * 25}%`,
+              top: `${activeClip.clipY - activeClip.scaleY * 25}%`,
+              width: `${activeClip.scaleX * 50}%`,
+              height: `${activeClip.scaleY * 50}%`,
+            }}
+          />
+        )}
 
         {/* Safe zones overlay */}
         {showSafeZones && (

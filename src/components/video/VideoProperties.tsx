@@ -1,5 +1,5 @@
-import { Trash2, Scissors, RotateCcw, Volume2, VolumeX, Gauge, Sparkles, Diamond, Layers, Activity, Zap, ArrowRightLeft } from 'lucide-react';
-import { useVideoStore, VideoFilters, ClipEffect, TransitionType, Keyframe, VideoClip, TextOverlay, SubtitleEntry, MotionPreset } from '../../store/videoStore';
+import { Trash2, Scissors, RotateCcw, Volume2, VolumeX, Gauge, Sparkles, Diamond, Layers, Activity, Zap, ArrowRightLeft, Move, Maximize2, Music } from 'lucide-react';
+import { useVideoStore, VideoFilters, ClipEffect, TransitionType, Keyframe, VideoClip, TextOverlay, SubtitleEntry, MotionPreset, AudioTrack } from '../../store/videoStore';
 
 const EFFECTS: { id: ClipEffect; label: string }[] = [
   { id: 'none', label: 'None' }, { id: 'shake', label: 'Shake' },
@@ -37,13 +37,17 @@ export default function VideoProperties() {
   const activeClipId = useVideoStore(s => s.activeClipId);
   const activeTextId = useVideoStore(s => s.activeTextId);
   const activeSubtitleId = useVideoStore(s => s.activeSubtitleId);
+  const activeAudioTrackId = useVideoStore(s => s.activeAudioTrackId);
   const activeClip = useVideoStore(s => s.project?.clips.find(c => c.id === s.activeClipId) ?? null);
+  const activeAudioTrack = useVideoStore(s => s.project?.audioTracks.find(a => a.id === s.activeAudioTrackId) ?? null);
 
-  if (!activeClipId && !activeTextId && !activeSubtitleId) {
+  const hasSelection = activeClipId || activeTextId || activeSubtitleId || activeAudioTrackId;
+
+  if (!hasSelection) {
     return (
       <div className="w-64 bg-[#111115] border-l border-zinc-800 p-6 flex items-center justify-center min-h-screen">
         <p className="text-zinc-400 text-sm text-center">
-          Select a clip, text overlay, or subtitle to edit properties
+          Select a clip, text, subtitle, or audio track to edit properties
         </p>
       </div>
     );
@@ -63,6 +67,9 @@ export default function VideoProperties() {
         <SubtitleProperties
           subtitle={project.subtitles.find(s => s.id === activeSubtitleId) as SubtitleEntry | undefined}
         />
+      )}
+      {activeAudioTrackId && activeAudioTrack && (
+        <AudioTrackProperties track={activeAudioTrack} />
       )}
     </div>
   );
@@ -206,6 +213,38 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
             </div>
           </div>
         )}
+      </div>
+
+      <SectionDivider />
+
+      {/* Clip Transform / Overlay */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+          <Maximize2 className="w-3.5 h-3.5 text-sky-400" /> Transform
+        </h3>
+        <div className="space-y-2">
+          <select value={clip.overlayMode} onChange={e => updateClip(clip.id, { overlayMode: e.target.value as 'full' | 'overlay' })}
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 text-sm focus:outline-none focus:border-sky-500">
+            <option value="full">Full Frame</option>
+            <option value="overlay">Overlay / PIP</option>
+          </select>
+          {clip.overlayMode === 'overlay' && (
+            <div className="space-y-2 pt-1">
+              <LabeledSlider label="Scale X" icon={<Maximize2 className="w-3 h-3" />} value={clip.scaleX} min={0.1} max={2} step={0.05}
+                display={`${(clip.scaleX * 100).toFixed(0)}%`} onChange={v => updateClip(clip.id, { scaleX: v })} />
+              <LabeledSlider label="Scale Y" icon={<Maximize2 className="w-3 h-3" />} value={clip.scaleY} min={0.1} max={2} step={0.05}
+                display={`${(clip.scaleY * 100).toFixed(0)}%`} onChange={v => updateClip(clip.id, { scaleY: v })} />
+              <LabeledSlider label="Position X" icon={<Move className="w-3 h-3" />} value={clip.clipX} min={0} max={100} step={1}
+                display={`${Math.round(clip.clipX)}%`} onChange={v => updateClip(clip.id, { clipX: v })} />
+              <LabeledSlider label="Position Y" icon={<Move className="w-3 h-3" />} value={clip.clipY} min={0} max={100} step={1}
+                display={`${Math.round(clip.clipY)}%`} onChange={v => updateClip(clip.id, { clipY: v })} />
+              <button onClick={() => updateClip(clip.id, { scaleX: 1, scaleY: 1, clipX: 50, clipY: 50 })}
+                className="w-full text-xs px-3 py-2 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 transition-colors">
+                Reset Position
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <SectionDivider />
@@ -612,6 +651,93 @@ function SubtitleProperties({ subtitle }: SubtitlePropertiesProps) {
         <Trash2 className="w-4 h-4" /> Delete Subtitle
       </button>
 
+      <div className="pb-4" />
+    </div>
+  );
+}
+
+interface AudioTrackPropertiesProps {
+  track: AudioTrack;
+}
+
+function AudioTrackProperties({ track }: AudioTrackPropertiesProps) {
+  const updateAudioTrack = useVideoStore(s => s.updateAudioTrack);
+  const removeAudioTrack = useVideoStore(s => s.removeAudioTrack);
+  const splitAudioTrack = useVideoStore(s => s.splitAudioTrack);
+
+  const handleUpdate = (updates: Partial<AudioTrack>) => {
+    updateAudioTrack(track.id, updates);
+  };
+
+  const handleSplit = () => {
+    splitAudioTrack(track.id, track.duration / 2);
+  };
+
+  const handleDelete = () => {
+    removeAudioTrack(track.id);
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+          <Music className="w-3.5 h-3.5 text-violet-400" /> Audio Track
+        </h3>
+        <div className="bg-zinc-900 border border-zinc-700 rounded p-3 space-y-1">
+          <div className="flex justify-between text-xs">
+            <span className="text-zinc-400">Name</span>
+            <span className="text-zinc-300 truncate max-w-[120px]">{track.name}</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-zinc-400">Duration</span>
+            <span className="text-zinc-300">{track.duration.toFixed(1)}s</span>
+          </div>
+        </div>
+      </div>
+
+      <SectionDivider />
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-zinc-200">Volume</h3>
+        <LabeledSlider label="Volume" icon={<Volume2 className="w-3 h-3" />} value={track.volume} min={0} max={1} step={0.01}
+          display={`${Math.round(track.volume * 100)}%`} onChange={v => handleUpdate({ volume: v })} />
+        <button onClick={() => handleUpdate({ muted: !track.muted })}
+          className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded text-sm font-medium transition ${
+            track.muted ? 'bg-sky-500 text-white hover:bg-sky-600' : 'bg-zinc-700 text-zinc-200 hover:bg-zinc-600'
+          }`}>
+          {track.muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          {track.muted ? 'Muted' : 'Unmuted'}
+        </button>
+      </div>
+
+      <SectionDivider />
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-zinc-200">Timing</h3>
+        <div className="space-y-2">
+          <div className="space-y-1">
+            <label className="text-xs text-zinc-400">Start Offset (seconds)</label>
+            <input type="number" value={track.startTime} onChange={e => handleUpdate({ startTime: parseFloat(e.target.value) || 0 })}
+              step={0.1} min={0}
+              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 text-sm focus:outline-none focus:border-sky-500" />
+          </div>
+        </div>
+      </div>
+
+      <SectionDivider />
+
+      <div className="space-y-2">
+        <button onClick={handleSplit}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-sky-500 hover:bg-sky-600 rounded text-sm font-medium text-white transition">
+          <Scissors className="w-4 h-4" /> Split Audio
+        </button>
+        <button onClick={handleDelete}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium text-white transition">
+          <Trash2 className="w-4 h-4" /> Delete Audio
+        </button>
+      </div>
+
+      <p className="text-[10px] text-zinc-600 text-center">Shortcuts apply to selected audio track</p>
       <div className="pb-4" />
     </div>
   );
