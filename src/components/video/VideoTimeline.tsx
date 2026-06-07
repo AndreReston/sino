@@ -71,8 +71,12 @@ export default function VideoTimeline() {
   }, []);
 
   const totalDuration = getTotalDuration();
-  const trackWidth = Math.max(containerWidth, totalDuration * timelineZoom + 100);
-  const pps = containerWidth > 0 && totalDuration > 0 ? containerWidth / totalDuration : timelineZoom;
+  // Use manual zoom (timelineZoom) when user has adjusted it, otherwise fit to container
+  const useFitToContainer = timelineZoom === 80; // default zoom value
+  const pps = useFitToContainer && containerWidth > 0 && totalDuration > 0
+    ? containerWidth / totalDuration
+    : timelineZoom;
+  const trackWidth = Math.max(containerWidth, totalDuration * pps + 100);
 
   const sortedClips = useMemo(
     () => [...(project?.clips || [])].sort((a, b) => a.order - b.order),
@@ -409,20 +413,20 @@ export default function VideoTimeline() {
                       data-noseek="1"
                       className={`absolute top-1 bottom-1 rounded-lg overflow-hidden group transition-all ${
                         isActive ? 'ring-2 ring-sky-400/60 shadow-[0_0_12px_rgba(56,189,248,0.15)] z-10' : 'hover:ring-1 hover:ring-white/20 z-[5]'
-                      } ${isDragging ? 'opacity-40 scale-y-95 z-20 cursor-grabbing' : 'cursor-grab'}`}
+                      } ${isDragging ? 'opacity-40 scale-y-95 z-20' : ''}`}
                       style={{ left, width: Math.max(width, 8) }}
-                      onClick={(e) => { e.stopPropagation(); setActiveClipId(clip.id); }}
+                      onClick={(e) => {
+                        if ((e.target as HTMLElement).closest('[data-trim]')) return;
+                        e.stopPropagation();
+                        setActiveClipId(clip.id);
+                      }}
                       onDoubleClick={(e) => {
+                        if ((e.target as HTMLElement).closest('[data-trim]')) return;
                         e.stopPropagation();
                         const rect = trackRef.current!.getBoundingClientRect();
                         const clickX = e.clientX - rect.left + getScrollOffset();
                         const timeFromStart = (clickX - left) / pps;
                         if (timeFromStart > 0.05) splitClip(clip.id, timeFromStart);
-                      }}
-                      onMouseDown={(e) => {
-                        if ((e.target as HTMLElement).closest('[data-trim]')) return;
-                        e.stopPropagation();
-                        setDragClipId(clip.id);
                       }}
                     >
                       {clip.thumbnails[0] && (
@@ -439,10 +443,18 @@ export default function VideoTimeline() {
                         <div className="absolute top-1 right-6 px-1 py-0.5 rounded bg-amber-500/20 text-[8px] text-amber-300 font-bold leading-none">{clip.speed}x</div>
                       )}
 
-                      <div className="absolute inset-0 flex items-center justify-center px-3">
+                      {/* Clip body - draggable area for reordering */}
+                      <div
+                        className="absolute inset-0 flex items-center justify-center px-3 cursor-grab active:cursor-grabbing"
+                        onMouseDown={(e) => {
+                          if ((e.target as HTMLElement).closest('[data-trim]')) return;
+                          e.stopPropagation();
+                          setDragClipId(clip.id);
+                        }}
+                      >
                         <span className="text-[10px] font-medium text-white truncate drop-shadow-md">{clip.name}</span>
                       </div>
-                      <div className="absolute bottom-0.5 right-1">
+                      <div className="absolute bottom-0.5 right-1 pointer-events-none">
                         <span className="text-[8px] text-sky-200/50 font-mono">{effDur.toFixed(1)}s</span>
                       </div>
 
@@ -452,16 +464,17 @@ export default function VideoTimeline() {
                           title={`Effect: ${clip.effect} — ${effDur.toFixed(1)}s`} />
                       )}
 
-                      {/* Trim handles */}
+                      {/* Left trim handle */}
                       <div data-trim="left"
-                        className="absolute top-0 bottom-0 left-0 w-3 cursor-col-resize hover:bg-sky-400/20 z-10 transition-colors flex items-center justify-start pl-0.5"
+                        className="absolute top-0 bottom-0 left-0 w-2 cursor-ew-resize hover:bg-sky-400/30 z-20 transition-colors group"
                         onMouseDown={(e) => { e.stopPropagation(); setTrimClipId({ id: clip.id, side: 'left' }); }}>
-                        <div className="w-0.5 h-5 bg-white/50 rounded-full" />
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white/40 group-hover:bg-white/70 rounded-r transition-colors" />
                       </div>
+                      {/* Right trim handle */}
                       <div data-trim="right"
-                        className="absolute top-0 bottom-0 right-0 w-3 cursor-col-resize hover:bg-sky-400/20 z-10 transition-colors flex items-center justify-end pr-0.5"
+                        className="absolute top-0 bottom-0 right-0 w-2 cursor-ew-resize hover:bg-sky-400/30 z-20 transition-colors group"
                         onMouseDown={(e) => { e.stopPropagation(); setTrimClipId({ id: clip.id, side: 'right' }); }}>
-                        <div className="w-0.5 h-5 bg-white/50 rounded-full" />
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white/40 group-hover:bg-white/70 rounded-l transition-colors" />
                       </div>
 
                       <button data-trim="del"
@@ -653,3 +666,6 @@ export default function VideoTimeline() {
     </div>
   );
 }
+
+
+export default VideoTimeline
