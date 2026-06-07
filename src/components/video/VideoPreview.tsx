@@ -45,6 +45,8 @@ export default function VideoPreview({ videoRef }: Props) {
   // Drag state for sticker overlays
   const [draggingStickerData, setDraggingStickerData] = useState<{ id: string; ox: number; oy: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [resizing, setResizing] = useState<{ corner: string; startX: number; startY: number } | null>(null);
+  const [panning, setPanning] = useState<{ startX: number; startY: number } | null>(null);
 
   // Sync video src when active clip changes
   useEffect(() => {
@@ -170,6 +172,34 @@ export default function VideoPreview({ videoRef }: Props) {
       window.removeEventListener('mouseup', handleUp);
     };
   }, [draggingStickerData, updateStickerOverlay]);
+
+  // ── Clip resize for overlay mode ──────────────────────────────────────
+  useEffect(() => {
+    if (!resizing) return;
+    const handleMove = (e: MouseEvent) => {
+      const deltaX = (e.clientX - resizing.startX) / 300; // sensitivity
+      const deltaY = (e.clientY - resizing.startY) / 300;
+      const { corner } = resizing;
+
+      if (corner.includes('e')) {
+        updateClip(activeClip.id, { scaleX: Math.max(0.1, Math.min(2, activeClip.scaleX + deltaX)) });
+      } else if (corner.includes('w')) {
+        updateClip(activeClip.id, { scaleX: Math.max(0.1, Math.min(2, activeClip.scaleX - deltaX)) });
+      }
+      if (corner.includes('s')) {
+        updateClip(activeClip.id, { scaleY: Math.max(0.1, Math.min(2, activeClip.scaleY + deltaY)) });
+      } else if (corner.includes('n')) {
+        updateClip(activeClip.id, { scaleY: Math.max(0.1, Math.min(2, activeClip.scaleY - deltaY)) });
+      }
+    };
+    const handleUp = () => setResizing(null);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [resizing, activeClip.id, updateClip, activeClip.scaleX, activeClip.scaleY]);
 
   // Active overlays and subtitles at current time
   const activeOverlays = project?.textOverlays.filter(
@@ -306,24 +336,78 @@ export default function VideoPreview({ videoRef }: Props) {
               transform: 'translate(-50%, -50%)',
               width: `${activeClip.scaleX * 50}%`,
               height: `${activeClip.scaleY * 50}%`,
-            } : {}),
+            } : {
+              transform: `translate(${activeClip.offsetX}%, ${activeClip.offsetY}%)`,
+            }),
             filter: buildFilterString(),
             ...buildEffectAnimation(),
           }}
           onTimeUpdate={handleTimeUpdate}
         />
 
+        {/* Resize handles for full frame mode (pan/crop) */}
+        {activeClip.overlayMode === 'full' && (
+          <div
+            className="absolute inset-0 cursor-grab active:cursor-grabbing"
+            onMouseDown={(e) => {
+              if (e.button !== 2 && !panning) { // not right-click
+                setPanning({ startX: e.clientX, startY: e.clientY });
+              }
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              updateClip(activeClip.id, { offsetX: 0, offsetY: 0 });
+            }}
+            title="Drag to pan, right-click to reset"
+          >
+            {panning && (
+              <div
+                onMouseMove={(e) => {
+                  const deltaX = (e.clientX - panning.startX) / 10;
+                  const deltaY = (e.clientY - panning.startY) / 10;
+                  updateClip(activeClip.id, {
+                    offsetX: Math.max(-50, Math.min(50, activeClip.offsetX + deltaX)),
+                    offsetY: Math.max(-50, Math.min(50, activeClip.offsetY + deltaY)),
+                  });
+                  setPanning({ startX: e.clientX, startY: e.clientY });
+                }}
+                onMouseUp={() => setPanning(null)}
+                onMouseLeave={() => setPanning(null)}
+                className="absolute inset-0"
+              />
+            )}
+          </div>
+        )}
+
         {/* Resize handles for overlay mode */}
         {activeClip.overlayMode === 'overlay' && (
-          <div
-            className="absolute border-2 border-dashed border-sky-400/50 pointer-events-none"
-            style={{
-              left: `${activeClip.clipX - activeClip.scaleX * 25}%`,
-              top: `${activeClip.clipY - activeClip.scaleY * 25}%`,
-              width: `${activeClip.scaleX * 50}%`,
-              height: `${activeClip.scaleY * 50}%`,
-            }}
-          />
+          <>
+            <div
+              className="absolute border-2 border-dashed border-sky-400/50 pointer-events-none"
+              style={{
+                left: `${activeClip.clipX - activeClip.scaleX * 25}%`,
+                top: `${activeClip.clipY - activeClip.scaleY * 25}%`,
+                width: `${activeClip.scaleX * 50}%`,
+                height: `${activeClip.scaleY * 50}%`,
+              }}
+            />
+            {/* Corner resize handles */}
+            {['nw', 'ne', 'sw', 'se'].map(corner => (
+              <div
+                key={corner}
+                className="absolute w-2 h-2 bg-sky-400 rounded-full cursor-nwse-resize z-20"
+                style={{
+                  left: corner.includes('e') ? `${activeClip.clipX + activeClip.scaleX * 25}%` : `${activeClip.clipX - activeClip.scaleX * 25}%`,
+                  top: corner.includes('s') ? `${activeClip.clipY + activeClip.scaleY * 25}%` : `${activeClip.clipY - activeClip.scaleY * 25}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  setResizing({ corner, startX: e.clientX, startY: e.clientY });
+                }}
+              />
+            ))}
+          </>
         )}
 
         {/* Safe zones overlay */}

@@ -225,11 +225,29 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
         <div className="space-y-2">
           <select value={clip.overlayMode} onChange={e => updateClip(clip.id, { overlayMode: e.target.value as 'full' | 'overlay' })}
             className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 text-sm focus:outline-none focus:border-sky-500">
-            <option value="full">Full Frame</option>
+            <option value="full">Full Frame (with Pan/Crop)</option>
             <option value="overlay">Overlay / PIP</option>
           </select>
+
+          {/* Pan/Crop controls for full frame mode */}
+          {clip.overlayMode === 'full' && (
+            <div className="space-y-2 pt-1 text-[11px]">
+              <p className="text-zinc-400">Drag video in preview to pan, or adjust below. Right-click to reset.</p>
+              <LabeledSlider label="Pan X" value={clip.offsetX} min={-50} max={50} step={1}
+                display={`${Math.round(clip.offsetX)}%`} onChange={v => updateClip(clip.id, { offsetX: v })} />
+              <LabeledSlider label="Pan Y" value={clip.offsetY} min={-50} max={50} step={1}
+                display={`${Math.round(clip.offsetY)}%`} onChange={v => updateClip(clip.id, { offsetY: v })} />
+              <button onClick={() => updateClip(clip.id, { offsetX: 0, offsetY: 0 })}
+                className="w-full text-xs px-3 py-2 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 transition-colors">
+                Reset Pan
+              </button>
+            </div>
+          )}
+
+          {/* Overlay controls */}
           {clip.overlayMode === 'overlay' && (
             <div className="space-y-2 pt-1">
+              <p className="text-[11px] text-zinc-400">Drag corners in preview to resize, drag border to reposition.</p>
               <LabeledSlider label="Scale X" icon={<Maximize2 className="w-3 h-3" />} value={clip.scaleX} min={0.1} max={2} step={0.05}
                 display={`${(clip.scaleX * 100).toFixed(0)}%`} onChange={v => updateClip(clip.id, { scaleX: v })} />
               <LabeledSlider label="Scale Y" icon={<Maximize2 className="w-3 h-3" />} value={clip.scaleY} min={0.1} max={2} step={0.05}

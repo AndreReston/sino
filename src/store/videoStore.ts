@@ -47,6 +47,8 @@ export interface VideoClip {
   clipX: number;         // percentage 0-100, default 50 (center)
   clipY: number;         // percentage 0-100, default 50 (center)
   overlayMode: 'full' | 'overlay';  // full = fill frame, overlay = positioned
+  offsetX: number;       // pan/crop X offset as percentage -100 to 100, default 0
+  offsetY: number;       // pan/crop Y offset as percentage -100 to 100, default 0
   // health data
   resolution?: string;
   bitrate?: string;
@@ -211,7 +213,7 @@ export interface VideoStoreActions {
   loadFromLocalStorage: () => void;
 
   // Clips
-  addClip: (clip: Omit<VideoClip, 'id' | 'order' | 'thumbnails' | 'filters' | 'transitionIn' | 'speed' | 'muted' | 'effect' | 'keyframes' | 'effectStack' | 'scaleX' | 'scaleY' | 'clipX' | 'clipY' | 'overlayMode' | 'transitionDuration' | 'effectDuration'> & { url: string; name: string; duration: number; trimStart?: number; trimEnd?: number; volume?: number }) => void;
+  addClip: (clip: Omit<VideoClip, 'id' | 'order' | 'thumbnails' | 'filters' | 'transitionIn' | 'speed' | 'muted' | 'effect' | 'keyframes' | 'effectStack' | 'scaleX' | 'scaleY' | 'clipX' | 'clipY' | 'overlayMode' | 'transitionDuration' | 'effectDuration' | 'offsetX' | 'offsetY'> & { url: string; name: string; duration: number; trimStart?: number; trimEnd?: number; volume?: number }) => void;
   removeClip: (id: string) => void;
   updateClip: (id: string, updates: Partial<VideoClip>) => void;
   reorderClip: (id: string, newIndex: number) => void;
@@ -571,6 +573,8 @@ export const useVideoStore = create<VStore>((set, get) => ({
           clipX: (clip as any).clipX ?? 50,
           clipY: (clip as any).clipY ?? 50,
           overlayMode: (clip as any).overlayMode ?? 'full',
+          offsetX: (clip as any).offsetX ?? 0,
+          offsetY: (clip as any).offsetY ?? 0,
         }));
         const migratedProject: VideoProject = {
           ...project,
@@ -613,6 +617,8 @@ export const useVideoStore = create<VStore>((set, get) => ({
       clipX: 50,
       clipY: 50,
       overlayMode: 'full',
+      offsetX: 0,
+      offsetY: 0,
     };
     const clips = [...project.clips, clip];
     set({ project: { ...project, clips }, activeClipId: clip.id });

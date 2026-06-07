@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Trash2, ZoomIn, ZoomOut, Film, Type, Volume2,
-  Music, Smile,
+  Music, Smile, Maximize2,
 } from 'lucide-react';
 import { useVideoStore, VideoClip } from '../../store/videoStore';
 
@@ -511,6 +511,15 @@ export default function VideoTimeline() {
                         onClick={(e) => { e.stopPropagation(); removeClip(clip.id); }}
                         title="Delete clip">
                         <Trash2 className="w-2.5 h-2.5 text-white" />
+                      </button>
+                      <button data-trim="overlay"
+                        className="absolute top-0.5 right-7 opacity-0 group-hover:opacity-100 p-0.5 rounded bg-zinc-800/80 hover:bg-violet-600 transition-all z-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          useVideoStore.getState().updateClip(clip.id, { overlayMode: 'overlay', clipX: 50, clipY: 50 });
+                        }}
+                        title="Convert to overlay">
+                        <Maximize2 className="w-2.5 h-2.5 text-white" />
                       </button>
                     </div>
                   );
