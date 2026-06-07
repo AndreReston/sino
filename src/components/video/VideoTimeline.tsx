@@ -601,25 +601,58 @@ export default function VideoTimeline() {
               <div className="h-10 border-b border-zinc-800/30 relative">
                 {project.audioTracks.map(track => {
                   const left = track.startTime * pps;
-                  const width = Math.max(60, totalDuration * pps * 0.3);
+                  const width = track.duration > 0 ? track.duration * pps : Math.max(60, totalDuration * pps * 0.3);
                   return (
                     <div key={track.id} data-noseek="1"
-                      className="absolute top-0.5 bottom-0.5 rounded bg-violet-500/15 border border-violet-500/30 flex items-center px-1.5"
-                      style={{ left, width }}>
+                      className="absolute top-0.5 bottom-0.5 rounded bg-violet-500/15 border border-violet-500/30 flex items-center px-1.5 cursor-grab active:cursor-grabbing select-none"
+                      style={{ left, width }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        const startX = e.clientX;
+                        const origStart = track.startTime;
+                        const move = (me: MouseEvent) => {
+                          const delta = (me.clientX - startX) / ppsRef.current;
+                          useVideoStore.getState().updateAudioTrack(track.id, { startTime: Math.max(0, origStart + delta) });
+                        };
+                        const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+                        window.addEventListener('mousemove', move);
+                        window.addEventListener('mouseup', up);
+                      }}
+                    >
                       <Music className="w-2.5 h-2.5 text-violet-400 shrink-0 mr-1" />
                       <span className="text-[9px] text-violet-200 truncate">{track.name}</span>
+                      {track.duration > 0 && <span className="text-[8px] text-violet-400/50 font-mono ml-1 shrink-0">{track.duration.toFixed(1)}s</span>}
                     </div>
                   );
                 })}
-                {project.backgroundMusic && (
-                  <div data-noseek="1"
-                    className="absolute top-0.5 bottom-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 flex items-center px-1.5"
-                    style={{ left: 0, width: Math.max(8, totalDuration * pps) }}>
-                    <Volume2 className="w-2.5 h-2.5 text-emerald-400 shrink-0 mr-1" />
-                    <span className="text-[9px] text-emerald-200 truncate">{project.backgroundMusic.name}</span>
-                    <span className="text-[8px] text-emerald-400/50 font-mono ml-1 shrink-0">{totalDuration.toFixed(1)}s</span>
-                  </div>
-                )}
+                {project.backgroundMusic && (() => {
+                  const bgm = project.backgroundMusic;
+                  const left = (bgm.startTime ?? 0) * pps;
+                  const width = bgm.duration > 0 ? bgm.duration * pps : Math.max(8, totalDuration * pps);
+                  return (
+                    <div data-noseek="1"
+                      className="absolute top-0.5 bottom-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 flex items-center px-1.5 cursor-grab active:cursor-grabbing select-none"
+                      style={{ left, width }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        const startX = e.clientX;
+                        const origStart = bgm.startTime ?? 0;
+                        const move = (me: MouseEvent) => {
+                          const delta = (me.clientX - startX) / ppsRef.current;
+                          const newStart = Math.max(0, origStart + delta);
+                          useVideoStore.getState().setBackgroundMusic({ ...bgm, startTime: newStart });
+                        };
+                        const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+                        window.addEventListener('mousemove', move);
+                        window.addEventListener('mouseup', up);
+                      }}
+                    >
+                      <Volume2 className="w-2.5 h-2.5 text-emerald-400 shrink-0 mr-1" />
+                      <span className="text-[9px] text-emerald-200 truncate">{bgm.name}</span>
+                      {bgm.duration > 0 && <span className="text-[8px] text-emerald-400/50 font-mono ml-1 shrink-0">{bgm.duration.toFixed(1)}s</span>}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* ─── SUBTITLES TRACK ─────────────────────────────── */}

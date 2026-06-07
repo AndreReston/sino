@@ -80,13 +80,14 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
 
     audio.volume = Math.max(0, Math.min(1, bgMusic.volume ?? 0.8));
     audio.loop = true;
+    audio.preload = 'auto';
 
     if (audio.src !== bgMusic.url) {
-      audio.preload = 'auto';
       audio.src = bgMusic.url;
       audio.load();
       if (isPlaying) {
-        audio.addEventListener('canplaythrough', () => {
+        // canplay fires as soon as first frame is decodable — reliable for any file size
+        audio.addEventListener('canplay', () => {
           audio.play().catch(() => {});
         }, { once: true });
       }

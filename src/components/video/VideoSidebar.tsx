@@ -213,7 +213,22 @@ export default function VideoSidebar() {
 
   const handleAudioUpload = (file: File) => {
     const url = URL.createObjectURL(file);
-    addAudioTrack(url, file.name);
+    // Read actual duration before storing as background music
+    const tempAudio = new Audio(url);
+    tempAudio.preload = 'metadata';
+    tempAudio.addEventListener('loadedmetadata', () => {
+      const dur = isFinite(tempAudio.duration) ? tempAudio.duration : 0;
+      setBackgroundMusic({
+        id: `bg_${Date.now()}`,
+        url,
+        name: file.name,
+        volume: 0.8,
+        muted: false,
+        startTime: 0,
+        duration: dur,
+      });
+    }, { once: true });
+    tempAudio.load();
   };
 
   const handleBeatAudioUpload = (file: File) => {
@@ -467,6 +482,7 @@ export default function VideoSidebar() {
             <div className="space-y-4">
               <div>
                 <p className="text-[11px] text-zinc-500 mb-2">Background Music</p>
+              <div className="space-y-3">
                 <label className="flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-white/[0.08] hover:border-sky-500/30 bg-[#151519] cursor-pointer transition-all group">
                   <Music className="w-4 h-4 text-zinc-500 group-hover:text-sky-400" />
                   <span className="text-[11px] text-zinc-500 group-hover:text-zinc-300">Upload music</span>
@@ -474,12 +490,29 @@ export default function VideoSidebar() {
                     onChange={e => { const f = e.target.files?.[0]; if (f) handleAudioUpload(f); e.target.value = ''; }} />
                 </label>
                 {project?.backgroundMusic && (
-                  <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-[#151519] border border-white/[0.06]">
-                    <Mic className="w-3 h-3 text-sky-400" />
-                    <span className="text-xs text-zinc-300 truncate flex-1">{project.backgroundMusic.name}</span>
-                    <button onClick={() => setBackgroundMusic(null)} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                  <div className="space-y-2 p-3 rounded-lg bg-[#151519] border border-emerald-500/20">
+                    <div className="flex items-center gap-2">
+                      <Mic className="w-3 h-3 text-emerald-400 shrink-0" />
+                      <span className="text-xs text-zinc-300 truncate flex-1">{project.backgroundMusic.name}</span>
+                      {project.backgroundMusic.duration > 0 && (
+                        <span className="text-[9px] text-zinc-500 font-mono shrink-0">{formatDuration(project.backgroundMusic.duration)}</span>
+                      )}
+                      <button onClick={() => setBackgroundMusic(null)} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Volume2 className="w-3 h-3 text-zinc-500 shrink-0" />
+                      <input type="range" min={0} max={1} step={0.01}
+                        value={project.backgroundMusic.volume ?? 0.8}
+                        onChange={e => setBackgroundMusic({ ...project.backgroundMusic!, volume: parseFloat(e.target.value) })}
+                        className="flex-1 accent-emerald-500" />
+                      <span className="text-[9px] text-zinc-400 w-8 text-right tabular-nums">
+                        {Math.round((project.backgroundMusic.volume ?? 0.8) * 100)}%
+                      </span>
+                    </div>
+                    <p className="text-[9px] text-zinc-600">Drag the bar in the timeline to set start offset. Loops automatically.</p>
                   </div>
                 )}
+              </div>
               </div>
               <div>
                 <p className="text-[11px] text-zinc-500 mb-2">Audio Tracks</p>

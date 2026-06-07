@@ -112,6 +112,7 @@ export interface AudioTrack {
   volume: number;
   muted: boolean;
   startTime: number;
+  duration: number;  // actual audio file duration in seconds
 }
 
 export interface SceneMarker {
@@ -491,11 +492,14 @@ export const useVideoStore = create<VStore>((set, get) => ({
 
   loadProject: (project) => {
     // Migrate old projects that lack new fields
+    const migrateAudioTrack = (t: any): AudioTrack => ({ ...t, duration: t.duration ?? 0 });
     const migrated: VideoProject = {
       ...project,
       stickerOverlays: project.stickerOverlays || [],
       sceneMarkers: project.sceneMarkers || [],
       beatMarkers: project.beatMarkers || [],
+      audioTracks: (project.audioTracks || []).map(migrateAudioTrack),
+      backgroundMusic: project.backgroundMusic ? migrateAudioTrack(project.backgroundMusic) : null,
       clips: project.clips.map(c => ({
         ...c,
         transitionDuration: (c as any).transitionDuration ?? 0.5,
@@ -993,16 +997,26 @@ export const useVideoStore = create<VStore>((set, get) => ({
   addAudioTrack: (url, name) => {
     const { project } = get();
     if (!project) return;
-    const track: AudioTrack = {
-      id: `audio_${uid()}`,
-      url,
-      name,
-      volume: 1,
-      muted: false,
-      startTime: 0,
-    };
-    set({ project: { ...project, audioTracks: [...project.audioTracks, track] } });
-    get().pushHistory();
+    // Read actual duration before storing
+    const tempAudio = new Audio(url);
+    tempAudio.addEventListener('loadedmetadata', () => {
+      const dur = isFinite(tempAudio.duration) ? tempAudio.duration : 0;
+      const track: AudioTrack = {
+        id: `audio_${uid()}`,
+        url,
+        name,
+        volume: 1,
+        muted: false,
+        startTime: 0,
+        duration: dur,
+      };
+      const { project: p } = get();
+      if (!p) return;
+      set({ project: { ...p, audioTracks: [...p.audioTracks, track] } });
+      get().pushHistory();
+    }, { once: true });
+    // Fallback: if metadata loads instantly (cached), handled above; if not, add with 0 duration temporarily
+    tempAudio.load();
   },
 
   removeAudioTrack: (id) => {
