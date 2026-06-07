@@ -1,5 +1,5 @@
-import { Trash2, Scissors, RotateCcw, Volume2, VolumeX, Gauge, Sparkles, Diamond, Layers, Activity, Zap } from 'lucide-react';
-import { useVideoStore, VideoFilters, ClipEffect, Keyframe, VideoClip, TextOverlay, SubtitleEntry, MotionPreset } from '../../store/videoStore';
+import { Trash2, Scissors, RotateCcw, Volume2, VolumeX, Gauge, Sparkles, Diamond, Layers, Activity, Zap, ArrowRightLeft } from 'lucide-react';
+import { useVideoStore, VideoFilters, ClipEffect, TransitionType, Keyframe, VideoClip, TextOverlay, SubtitleEntry, MotionPreset } from '../../store/videoStore';
 
 const EFFECTS: { id: ClipEffect; label: string }[] = [
   { id: 'none', label: 'None' }, { id: 'shake', label: 'Shake' },
@@ -7,6 +7,18 @@ const EFFECTS: { id: ClipEffect; label: string }[] = [
   { id: 'fade-in', label: 'Fade In' }, { id: 'fade-out', label: 'Fade Out' },
   { id: 'blur-in', label: 'Blur In' }, { id: 'blur-out', label: 'Blur Out' },
   { id: 'vhs', label: 'VHS' }, { id: 'glitch', label: 'Glitch' },
+];
+
+const TRANSITIONS: { id: TransitionType; label: string }[] = [
+  { id: 'none', label: 'None' },
+  { id: 'fade', label: 'Fade' },
+  { id: 'crossfade', label: 'Crossfade' },
+  { id: 'slide-left', label: 'Slide Left' },
+  { id: 'slide-right', label: 'Slide Right' },
+  { id: 'slide-up', label: 'Slide Up' },
+  { id: 'slide-down', label: 'Slide Down' },
+  { id: 'wipe-left', label: 'Wipe Left' },
+  { id: 'wipe-right', label: 'Wipe Right' },
 ];
 
 const MOTION_PRESETS: { id: MotionPreset; label: string }[] = [
@@ -172,6 +184,58 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
           className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 text-sm focus:outline-none focus:border-sky-500">
           {EFFECTS.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
         </select>
+        {clip.effect !== 'none' && (
+          <div className="space-y-2 pt-1">
+            <div className="bg-zinc-900 border border-zinc-800 rounded p-2.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-zinc-400">Effect Duration</span>
+                <span className="text-xs text-zinc-200 font-mono">
+                  {clip.effectDuration > 0 ? `${clip.effectDuration.toFixed(1)}s` : 'Full clip'}
+                </span>
+              </div>
+              <input type="range" min={0} max={effectiveDuration} step={0.1}
+                value={clip.effectDuration}
+                onChange={e => updateClip(clip.id, { effectDuration: parseFloat(e.target.value) })}
+                className="w-full h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-violet-500"
+              />
+              <div className="flex justify-between text-[10px] text-zinc-600">
+                <span>Full clip</span>
+                <span>{effectiveDuration.toFixed(1)}s</span>
+              </div>
+              <p className="text-[10px] text-zinc-500">0 = applies for the entire clip duration</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <SectionDivider />
+
+      {/* Transition */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+          <ArrowRightLeft className="w-3.5 h-3.5 text-sky-400" /> Transition In
+        </h3>
+        <select value={clip.transitionIn} onChange={e => updateClip(clip.id, { transitionIn: e.target.value as TransitionType })}
+          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 text-sm focus:outline-none focus:border-sky-500">
+          {TRANSITIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+        </select>
+        {clip.transitionIn !== 'none' && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded p-2.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-400">Duration</span>
+              <span className="text-xs text-zinc-200 font-mono">{(clip.transitionDuration ?? 0.5).toFixed(1)}s</span>
+            </div>
+            <input type="range" min={0.1} max={Math.min(3, effectiveDuration * 0.5)} step={0.1}
+              value={clip.transitionDuration ?? 0.5}
+              onChange={e => updateClip(clip.id, { transitionDuration: parseFloat(e.target.value) })}
+              className="w-full h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+            />
+            <div className="flex justify-between text-[10px] text-zinc-600">
+              <span>0.1s</span>
+              <span>{Math.min(3, effectiveDuration * 0.5).toFixed(1)}s max</span>
+            </div>
+          </div>
+        )}
       </div>
 
       <SectionDivider />

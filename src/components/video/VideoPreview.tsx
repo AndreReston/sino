@@ -198,7 +198,10 @@ export default function VideoPreview({ videoRef }: Props) {
     };
 
     const effStart = 0;
-    const effEnd = (clip.duration - clip.trimStart - clip.trimEnd) / clip.speed;
+    const clipEffectiveDur = (clip.duration - clip.trimStart - clip.trimEnd) / clip.speed;
+    const effEnd = (clip.effectDuration && clip.effectDuration > 0)
+      ? Math.min(clip.effectDuration, clipEffectiveDur)
+      : clipEffectiveDur;
 
     switch (effect) {
       case 'shake':

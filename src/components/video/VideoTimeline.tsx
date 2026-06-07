@@ -458,10 +458,24 @@ export default function VideoTimeline() {
                         <span className="text-[8px] text-sky-200/50 font-mono">{effDur.toFixed(1)}s</span>
                       </div>
 
-                      {/* Effect duration bar */}
+                      {/* Effect duration bar — shows configured effect duration as a sub-bar */}
                       {clip.effect !== 'none' && (
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-violet-500/50 pointer-events-none"
-                          title={`Effect: ${clip.effect} — ${effDur.toFixed(1)}s`} />
+                        <div className="absolute bottom-0 left-0 h-1 bg-violet-500/60 pointer-events-none"
+                          style={{
+                            width: clip.effectDuration > 0
+                              ? `${Math.min(100, (clip.effectDuration / effDur) * 100)}%`
+                              : '100%'
+                          }}
+                          title={`Effect: ${clip.effect} — ${clip.effectDuration > 0 ? clip.effectDuration.toFixed(1) + 's' : 'full clip'}`}
+                        />
+                      )}
+
+                      {/* Transition duration indicator on left edge */}
+                      {clip.transitionIn !== 'none' && (
+                        <div className="absolute top-0 left-0 h-full bg-sky-500/20 pointer-events-none"
+                          style={{ width: `${Math.min(100, ((clip.transitionDuration ?? 0.5) / effDur) * 100)}%` }}
+                          title={`Transition: ${clip.transitionIn} — ${(clip.transitionDuration ?? 0.5).toFixed(1)}s`}
+                        />
                       )}
 
                       {/* Left trim handle */}

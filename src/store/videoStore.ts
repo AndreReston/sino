@@ -34,6 +34,8 @@ export interface VideoClip {
   muted: boolean;
   filters: VideoFilters;
   transitionIn: TransitionType;
+  transitionDuration: number;  // seconds, default 0.5
+  effectDuration: number;      // seconds for in/out effects, default = full clip
   thumbnails: string[];   // data URLs of frame snapshots
   order: number;
   effect: ClipEffect;
@@ -495,6 +497,11 @@ export const useVideoStore = create<VStore>((set, get) => ({
       beatMarkers: project.beatMarkers || [],
       clips: project.clips.map(c => ({
         ...c,
+        transitionDuration: (c as any).transitionDuration ?? 0.5,
+        effectDuration: (c as any).effectDuration ?? 0,
+        effect: c.effect || 'none',
+        keyframes: c.keyframes || [],
+        effectStack: c.effectStack || [],
       })),
     };
     set({
@@ -542,6 +549,8 @@ export const useVideoStore = create<VStore>((set, get) => ({
           effect: clip.effect || ('none' as ClipEffect),
           keyframes: clip.keyframes || ([] as Keyframe[]),
           effectStack: clip.effectStack || ([] as EffectLayer[]),
+          transitionDuration: (clip as any).transitionDuration ?? 0.5,
+          effectDuration: (clip as any).effectDuration ?? 0,
         }));
         const migratedProject: VideoProject = {
           ...project,
@@ -572,6 +581,8 @@ export const useVideoStore = create<VStore>((set, get) => ({
       muted: false,
       filters: { ...DEFAULT_FILTERS },
       transitionIn: 'none',
+      transitionDuration: 0.5,
+      effectDuration: 0,  // 0 = full clip duration
       thumbnails: [],
       order: project.clips.length,
       effect: 'none',
@@ -607,7 +618,8 @@ export const useVideoStore = create<VStore>((set, get) => ({
   reorderClip: (id, newIndex) => {
     const { project } = get();
     if (!project) return;
-    const clips = [...project.clips];
+    // Sort by current order first so newIndex maps correctly to visual position
+    const clips = [...project.clips].sort((a, b) => a.order - b.order);
     const oldIndex = clips.findIndex(c => c.id === id);
     if (oldIndex < 0) return;
     const [moved] = clips.splice(oldIndex, 1);

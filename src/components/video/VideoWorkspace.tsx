@@ -65,32 +65,50 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
     const bgMusic = project?.backgroundMusic;
     if (!bgMusic?.url) {
       audio.pause();
-      audio.src = '';
+      audio.removeAttribute('src');
+      audio.load();
       return;
     }
+
+    audio.volume = Math.max(0, Math.min(1, bgMusic.volume ?? 0.8));
+
+    const startPlayback = () => {
+      const st = useVideoStore.getState();
+      // Seek to current project time before playing
+      if (isFinite(audio.duration) && audio.duration > 0) {
+        const targetTime = st.currentTime % audio.duration;
+        if (Math.abs(audio.currentTime - targetTime) > 0.3) {
+          audio.currentTime = targetTime;
+        }
+      }
+      audio.play().catch(() => {});
+    };
+
     if (audio.src !== bgMusic.url) {
+      audio.preload = 'auto';
       audio.src = bgMusic.url;
       audio.load();
-    }
-    audio.volume = Math.max(0, Math.min(1, bgMusic.volume ?? 0.8));
-    if (isPlaying) {
-      audio.play().catch(() => {});
+      if (isPlaying) {
+        audio.addEventListener('canplay', startPlayback, { once: true });
+      }
     } else {
-      audio.pause();
+      if (isPlaying) {
+        startPlayback();
+      } else {
+        audio.pause();
+      }
     }
   }, [project?.backgroundMusic?.url, project?.backgroundMusic?.volume, isPlaying]);
 
-  // Seek audio to match current time when playback starts
+  // Keep audio in sync with currentTime during seeks (when not playing)
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !project?.backgroundMusic?.url) return;
-    if (isPlaying) {
+    if (!audio || !project?.backgroundMusic?.url || isPlaying) return;
+    if (isFinite(audio.duration) && audio.duration > 0) {
       const st = useVideoStore.getState();
-      if (Math.abs(audio.currentTime - st.currentTime) > 0.3) {
-        audio.currentTime = st.currentTime;
-      }
+      audio.currentTime = st.currentTime % audio.duration;
     }
-  }, [isPlaying]);
+  }, [project?.backgroundMusic?.url]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -205,7 +223,7 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
   return (
     <div className="flex h-screen bg-[#07070a] text-white overflow-hidden select-none">
       {/* Hidden audio element for background music */}
-      <audio ref={audioRef} loop />
+      <audio ref={audioRef} loop preload="auto" />
       <VideoSidebar />
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
         <VideoTopBar onSave={onSave} onBack={onBack} />
