@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useVideoStore } from '../../store/videoStore';
+import { useVideoStore, AudioTrack } from '../../store/videoStore';
 import VideoSidebar from './VideoSidebar';
 import VideoPreview from './VideoPreview';
 import VideoProperties from './VideoProperties';
@@ -13,6 +13,44 @@ interface Props {
   onBack?: () => void;
 }
 
+interface AudioSyncTrack {
+  url: string;
+  volume: number;
+  muted: boolean;
+  startTime: number;
+  duration: number;
+}
+
+function syncAudioElement(
+  audio: HTMLAudioElement,
+  track: AudioSyncTrack,
+  timelineTime: number,
+  playing: boolean,
+  speed: number
+) {
+  const trackEnd = track.startTime + track.duration;
+  const withinRange = timelineTime >= track.startTime && timelineTime < trackEnd;
+
+  audio.volume = track.muted ? 0 : Math.max(0, Math.min(1, track.volume));
+  audio.playbackRate = speed;
+
+  if (!withinRange || !playing) {
+    if (!audio.paused) audio.pause();
+    return;
+  }
+
+  const audioTime = timelineTime - track.startTime;
+
+  // Seek if drift is significant (>0.3s) or if audio hasn't started yet
+  if (audio.readyState < 2 || Math.abs(audio.currentTime - audioTime) > 0.3) {
+    audio.currentTime = Math.max(0, audioTime);
+  }
+
+  if (audio.paused) {
+    audio.play().catch(() => {});
+  }
+}
+
 export default function VideoWorkspace({ onSave, onBack }: Props) {
   const project = useVideoStore(s => s.project);
   const createProject = useVideoStore(s => s.createProject);
@@ -20,10 +58,12 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const bgAudioRef = useRef<HTMLAudioElement>(null);
+  const trackAudioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
 
   const rafRef = useRef<number>(0);
   const lastTickRef = useRef<number>(0);
+  const lastAudioSyncRef = useRef<number>(0);
   const isPlaying = useVideoStore(s => s.isPlaying);
   const playbackSpeed = useVideoStore(s => s.playbackSpeed);
 
@@ -36,69 +76,164 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
     return () => clearTimeout(timer);
   }, [project?.clips, project?.textOverlays, project?.subtitles, project?.audioTracks, project?.title, project?.aspectRatio]);
 
-  // Playback RAF loop — advances currentTime and auto-switches activeClipId
+  // ── Ensure audio elements exist for each track ─────────────────────
+  useEffect(() => {
+    if (!project) return;
+    const trackIds = new Set(project.audioTracks.map(t => t.id));
+    // Remove stale
+    for (const [id, el] of trackAudioRefs.current) {
+      if (!trackIds.has(id)) {
+        el.pause();
+        el.removeAttribute('src');
+        trackAudioRefs.current.delete(id);
+      }
+    }
+    // Create new
+    for (const track of project.audioTracks) {
+      if (!trackAudioRefs.current.has(track.id)) {
+        const audio = new Audio();
+        audio.preload = 'auto';
+        trackAudioRefs.current.set(track.id, audio);
+      }
+    }
+  }, [project?.audioTracks]);
+
+  // ── Set audio src when tracks change ───────────────────────────────
+  useEffect(() => {
+    if (!project) return;
+    for (const track of project.audioTracks) {
+      const audio = trackAudioRefs.current.get(track.id);
+      if (!audio || !track.url) continue;
+      if (!audio.src || !audio.src.endsWith(track.url)) {
+        audio.src = track.url;
+        audio.load();
+      }
+    }
+  }, [project?.audioTracks]);
+
+  // ── Set bg music src when it changes ───────────────────────────────
+  useEffect(() => {
+    const audio = bgAudioRef.current;
+    const bgMusic = project?.backgroundMusic;
+    if (!audio) return;
+    if (!bgMusic?.url) {
+      audio.pause();
+      audio.removeAttribute('src');
+      return;
+    }
+    if (audio.src !== bgMusic.url) {
+      audio.src = bgMusic.url;
+      audio.load();
+    }
+  }, [project?.backgroundMusic?.url]);
+
+  // ── Seek audio when user scrubs timeline (not playing) ─────────────
+  const prevTimeRef = useRef(0);
+  useEffect(() => {
+    const unsub = useVideoStore.subscribe((state, prev) => {
+      if (state.isPlaying) return; // RAF loop handles sync during playback
+      if (state.currentTime === prev.currentTime) return;
+      if (Math.abs(state.currentTime - prevTimeRef.current) < 0.05) return;
+      prevTimeRef.current = state.currentTime;
+
+      const time = state.currentTime;
+      const bgMusic = state.project?.backgroundMusic;
+      const bgAudio = bgAudioRef.current;
+      if (bgAudio && bgMusic?.url) {
+        syncAudioElement(bgAudio, bgMusic, time, false, state.playbackSpeed);
+      }
+
+      for (const track of state.project?.audioTracks ?? []) {
+        const audio = trackAudioRefs.current.get(track.id);
+        if (audio && track.url) {
+          syncAudioElement(audio, track, time, false, state.playbackSpeed);
+        }
+      }
+    });
+    return unsub;
+  }, []);
+
+  // ── Playback RAF loop with integrated audio sync ───────────────────
   useEffect(() => {
     if (!isPlaying) { cancelAnimationFrame(rafRef.current); return; }
     lastTickRef.current = performance.now();
+    lastAudioSyncRef.current = 0;
+
     const tick = (now: number) => {
       const delta = (now - lastTickRef.current) / 1000;
       lastTickRef.current = now;
       const st = useVideoStore.getState();
       const total = st.getTotalDuration();
       const next = st.currentTime + delta * playbackSpeed;
+
       if (next >= total) {
         st.setCurrentTime(0);
         st.setIsPlaying(false);
-        // Switch to first clip
         const sorted = [...(st.project?.clips || [])].sort((a, b) => a.order - b.order);
         if (sorted.length > 0) st.setActiveClipId(sorted[0].id);
         return;
       }
       st.setCurrentTime(next);
-      // Auto-switch active clip based on current time
       const info = st.getClipAtTime(next);
       if (info && info.clip.id !== st.activeClipId) {
         st.setActiveClipId(info.clip.id);
       }
+
+      // Sync audio every ~100ms during playback to avoid drift
+      if (now - lastAudioSyncRef.current > 100) {
+        lastAudioSyncRef.current = now;
+        const bgMusic = st.project?.backgroundMusic;
+        const bgAudio = bgAudioRef.current;
+        if (bgAudio && bgMusic?.url) {
+          syncAudioElement(bgAudio, bgMusic, next, true, playbackSpeed);
+        }
+        if (st.project) {
+          for (const track of st.project.audioTracks) {
+            const audio = trackAudioRefs.current.get(track.id);
+            if (audio && track.url) {
+              syncAudioElement(audio, track, next, true, playbackSpeed);
+            }
+          }
+        }
+      }
+
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
   }, [isPlaying, playbackSpeed]);
 
-  // Background music audio element sync
+  // ── Play/pause audio when playback state changes ───────────────────
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    const st = useVideoStore.getState();
+    const time = st.currentTime;
+
     const bgMusic = project?.backgroundMusic;
-    if (!bgMusic?.url) {
-      audio.pause();
-      audio.removeAttribute('src');
-      audio.load();
-      return;
+    const bgAudio = bgAudioRef.current;
+    if (bgAudio && bgMusic?.url) {
+      syncAudioElement(bgAudio, bgMusic, time, isPlaying, playbackSpeed);
     }
 
-    audio.volume = Math.max(0, Math.min(1, bgMusic.volume ?? 0.8));
-    audio.loop = true;
-    audio.preload = 'auto';
-
-    if (audio.src !== bgMusic.url) {
-      audio.src = bgMusic.url;
-      audio.load();
-      if (isPlaying) {
-        // canplay fires as soon as first frame is decodable — reliable for any file size
-        audio.addEventListener('canplay', () => {
-          audio.play().catch(() => {});
-        }, { once: true });
-      }
-    } else {
-      if (isPlaying) {
-        if (audio.paused) audio.play().catch(() => {});
-      } else {
-        audio.pause();
+    if (project) {
+      for (const track of project.audioTracks) {
+        const audio = trackAudioRefs.current.get(track.id);
+        if (audio && track.url) {
+          syncAudioElement(audio, track, time, isPlaying, playbackSpeed);
+        }
       }
     }
-  }, [project?.backgroundMusic?.url, project?.backgroundMusic?.volume, isPlaying]);
+  }, [isPlaying, playbackSpeed, project?.backgroundMusic, project?.audioTracks]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      for (const [, el] of trackAudioRefs.current) {
+        el.pause();
+        el.removeAttribute('src');
+      }
+      trackAudioRefs.current.clear();
+    };
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -213,7 +348,7 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
   return (
     <div className="flex h-screen bg-[#07070a] text-white overflow-hidden select-none">
       {/* Hidden audio element for background music */}
-      <audio ref={audioRef} loop preload="auto" />
+      <audio ref={bgAudioRef} preload="auto" />
       <VideoSidebar />
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
         <VideoTopBar onSave={onSave} onBack={onBack} />
