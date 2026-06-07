@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Trash2, ZoomIn, ZoomOut, Film, Type, Volume2,
-  Music, Smile, Maximize2,
+  Music, Smile, Maximize2, Image as ImageIcon,
 } from 'lucide-react';
 import { useVideoStore, VideoClip } from '../../store/videoStore';
 
@@ -395,6 +395,10 @@ export default function VideoTimeline() {
                 <span className="text-[10px] text-zinc-400 font-medium">Stickers</span>
               </div>
               <div className="h-10 flex items-center gap-1 px-2 border-b border-zinc-800/30">
+                <ImageIcon className="w-3 h-3 text-teal-400 shrink-0" />
+                <span className="text-[10px] text-zinc-400 font-medium">Photos</span>
+              </div>
+              <div className="h-10 flex items-center gap-1 px-2 border-b border-zinc-800/30">
                 <Music className="w-3 h-3 text-violet-400 shrink-0" />
                 <span className="text-[10px] text-zinc-400 font-medium">Audio</span>
               </div>
@@ -576,12 +580,12 @@ export default function VideoTimeline() {
 
               {/* ─── STICKERS TRACK ──────────────────────────────── */}
               <div className="h-10 border-b border-zinc-800/30 relative">
-                {(project.stickerOverlays || []).length === 0 && (
+                {(project.stickerOverlays || []).filter(s => s.type !== 'photo').length === 0 && (
                   <div className="absolute inset-0 flex items-center px-3 pointer-events-none">
                     <span className="text-[9px] text-zinc-700">No stickers</span>
                   </div>
                 )}
-                {(project.stickerOverlays || []).map(sticker => {
+                {(project.stickerOverlays || []).filter(s => s.type !== 'photo').map(sticker => {
                   const dur = sticker.endTime - sticker.startTime;
                   const left = sticker.startTime * pps;
                   const width = Math.max(8, dur * pps);
@@ -606,6 +610,44 @@ export default function VideoTimeline() {
                 })}
               </div>
 
+              {/* ─── PHOTOS TRACK ─────────────────────────────────── */}
+              <div className="h-10 border-b border-zinc-800/30 relative">
+                {(() => {
+                  const photoStickers = (project.stickerOverlays || []).filter(s => s.type === 'photo');
+                  if (photoStickers.length === 0) {
+                    return (
+                      <div className="absolute inset-0 flex items-center px-3 pointer-events-none">
+                        <span className="text-[9px] text-zinc-700">No photos</span>
+                      </div>
+                    );
+                  }
+                  return photoStickers.map(sticker => {
+                    const dur = sticker.endTime - sticker.startTime;
+                    const left = sticker.startTime * pps;
+                    const width = Math.max(8, dur * pps);
+                    const isActive = useVideoStore.getState().activeStickerOverlayId === sticker.id;
+                    return (
+                      <div key={sticker.id} data-noseek="1"
+                        className={`absolute top-0.5 bottom-0.5 rounded border border-teal-500/30 flex items-center px-1.5 cursor-grab active:cursor-grabbing transition-all ${
+                          isActive ? 'bg-teal-500/25 ring-1 ring-teal-400/60' : 'bg-teal-500/15 hover:bg-teal-500/25'
+                        }`}
+                        style={{ left, width }}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          useVideoStore.getState().setActiveStickerOverlayId(sticker.id);
+                          dragInitRef.current = { startX: e.clientX, origStart: sticker.startTime, origEnd: sticker.endTime };
+                          setDragStickerId(sticker.id);
+                        }}
+                        title="Photo overlay"
+                      >
+                        <ImageIcon className="w-2.5 h-2.5 text-teal-400 shrink-0 mr-1" />
+                        <span className="text-[9px] text-teal-200 truncate">Photo</span>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+
               {/* ─── AUDIO TRACK ─────────────────────────────────── */}
               <div className="h-10 border-b border-zinc-800/30 relative">
                 {project.audioTracks.map(track => {
@@ -615,20 +657,21 @@ export default function VideoTimeline() {
                   return (
                     <div key={track.id} data-noseek="1"
                       className={`absolute top-0.5 bottom-0.5 rounded flex items-center px-1.5 cursor-grab active:cursor-grabbing select-none ${
-                        isSelected ? 'bg-violet-500/25 border-2 border-violet-400/60' : 'bg-violet-500/15 border border-violet-500/30'
+                        isSelected ? 'bg-violet-500/25 border-2 border-violet-400/60' : 'bg-violet-500/15 border border-violet-500/30 hover:bg-violet-500/25'
                       }`}
                       style={{ left, width }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        useVideoStore.getState().setActiveAudioTrackId(track.id);
-                      }}
                       onMouseDown={(e) => {
                         e.stopPropagation();
+                        useVideoStore.getState().setActiveAudioTrackId(track.id);
                         const startX = e.clientX;
                         const origStart = track.startTime;
+                        let hasMoved = false;
                         const move = (me: MouseEvent) => {
-                          const delta = (me.clientX - startX) / ppsRef.current;
-                          useVideoStore.getState().updateAudioTrack(track.id, { startTime: Math.max(0, origStart + delta) });
+                          if (!hasMoved && Math.abs(me.clientX - startX) > 3) hasMoved = true;
+                          if (hasMoved) {
+                            const delta = (me.clientX - startX) / ppsRef.current;
+                            useVideoStore.getState().updateAudioTrack(track.id, { startTime: Math.max(0, origStart + delta) });
+                          }
                         };
                         const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
                         window.addEventListener('mousemove', move);

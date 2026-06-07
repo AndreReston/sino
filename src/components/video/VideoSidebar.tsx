@@ -3,17 +3,18 @@ import {
   Film, Type, Sliders, Volume2, Wand2, Download, Upload, Plus, Trash2,
   Music, Mic, ArrowLeft, ArrowRight, Sparkles, Layers, Bookmark,
   Zap, BarChart2, Package, ShieldCheck, RotateCcw, Check, Play,
-  SmilePlus, Move,
+  SmilePlus, Move, Image as ImageIcon,
 } from 'lucide-react';
 import {
   useVideoStore, DEFAULT_FILTERS, VideoFilters, TransitionType,
   CaptionStyle, ClipEffect, MotionPreset,
 } from '../../store/videoStore';
 
-type Panel = 'clips' | 'text' | 'filters' | 'effects' | 'audio' | 'transitions' | 'subtitles' | 'export' | 'stickers' | 'markers' | 'beats' | 'stats' | 'presets';
+type Panel = 'clips' | 'photos' | 'text' | 'filters' | 'effects' | 'audio' | 'transitions' | 'subtitles' | 'export' | 'stickers' | 'markers' | 'beats' | 'stats' | 'presets';
 
 const PANELS: { id: Panel; icon: React.ReactNode; label: string }[] = [
   { id: 'clips', icon: <Film className="w-4 h-4" />, label: 'Clips' },
+  { id: 'photos', icon: <ImageIcon className="w-4 h-4" />, label: 'Photos' },
   { id: 'text', icon: <Type className="w-4 h-4" />, label: 'Text' },
   { id: 'filters', icon: <Sliders className="w-4 h-4" />, label: 'Filters' },
   { id: 'effects', icon: <Sparkles className="w-4 h-4" />, label: 'Effects' },
@@ -67,6 +68,21 @@ const STOCK_VIDEOS = [
   { url: 'https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg?w=300', label: 'City' },
   { url: 'https://images.pexels.com/photos/1261728/pexels-photo-1261728.jpeg?w=300', label: 'Forest' },
   { url: 'https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?w=300', label: 'Galaxy' },
+];
+
+const STOCK_PHOTOS = [
+  { url: 'https://images.pexels.com/photos/1629212/pexels-photo-1629212.jpeg?w=400', label: 'Nature' },
+  { url: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?w=400', label: 'Team' },
+  { url: 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?w=400', label: 'Office' },
+  { url: 'https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg?w=400', label: 'Meeting' },
+  { url: 'https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?w=400', label: 'Work' },
+  { url: 'https://images.pexels.com/photos/7376/startup-photos.jpg?w=400', label: 'Startup' },
+  { url: 'https://images.pexels.com/photos/3183197/pexels-photo-3183197.jpeg?w=400', label: 'People' },
+  { url: 'https://images.pexels.com/photos/1181244/pexels-photo-1181244.jpeg?w=400', label: 'Tech' },
+  { url: 'https://images.pexels.com/photos/1103970/pexels-photo-1103970.jpeg?w=400', label: 'Sky' },
+  { url: 'https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg?w=400', label: 'City' },
+  { url: 'https://images.pexels.com/photos/1261728/pexels-photo-1261728.jpeg?w=400', label: 'Forest' },
+  { url: 'https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?w=400', label: 'Galaxy' },
 ];
 
 const MARKER_COLORS = ['#f59e0b', '#ef4444', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
@@ -175,6 +191,7 @@ function AutoSubtitleDistributor() {
 export default function VideoSidebar() {
   const [activePanel, setActivePanel] = useState<Panel>('clips');
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const beatAudioInputRef = useRef<HTMLInputElement>(null);
 
@@ -234,6 +251,15 @@ export default function VideoSidebar() {
   const handleBeatAudioUpload = (file: File) => {
     const url = URL.createObjectURL(file);
     analyzeBeatMarkers(url);
+  };
+
+  const handlePhotoUpload = (file: File) => {
+    const url = URL.createObjectURL(file);
+    addStickerOverlay('photo', url);
+  };
+
+  const handleStockPhoto = (url: string) => {
+    addStickerOverlay('photo', url);
   };
 
   return (
@@ -323,6 +349,54 @@ export default function VideoSidebar() {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ── Photos & Overlay Panel ─────────────────────── */}
+          {activePanel === 'photos' && (
+            <div className="space-y-3">
+              <label className="flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-white/[0.08] hover:border-sky-500/30 bg-[#151519] cursor-pointer transition-all group">
+                <Upload className="w-5 h-5 text-zinc-500 group-hover:text-sky-400 transition-colors" />
+                <span className="text-xs text-zinc-500 group-hover:text-zinc-300">Upload Photo</span>
+                <input ref={photoInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f); e.target.value = ''; }} />
+              </label>
+
+              <div>
+                <p className="text-[11px] text-zinc-500 mb-2">Stock Photos</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {STOCK_PHOTOS.map((p, i) => (
+                    <button key={i} onClick={() => handleStockPhoto(p.url)}
+                      className="aspect-video rounded-lg overflow-hidden border border-white/[0.06] hover:border-sky-500/30 transition-all hover:scale-105 group"
+                      title={p.label}
+                    >
+                      <img src={p.url} alt={p.label} className="w-full h-full object-cover group-hover:opacity-80 transition-opacity" loading="lazy" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Active photo overlays */}
+              {(project?.stickerOverlays || []).filter(s => s.type === 'photo').length > 0 && (
+                <div className="pt-2 border-t border-white/[0.06]">
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Photo Overlays</p>
+                  {(project?.stickerOverlays || []).filter(s => s.type === 'photo').map(s => (
+                    <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-[#151519] border border-white/[0.06] mb-1">
+                      <div className="w-10 h-7 rounded overflow-hidden bg-zinc-900 shrink-0">
+                        <img src={s.content} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] text-zinc-400">Photo overlay</p>
+                        <p className="text-[9px] text-zinc-600">{s.startTime.toFixed(1)}s – {s.endTime.toFixed(1)}s</p>
+                      </div>
+                      <Move className="w-3 h-3 text-zinc-600" />
+                      <button onClick={() => removeStickerOverlay(s.id)} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <p className="text-[10px] text-zinc-600 text-center">Photos are added as overlays. Drag on preview to reposition, adjust timing on timeline.</p>
             </div>
           )}
 

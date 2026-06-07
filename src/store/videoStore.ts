@@ -94,7 +94,7 @@ export interface TextOverlay {
 
 export interface StickerOverlay {
   id: string;
-  type: 'emoji' | 'shape' | 'arrow' | 'speech-bubble';
+  type: 'emoji' | 'shape' | 'arrow' | 'speech-bubble' | 'photo';
   content: string;       // emoji char or SVG path key
   x: number;
   y: number;
