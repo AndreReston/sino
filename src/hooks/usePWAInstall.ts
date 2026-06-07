@@ -22,6 +22,21 @@ export function usePWAInstall() {
       return;
     }
 
+    // Check if PWA is installable via native criteria
+    const checkInstallable = async () => {
+      try {
+        // Modern Chrome/Edge checks installability
+        if ('getInstalledRelatedApps' in navigator && 'BeforeInstallPromptEvent' in window) {
+          const installed = await (navigator as any).getInstalledRelatedApps?.() ?? [];
+          if (installed.length === 0) {
+            setIsInstallable(true);
+          }
+        }
+      } catch {
+        setIsInstallable(true);
+      }
+    };
+
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -33,10 +48,15 @@ export function usePWAInstall() {
     const installedHandler = () => {
       setIsInstalled(true);
       setIsInstallable(false);
+      setDeferredPrompt(null);
     };
     window.addEventListener('appinstalled', installedHandler);
 
+    // Check after a short delay to allow the beforeinstallprompt to fire
+    const timer = setTimeout(checkInstallable, 1000);
+
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('beforeinstallprompt', handler);
       window.removeEventListener('appinstalled', installedHandler);
     };
@@ -44,13 +64,17 @@ export function usePWAInstall() {
 
   const installApp = async () => {
     if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsInstalled(true);
-      setIsInstallable(false);
+    try {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+        setIsInstallable(false);
+        setDeferredPrompt(null);
+      }
+    } catch {
+      // Handle prompt errors gracefully
     }
-    setDeferredPrompt(null);
   };
 
   return { isInstallable, isInstalled, installApp };
