@@ -36,7 +36,7 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
     return () => clearTimeout(timer);
   }, [project?.clips, project?.textOverlays, project?.subtitles, project?.audioTracks, project?.title, project?.aspectRatio]);
 
-  // Playback RAF loop
+  // Playback RAF loop — advances currentTime and auto-switches activeClipId
   useEffect(() => {
     if (!isPlaying) { cancelAnimationFrame(rafRef.current); return; }
     lastTickRef.current = performance.now();
@@ -49,9 +49,17 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
       if (next >= total) {
         st.setCurrentTime(0);
         st.setIsPlaying(false);
+        // Switch to first clip
+        const sorted = [...(st.project?.clips || [])].sort((a, b) => a.order - b.order);
+        if (sorted.length > 0) st.setActiveClipId(sorted[0].id);
         return;
       }
       st.setCurrentTime(next);
+      // Auto-switch active clip based on current time
+      const info = st.getClipAtTime(next);
+      if (info && info.clip.id !== st.activeClipId) {
+        st.setActiveClipId(info.clip.id);
+      }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -71,44 +79,25 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
     }
 
     audio.volume = Math.max(0, Math.min(1, bgMusic.volume ?? 0.8));
-
-    const startPlayback = () => {
-      const st = useVideoStore.getState();
-      // Seek to current project time before playing
-      if (isFinite(audio.duration) && audio.duration > 0) {
-        const targetTime = st.currentTime % audio.duration;
-        if (Math.abs(audio.currentTime - targetTime) > 0.3) {
-          audio.currentTime = targetTime;
-        }
-      }
-      audio.play().catch(() => {});
-    };
+    audio.loop = true;
 
     if (audio.src !== bgMusic.url) {
       audio.preload = 'auto';
       audio.src = bgMusic.url;
       audio.load();
       if (isPlaying) {
-        audio.addEventListener('canplay', startPlayback, { once: true });
+        audio.addEventListener('canplaythrough', () => {
+          audio.play().catch(() => {});
+        }, { once: true });
       }
     } else {
       if (isPlaying) {
-        startPlayback();
+        if (audio.paused) audio.play().catch(() => {});
       } else {
         audio.pause();
       }
     }
   }, [project?.backgroundMusic?.url, project?.backgroundMusic?.volume, isPlaying]);
-
-  // Keep audio in sync with currentTime during seeks (when not playing)
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !project?.backgroundMusic?.url || isPlaying) return;
-    if (isFinite(audio.duration) && audio.duration > 0) {
-      const st = useVideoStore.getState();
-      audio.currentTime = st.currentTime % audio.duration;
-    }
-  }, [project?.backgroundMusic?.url]);
 
   // Keyboard shortcuts
   useEffect(() => {

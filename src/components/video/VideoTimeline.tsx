@@ -114,14 +114,20 @@ export default function VideoTimeline() {
 
   const playheadX = currentTime * pps;
 
+  const getClipAtTime = useVideoStore(s => s.getClipAtTime);
+
   // ── Track click to seek ────────────────────────────────────────────────
   const handleTrackMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('[data-noseek]')) return;
     if (!trackRef.current) return;
     const rect = trackRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left + getScrollOffset();
-    setCurrentTime(Math.max(0, Math.min(totalDuration, x / pps)));
-  }, [pps, totalDuration, setCurrentTime]);
+    const t = Math.max(0, Math.min(totalDuration, x / pps));
+    setCurrentTime(t);
+    // Auto-switch active clip to whichever clip owns this time
+    const info = getClipAtTime(t);
+    if (info) setActiveClipId(info.clip.id);
+  }, [pps, totalDuration, setCurrentTime, setActiveClipId, getClipAtTime]);
 
   // ── Playhead drag ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -130,7 +136,11 @@ export default function VideoTimeline() {
       if (!trackRef.current) return;
       const rect = trackRef.current.getBoundingClientRect();
       const x = e.clientX - rect.left + getScrollOffset();
-      setCurrentTime(Math.max(0, Math.min(totalDurationRef.current, x / ppsRef.current)));
+      const t = Math.max(0, Math.min(totalDurationRef.current, x / ppsRef.current));
+      setCurrentTime(t);
+      const st = useVideoStore.getState();
+      const info = st.getClipAtTime(t);
+      if (info && info.clip.id !== st.activeClipId) st.setActiveClipId(info.clip.id);
     };
     const up = () => setDraggingPlayhead(false);
     window.addEventListener('mousemove', move);
@@ -331,7 +341,10 @@ export default function VideoTimeline() {
             onClick={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
               const x = e.clientX - rect.left + getScrollOffset();
-              setCurrentTime(Math.max(0, Math.min(totalDuration, x / pps)));
+              const t = Math.max(0, Math.min(totalDuration, x / pps));
+              setCurrentTime(t);
+              const info = getClipAtTime(t);
+              if (info) setActiveClipId(info.clip.id);
             }}
           >
             {rulerMarks.map(m => (
@@ -419,6 +432,8 @@ export default function VideoTimeline() {
                         if ((e.target as HTMLElement).closest('[data-trim]')) return;
                         e.stopPropagation();
                         setActiveClipId(clip.id);
+                        // Seek to the start of this clip so preview shows correct frame
+                        setCurrentTime(getClipLeft(index) / pps);
                       }}
                       onDoubleClick={(e) => {
                         if ((e.target as HTMLElement).closest('[data-trim]')) return;

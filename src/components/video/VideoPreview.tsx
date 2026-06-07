@@ -26,8 +26,18 @@ export default function VideoPreview({ videoRef }: Props) {
   const updateStickerOverlay = useVideoStore(s => s.updateStickerOverlay);
   const setActiveStickerOverlayId = useVideoStore(s => s.setActiveStickerOverlayId);
   const activeStickerOverlayId = useVideoStore(s => s.activeStickerOverlayId);
+  const getClipAtTime = useVideoStore(s => s.getClipAtTime);
 
   const activeClip = project?.clips.find(c => c.id === activeClipId) ?? null;
+
+  // Compute the clip-local time for the active clip
+  const clipInfo = activeClip ? getClipAtTime(currentTime) : null;
+  // If the resolved clip differs from activeClipId (e.g. user seeked to another position), use active clip
+  const resolvedClipInfo = clipInfo?.clip.id === activeClipId ? clipInfo : null;
+  // clip-local time = offset within this clip's effective duration
+  const clipLocalTime = resolvedClipInfo ? resolvedClipInfo.clipLocalTime : 0;
+  // actual video currentTime = trimStart + clipLocalTime * speed
+  const videoSeekTime = activeClip ? activeClip.trimStart + clipLocalTime * activeClip.speed : 0;
 
   // Drag state for text overlays
   const [draggingTextId, setDraggingTextId] = useState<string | null>(null);
@@ -39,33 +49,46 @@ export default function VideoPreview({ videoRef }: Props) {
   // Sync video src when active clip changes
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
-    if (activeClip) {
-      if (video.src !== activeClip.url) {
-        video.src = activeClip.url;
-        video.load();
+    if (!video || !activeClip) return;
+    if (video.src !== activeClip.url) {
+      video.src = activeClip.url;
+      video.load();
+      // After loading, seek to the clip-local position
+      const st = useVideoStore.getState();
+      const info = st.getClipAtTime(st.currentTime);
+      if (info?.clip.id === activeClip.id) {
+        const seekTo = activeClip.trimStart + info.clipLocalTime * activeClip.speed;
+        video.addEventListener('loadedmetadata', () => { video.currentTime = seekTo; }, { once: true });
       }
     }
   }, [activeClip?.id]);
 
-  // Sync playback state
+  // Sync playback state — when clip switches during playback, start playing new clip immediately
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !activeClip) return;
     if (isPlaying) {
+      // Seek to correct position then play
+      const st = useVideoStore.getState();
+      const info = st.getClipAtTime(st.currentTime);
+      if (info?.clip.id === activeClip.id) {
+        const seekTo = activeClip.trimStart + info.clipLocalTime * activeClip.speed;
+        if (Math.abs(video.currentTime - seekTo) > 0.15) {
+          video.currentTime = seekTo;
+        }
+      }
       video.play().catch(() => {});
     } else {
       video.pause();
     }
   }, [isPlaying, activeClip?.id]);
 
-  // Sync seek when not playing
+  // Sync seek when not playing — seek video to clip-local position
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !activeClip || isPlaying) return;
-    const clipTime = currentTime;
-    if (Math.abs(video.currentTime - clipTime) > 0.1) {
-      video.currentTime = clipTime;
+    if (Math.abs(video.currentTime - videoSeekTime) > 0.1) {
+      video.currentTime = videoSeekTime;
     }
   }, [currentTime, isPlaying, activeClip?.id]);
 
@@ -78,12 +101,11 @@ export default function VideoPreview({ videoRef }: Props) {
     video.volume = activeClip.volume;
   }, [playbackSpeed, activeClip?.speed, activeClip?.volume, activeClip?.muted, activeClip?.id]);
 
-  // Time update → store
-  const handleTimeUpdate = useCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
-    if (isPlaying) {
-      setCurrentTime(e.currentTarget.currentTime);
-    }
-  }, [isPlaying, setCurrentTime]);
+  // Time update — video drives nothing during playback (RAF loop in VideoWorkspace drives currentTime)
+  // But we still need to handle manual seeks on the video element itself
+  const handleTimeUpdate = useCallback((_e: React.SyntheticEvent<HTMLVideoElement>) => {
+    // RAF loop handles time — no-op here to avoid feedback loop
+  }, []);
 
   // ── Drag text overlay positioning ──────────────────────────────────────
   const handleTextMouseDown = useCallback((e: React.MouseEvent, overlayId: string) => {

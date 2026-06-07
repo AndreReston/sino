@@ -297,6 +297,7 @@ export interface VideoStoreActions {
 
   // Computed
   getTotalDuration: () => number;
+  getClipAtTime: (globalTime: number) => { clip: VideoClip; clipStartTime: number; clipLocalTime: number } | null;
   getActiveClip: () => VideoClip | null;
   getProjectStats: () => {
     totalDuration: number;
@@ -1261,6 +1262,25 @@ export const useVideoStore = create<VStore>((set, get) => ({
     return project.clips.reduce((sum, c) => {
       return sum + (c.duration - c.trimStart - c.trimEnd) / Math.max(0.25, c.speed);
     }, 0);
+  },
+
+  // Returns { clip, clipStartTime, clipLocalTime } for the clip that owns globalTime
+  getClipAtTime: (globalTime: number) => {
+    const { project } = get();
+    if (!project || project.clips.length === 0) return null;
+    const sorted = [...project.clips].sort((a, b) => a.order - b.order);
+    let acc = 0;
+    for (const clip of sorted) {
+      const dur = (clip.duration - clip.trimStart - clip.trimEnd) / Math.max(0.25, clip.speed);
+      if (globalTime < acc + dur) {
+        return { clip, clipStartTime: acc, clipLocalTime: globalTime - acc };
+      }
+      acc += dur;
+    }
+    // Past the end — return last clip
+    const last = sorted[sorted.length - 1];
+    const lastDur = (last.duration - last.trimStart - last.trimEnd) / Math.max(0.25, last.speed);
+    return { clip: last, clipStartTime: acc - lastDur, clipLocalTime: lastDur };
   },
 
   getActiveClip: () => {
