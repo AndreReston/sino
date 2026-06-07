@@ -199,7 +199,7 @@ export default function VideoSidebar() {
     project, activeClipId, updateClip, addClip, removeClip, reorderClip,
     addTextOverlay, removeTextOverlay,
     addSubtitle, removeSubtitle, updateSubtitle,
-    setClipFilter, resetClipFilters, addAudioTrack, removeAudioTrack, setBackgroundMusic,
+    setClipFilter, resetClipFilters, removeAudioTrack, setBackgroundMusic,
     setActiveClipId, setActiveTextId, activeTextId,
     startExport, isExporting, exportProgress, setClipEffect,
     addStickerOverlay, removeStickerOverlay,

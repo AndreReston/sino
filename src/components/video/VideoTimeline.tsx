@@ -15,6 +15,8 @@ export default function VideoTimeline() {
   const activeClipId = useVideoStore(s => s.activeClipId);
   const activeTextId = useVideoStore(s => s.activeTextId);
   const activeSubtitleId = useVideoStore(s => s.activeSubtitleId);
+  const activeAudioTrackId = useVideoStore(s => s.activeAudioTrackId);
+  const activeStickerOverlayId = useVideoStore(s => s.activeStickerOverlayId);
   const setCurrentTime = useVideoStore(s => s.setCurrentTime);
   const setActiveClipId = useVideoStore(s => s.setActiveClipId);
   const setActiveTextId = useVideoStore(s => s.setActiveTextId);
@@ -625,7 +627,7 @@ export default function VideoTimeline() {
                     const dur = sticker.endTime - sticker.startTime;
                     const left = sticker.startTime * pps;
                     const width = Math.max(8, dur * pps);
-                    const isActive = useVideoStore.getState().activeStickerOverlayId === sticker.id;
+                    const isActive = activeStickerOverlayId === sticker.id;
                     return (
                       <div key={sticker.id} data-noseek="1"
                         className={`absolute top-0.5 bottom-0.5 rounded border border-teal-500/30 flex items-center px-1.5 cursor-grab active:cursor-grabbing transition-all ${
@@ -653,16 +655,19 @@ export default function VideoTimeline() {
                 {project.audioTracks.map(track => {
                   const left = track.startTime * pps;
                   const width = track.duration > 0 ? track.duration * pps : Math.max(60, totalDuration * pps * 0.3);
-                  const isSelected = useVideoStore.getState().activeAudioTrackId === track.id;
+                  const isSelected = activeAudioTrackId === track.id;
                   return (
                     <div key={track.id} data-noseek="1"
-                      className={`absolute top-0.5 bottom-0.5 rounded flex items-center px-1.5 cursor-grab active:cursor-grabbing select-none ${
+                      className={`absolute top-0.5 bottom-0.5 rounded flex items-center px-1.5 cursor-pointer select-none ${
                         isSelected ? 'bg-violet-500/25 border-2 border-violet-400/60' : 'bg-violet-500/15 border border-violet-500/30 hover:bg-violet-500/25'
                       }`}
                       style={{ left, width }}
-                      onMouseDown={(e) => {
+                      onClick={(e) => {
                         e.stopPropagation();
                         useVideoStore.getState().setActiveAudioTrackId(track.id);
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
                         const startX = e.clientX;
                         const origStart = track.startTime;
                         let hasMoved = false;

@@ -442,7 +442,6 @@ export default function App() {
   if (view === 'video-workspace') {
     return (
       <VideoWorkspace
-        onSave={handleSaveDesign}
         onBack={openDashboard}
       />
     );

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useVideoStore, AudioTrack } from '../../store/videoStore';
+import { useVideoStore } from '../../store/videoStore';
 import VideoSidebar from './VideoSidebar';
 import VideoPreview from './VideoPreview';
 import VideoProperties from './VideoProperties';
@@ -9,7 +9,6 @@ import VideoTopBar from './VideoTopBar';
 import { ArrowLeft, Film, Upload } from 'lucide-react';
 
 interface Props {
-  onSave?: () => void;
   onBack?: () => void;
 }
 
@@ -51,7 +50,7 @@ function syncAudioElement(
   }
 }
 
-export default function VideoWorkspace({ onSave, onBack }: Props) {
+export default function VideoWorkspace({ onBack }: Props) {
   const project = useVideoStore(s => s.project);
   const createProject = useVideoStore(s => s.createProject);
   const addClip = useVideoStore(s => s.addClip);
@@ -74,7 +73,7 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
       useVideoStore.getState().saveToLocalStorage();
     }, 2000);
     return () => clearTimeout(timer);
-  }, [project?.clips, project?.textOverlays, project?.subtitles, project?.audioTracks, project?.title, project?.aspectRatio]);
+  }, [project?.clips, project?.textOverlays, project?.stickerOverlays, project?.subtitles, project?.audioTracks, project?.backgroundMusic, project?.title, project?.aspectRatio]);
 
   // ── Ensure audio elements exist for each track ─────────────────────
   useEffect(() => {
@@ -378,7 +377,7 @@ export default function VideoWorkspace({ onSave, onBack }: Props) {
       <audio ref={bgAudioRef} preload="auto" />
       <VideoSidebar />
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
-        <VideoTopBar onSave={onSave} onBack={onBack} />
+        <VideoTopBar onBack={onBack} />
         <div className="flex flex-1 min-w-0 min-h-0">
           <VideoPreview videoRef={videoRef} />
           <VideoProperties />

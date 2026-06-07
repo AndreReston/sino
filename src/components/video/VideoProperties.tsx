@@ -232,14 +232,15 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
           {/* Pan/Crop controls for full frame mode */}
           {clip.overlayMode === 'full' && (
             <div className="space-y-2 pt-1 text-[11px]">
-              <p className="text-zinc-400">Drag video in preview to pan, or adjust below. Right-click to reset.</p>
+              <LabeledSlider label="Scale" icon={<Maximize2 className="w-3 h-3" />} value={clip.scaleX} min={0.2} max={3} step={0.05}
+                display={`${Math.round(clip.scaleX * 100)}%`} onChange={v => updateClip(clip.id, { scaleX: v, scaleY: v })} />
               <LabeledSlider label="Pan X" value={clip.offsetX} min={-50} max={50} step={1}
                 display={`${Math.round(clip.offsetX)}%`} onChange={v => updateClip(clip.id, { offsetX: v })} />
               <LabeledSlider label="Pan Y" value={clip.offsetY} min={-50} max={50} step={1}
                 display={`${Math.round(clip.offsetY)}%`} onChange={v => updateClip(clip.id, { offsetY: v })} />
-              <button onClick={() => updateClip(clip.id, { offsetX: 0, offsetY: 0 })}
+              <button onClick={() => updateClip(clip.id, { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 })}
                 className="w-full text-xs px-3 py-2 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 transition-colors">
-                Reset Pan
+                Reset Transform
               </button>
             </div>
           )}

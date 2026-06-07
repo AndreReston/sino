@@ -18,7 +18,6 @@ export default function VideoPreview({ videoRef }: Props) {
   const currentTime = useVideoStore(s => s.currentTime);
   const isPlaying = useVideoStore(s => s.isPlaying);
   const playbackSpeed = useVideoStore(s => s.playbackSpeed);
-  const setCurrentTime = useVideoStore(s => s.setCurrentTime);
   const setActiveClipId = useVideoStore(s => s.setActiveClipId);
   const setActiveTextId = useVideoStore(s => s.setActiveTextId);
   const updateTextOverlay = useVideoStore(s => s.updateTextOverlay);
@@ -372,8 +371,6 @@ export default function VideoPreview({ videoRef }: Props) {
           <div
             className="absolute inset-0 cursor-grab active:cursor-grabbing"
             onMouseDown={(e) => {
-              // If clicking on a resize handle, skip panning
-              if ((e.target as HTMLElement).closest('[data-resize]')) return;
               if (e.button !== 2 && !panning) {
                 setPanning({ startX: e.clientX, startY: e.clientY });
               }
@@ -403,64 +400,11 @@ export default function VideoPreview({ videoRef }: Props) {
           </div>
         )}
 
-        {/* Resize handles for full frame mode — scale the video */}
-        {activeClip.overlayMode === 'full' && (
-          <>
-            {/* Corner resize handles */}
-            {['nw', 'ne', 'sw', 'se'].map(corner => {
-              const cursorMap: Record<string, string> = { nw: 'nwse-resize', ne: 'nesw-resize', sw: 'nesw-resize', se: 'nwse-resize' };
-              const posMap: Record<string, React.CSSProperties> = {
-                nw: { left: 0, top: 0, transform: 'translate(-50%, -50%)' },
-                ne: { right: 0, top: 0, transform: 'translate(50%, -50%)' },
-                sw: { left: 0, bottom: 0, transform: 'translate(-50%, 50%)' },
-                se: { right: 0, bottom: 0, transform: 'translate(50%, 50%)' },
-              };
-              return (
-                <div
-                  key={`full-${corner}`}
-                  data-resize="1"
-                  className={`absolute w-3 h-3 bg-sky-400 rounded-full z-20 hover:scale-150 transition-transform`}
-                  style={{ ...posMap[corner], cursor: cursorMap[corner] }}
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                    setResizing({ corner, startX: e.clientX, startY: e.clientY });
-                  }}
-                />
-              );
-            })}
-            {/* Edge resize handles */}
-            {['n', 's', 'e', 'w'].map(edge => {
-              const cursorMap: Record<string, string> = { n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize' };
-              const posMap: Record<string, React.CSSProperties> = {
-                n: { left: '50%', top: 0, transform: 'translate(-50%, -50%)' },
-                s: { left: '50%', bottom: 0, transform: 'translate(-50%, 50%)' },
-                e: { right: 0, top: '50%', transform: 'translate(50%, -50%)' },
-                w: { left: 0, top: '50%', transform: 'translate(-50%, -50%)' },
-              };
-              const sizeMap: Record<string, React.CSSProperties> = {
-                n: { width: '40px', height: '6px' },
-                s: { width: '40px', height: '6px' },
-                e: { width: '6px', height: '40px' },
-                w: { width: '6px', height: '40px' },
-              };
-              return (
-                <div
-                  key={`full-edge-${edge}`}
-                  data-resize="1"
-                  className="absolute bg-sky-400/60 rounded z-20 hover:bg-sky-400 transition-colors"
-                  style={{ ...posMap[edge], ...sizeMap[edge], cursor: cursorMap[edge] }}
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                    setResizing({ corner: edge, startX: e.clientX, startY: e.clientY });
-                  }}
-                />
-              );
-            })}
-            {/* Scale indicator */}
+        {/* Scale indicator for full frame mode */}
+        {activeClip.overlayMode === 'full' && activeClip.scaleX !== 1 && (
             <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-[10px] text-sky-300 px-2 py-1 rounded pointer-events-none z-20 font-mono">
               {Math.round(activeClip.scaleX * 100)}%
             </div>
-          </>
         )}
 
         {/* Resize handles for overlay mode */}

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowLeft, Film, Undo2, Redo2, Download, Monitor, ChevronDown, Save, Smartphone, Square, MonitorPlay } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Film, Undo2, Redo2, Download, Monitor, ChevronDown, Smartphone, Square, MonitorPlay, Check } from 'lucide-react';
 import { useVideoStore, AspectRatio } from '../../store/videoStore';
 
 const RATIOS: { id: AspectRatio; label: string; dims: string; icon: React.ReactNode }[] = [
@@ -9,14 +9,24 @@ const RATIOS: { id: AspectRatio; label: string; dims: string; icon: React.ReactN
 ];
 
 interface Props {
-  onSave?: () => void;
   onBack?: () => void;
 }
 
-export default function VideoTopBar({ onSave, onBack }: Props) {
+export default function VideoTopBar({ onBack }: Props) {
   const { project, updateProject, undo, redo, historyIndex, history, startExport, isExporting, exportProgress } = useVideoStore();
   const [editingName, setEditingName] = useState(false);
   const [showRatio, setShowRatio] = useState(false);
+  const [autoSaveLabel, setAutoSaveLabel] = useState<string>('');
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  // Show "Saved" indicator briefly when project data changes (auto-save fires)
+  useEffect(() => {
+    if (!project) return;
+    setAutoSaveLabel('Saved');
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => setAutoSaveLabel(''), 2000);
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, [project?.clips, project?.textOverlays, project?.stickerOverlays, project?.subtitles, project?.audioTracks, project?.backgroundMusic, project?.title, project?.aspectRatio]);
 
   if (!project) return null;
 
@@ -89,11 +99,11 @@ export default function VideoTopBar({ onSave, onBack }: Props) {
 
       <div className="flex-1" />
 
-      {/* Save & Download & Export */}
-      {onSave && (
-        <button onClick={onSave} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-zinc-400 hover:text-white hover:bg-white/5 border border-white/[0.06] transition-colors">
-          <Save className="w-3.5 h-3.5" /> Save
-        </button>
+      {/* Auto-save indicator */}
+      {autoSaveLabel && (
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-emerald-400/80 transition-opacity">
+          <Check className="w-3 h-3" /> {autoSaveLabel}
+        </div>
       )}
       <button onClick={startExport} disabled={isExporting}
         className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-sky-500 text-white text-xs font-semibold hover:bg-sky-400 hover:shadow-[0_4px_20px_rgba(56,189,248,0.3)] transition-all disabled:opacity-50">
