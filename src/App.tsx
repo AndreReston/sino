@@ -165,17 +165,74 @@ export default function App() {
 
     // Listen for auth state changes (login/logout from other tabs, etc.)
     const { data: { subscription } } = onAuthStateChange(async (newUser, event) => {
-      // On tab focus (INITIAL_SESSION), restore the persisted view
+      // On tab focus (INITIAL_SESSION), fully restore the workspace state
       if (event === 'INITIAL_SESSION') {
         if (newUser) {
           setUser(newUser);
           await fetchUsername(newUser.id);
-          await fetchDesigns(newUser.id);
+          const savedDesigns = await fetchDesigns(newUser.id);
 
-          // Restore the view the user was on before switching tabs
           const lastView = localStorage.getItem(LAST_VIEW_KEY);
-          if (lastView && (lastView === 'workspace' || lastView === 'video-workspace')) {
-            setView(lastView as AppView);
+          const lastDesignId = localStorage.getItem(LAST_DESIGN_KEY);
+
+          if (lastView === 'workspace') {
+            if (lastDesignId) {
+              const design = savedDesigns.find(d => d.id === lastDesignId);
+              if (design) {
+                setActiveDesign(design);
+                await store.loadDesign(design);
+                setView('workspace');
+                return;
+              }
+            }
+            store.resetWorkspace();
+            setView('workspace');
+            return;
+          }
+
+          if (lastView === 'video-workspace') {
+            // Try to restore from a saved design first
+            if (lastDesignId) {
+              const design = savedDesigns.find(d => d.id === lastDesignId && d.projectMode === 'video');
+              if (design) {
+                setActiveDesign(design);
+                useVideoStore.getState().resetStore();
+                const savedProject = design.pages[0]?.canvas_data as any;
+                if (savedProject?.id) {
+                  useVideoStore.getState().loadProject(savedProject);
+                } else {
+                  useVideoStore.getState().createProject(design.title);
+                }
+                setView('video-workspace');
+                return;
+              }
+            }
+            // Fall back to the in-progress video project stored in IndexedDB / localStorage
+            const idbProject = await loadFromIndexedDB(VIDEO_PROJECT_STORAGE_KEY) as any;
+            const rawProject = idbProject ? JSON.stringify(idbProject) : localStorage.getItem(VIDEO_PROJECT_STORAGE_KEY);
+            if (rawProject) {
+              try {
+                const parsed = JSON.parse(rawProject);
+                useVideoStore.getState().resetStore();
+                if (parsed?.id) {
+                  useVideoStore.getState().loadProject(parsed);
+                } else {
+                  useVideoStore.getState().createProject('Untitled Video');
+                }
+                setView('video-workspace');
+                return;
+              } catch { /* fall through */ }
+            }
+            // No project data — open a fresh video workspace
+            useVideoStore.getState().resetStore();
+            useVideoStore.getState().createProject('Untitled Video');
+            setView('video-workspace');
+            return;
+          }
+
+          if (lastView === 'dashboard') {
+            setView('dashboard');
+            return;
           }
         }
         return;
