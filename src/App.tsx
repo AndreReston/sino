@@ -3,6 +3,7 @@ import { User } from '@supabase/supabase-js';
 import { fabric } from 'fabric';
 import { useStore, SavedDesign, ProjectMode } from './store/useStore';
 import { useVideoStore } from './store/videoStore';
+import { loadFromIndexedDB } from './lib/indexedDBStorage';
 import LandingPage from './components/LandingPage';
 import AuthPage from './components/AuthPage';
 import Dashboard from './components/Dashboard';
@@ -135,8 +136,9 @@ export default function App() {
               return;
             }
           }
-          // Fall back to the in-progress video project stored directly in localStorage
-          const rawProject = localStorage.getItem(VIDEO_PROJECT_STORAGE_KEY);
+          // Fall back to the in-progress video project stored in IndexedDB / localStorage
+          const idbProject = await loadFromIndexedDB(VIDEO_PROJECT_STORAGE_KEY) as any;
+          const rawProject = idbProject ? JSON.stringify(idbProject) : localStorage.getItem(VIDEO_PROJECT_STORAGE_KEY);
           if (rawProject) {
             try {
               const parsed = JSON.parse(rawProject);
@@ -204,10 +206,11 @@ export default function App() {
                 return;
               }
             }
-            const rawProject = localStorage.getItem(VIDEO_PROJECT_STORAGE_KEY);
-            if (rawProject) {
+            const idbProject2 = await loadFromIndexedDB(VIDEO_PROJECT_STORAGE_KEY) as any;
+            const rawProject2 = idbProject2 ? JSON.stringify(idbProject2) : localStorage.getItem(VIDEO_PROJECT_STORAGE_KEY);
+            if (rawProject2) {
               try {
-                const parsed = JSON.parse(rawProject);
+                const parsed = JSON.parse(rawProject2);
                 useVideoStore.getState().resetStore();
                 if (parsed?.id) {
                   useVideoStore.getState().loadProject(parsed);

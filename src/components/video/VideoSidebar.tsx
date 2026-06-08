@@ -9,6 +9,8 @@ import {
   useVideoStore, DEFAULT_FILTERS, VideoFilters, TransitionType,
   CaptionStyle, ClipEffect, MotionPreset,
 } from '../../store/videoStore';
+import { uploadMediaFile } from '../../lib/userStorage';
+import { supabase } from '../../lib/supabase';
 
 type Panel = 'clips' | 'photos' | 'text' | 'filters' | 'effects' | 'audio' | 'transitions' | 'subtitles' | 'export' | 'stickers' | 'markers' | 'beats' | 'stats' | 'presets';
 
@@ -218,26 +220,37 @@ export default function VideoSidebar() {
   const sortedClips = [...(project?.clips ?? [])].sort((a, b) => a.order - b.order);
   const stats = getProjectStats();
 
-  const handleVideoUpload = (file: File) => {
-    const url = URL.createObjectURL(file);
+  const handleVideoUpload = async (file: File) => {
+    const blobUrl = URL.createObjectURL(file);
     const video = document.createElement('video');
     video.preload = 'metadata';
-    video.onloadedmetadata = () => {
-      addClip({ url, name: file.name, duration: video.duration, trimStart: 0, trimEnd: 0, volume: 1 });
+    video.onloadedmetadata = async () => {
+      let persistentUrl = blobUrl;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const storageUrl = await uploadMediaFile(file);
+        if (storageUrl) persistentUrl = storageUrl;
+      }
+      addClip({ url: persistentUrl, name: file.name, duration: video.duration, trimStart: 0, trimEnd: 0, volume: 1 });
     };
-    video.src = url;
+    video.src = blobUrl;
   };
 
-  const handleAudioUpload = (file: File) => {
-    const url = URL.createObjectURL(file);
-    // Read actual duration before storing as background music
-    const tempAudio = new Audio(url);
+  const handleAudioUpload = async (file: File) => {
+    const blobUrl = URL.createObjectURL(file);
+    const tempAudio = new Audio(blobUrl);
     tempAudio.preload = 'metadata';
-    tempAudio.addEventListener('loadedmetadata', () => {
+    tempAudio.addEventListener('loadedmetadata', async () => {
       const dur = isFinite(tempAudio.duration) ? tempAudio.duration : 0;
+      let persistentUrl = blobUrl;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const storageUrl = await uploadMediaFile(file);
+        if (storageUrl) persistentUrl = storageUrl;
+      }
       setBackgroundMusic({
         id: `bg_${Date.now()}`,
-        url,
+        url: persistentUrl,
         name: file.name,
         volume: 0.8,
         muted: false,
@@ -253,9 +266,15 @@ export default function VideoSidebar() {
     analyzeBeatMarkers(url);
   };
 
-  const handlePhotoUpload = (file: File) => {
-    const url = URL.createObjectURL(file);
-    addStickerOverlay('photo', url);
+  const handlePhotoUpload = async (file: File) => {
+    const blobUrl = URL.createObjectURL(file);
+    let persistentUrl = blobUrl;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const storageUrl = await uploadMediaFile(file);
+      if (storageUrl) persistentUrl = storageUrl;
+    }
+    addStickerOverlay('photo', persistentUrl);
   };
 
   const handleStockPhoto = (url: string) => {

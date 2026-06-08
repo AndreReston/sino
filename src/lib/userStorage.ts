@@ -258,3 +258,42 @@ export const deleteUserMedia = async (mediaId: string) => {
     console.error('Failed to delete media:', error);
   }
 };
+
+// ── Supabase Storage Upload ──────────────────────────────────────────
+
+export const uploadMediaFile = async (file: File): Promise<string | null> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const path = `${user.id}/${Date.now()}_${file.name}`;
+
+  const { error } = await supabase.storage
+    .from('media')
+    .upload(path, file, { upsert: false });
+
+  if (error) {
+    console.error('Failed to upload media file:', error);
+    return null;
+  }
+
+  const { data: urlData } = supabase.storage
+    .from('media')
+    .getPublicUrl(path);
+
+  return urlData.publicUrl;
+};
+
+export const deleteMediaFile = async (url: string): Promise<void> => {
+  // Extract the path after /media/ from the public URL
+  const parts = url.split('/media/');
+  if (parts.length < 2) return;
+  const path = parts[1].split('?')[0]; // Remove query params
+
+  const { error } = await supabase.storage
+    .from('media')
+    .remove([path]);
+
+  if (error) {
+    console.error('Failed to delete media file:', error);
+  }
+};

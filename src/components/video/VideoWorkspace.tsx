@@ -7,6 +7,8 @@ import VideoTimeline from './VideoTimeline';
 import PlaybackControls from './PlaybackControls';
 import VideoTopBar from './VideoTopBar';
 import { ArrowLeft, Film, Upload } from 'lucide-react';
+import { uploadMediaFile } from '../../lib/userStorage';
+import { supabase } from '../../lib/supabase';
 
 interface Props {
   onBack?: () => void;
@@ -309,15 +311,27 @@ export default function VideoWorkspace({ onBack }: Props) {
     return () => window.removeEventListener('keydown', handleKey);
   }, []);
 
-  const handleVideoUpload = (file: File) => {
-    const url = URL.createObjectURL(file);
+  const handleVideoUpload = async (file: File) => {
+    // Immediately create a blob URL for instant preview
+    const blobUrl = URL.createObjectURL(file);
     const video = document.createElement('video');
     video.preload = 'metadata';
-    video.onloadedmetadata = () => {
+    video.onloadedmetadata = async () => {
       if (!useVideoStore.getState().project) createProject();
-      addClip({ url, name: file.name, duration: video.duration, trimStart: 0, trimEnd: 0, volume: 1 });
+
+      // Try to upload to Supabase Storage for persistence
+      let persistentUrl = blobUrl;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const storageUrl = await uploadMediaFile(file);
+        if (storageUrl) {
+          persistentUrl = storageUrl;
+        }
+      }
+
+      addClip({ url: persistentUrl, name: file.name, duration: video.duration, trimStart: 0, trimEnd: 0, volume: 1 });
     };
-    video.src = url;
+    video.src = blobUrl;
   };
 
   if (!project) {

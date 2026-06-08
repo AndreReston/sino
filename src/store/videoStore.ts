@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { saveToIndexedDB, loadFromIndexedDB } from '../lib/indexedDBStorage';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -210,7 +211,7 @@ export interface VideoStoreActions {
   exportProject: () => VideoProject | null;
   resetStore: () => void;
   saveToLocalStorage: () => void;
-  loadFromLocalStorage: () => void;
+  loadFromLocalStorage: () => Promise<void>;
 
   // Clips
   addClip: (clip: Omit<VideoClip, 'id' | 'order' | 'thumbnails' | 'filters' | 'transitionIn' | 'speed' | 'muted' | 'effect' | 'keyframes' | 'effectStack' | 'scaleX' | 'scaleY' | 'clipX' | 'clipY' | 'overlayMode' | 'transitionDuration' | 'effectDuration' | 'offsetX' | 'offsetY'> & { url: string; name: string; duration: number; trimStart?: number; trimEnd?: number; volume?: number }) => void;
@@ -551,12 +552,51 @@ export const useVideoStore = create<VStore>((set, get) => ({
   saveToLocalStorage: () => {
     const { project } = get();
     if (!project) return;
+    const serialized = JSON.stringify(project);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
+      saveToIndexedDB(STORAGE_KEY, project);
+    } catch { /* quota exceeded */ }
+    // Also save to localStorage as a lightweight fallback for migration
+    try {
+      localStorage.setItem(STORAGE_KEY, serialized);
     } catch { /* quota exceeded */ }
   },
 
-  loadFromLocalStorage: () => {
+  loadFromLocalStorage: async () => {
+    try {
+      // Try IndexedDB first (primary storage)
+      const data = await loadFromIndexedDB(STORAGE_KEY);
+      if (data) {
+        const project = data as VideoProject;
+        const migratedClips = project.clips.map(clip => ({
+          ...clip,
+          effect: clip.effect || ('none' as ClipEffect),
+          keyframes: clip.keyframes || ([] as Keyframe[]),
+          effectStack: clip.effectStack || ([] as EffectLayer[]),
+          transitionDuration: (clip as any).transitionDuration ?? 0.5,
+          effectDuration: (clip as any).effectDuration ?? 0,
+          scaleX: (clip as any).scaleX ?? 1,
+          scaleY: (clip as any).scaleY ?? 1,
+          clipX: (clip as any).clipX ?? 50,
+          clipY: (clip as any).clipY ?? 50,
+          overlayMode: (clip as any).overlayMode ?? 'full',
+          offsetX: (clip as any).offsetX ?? 0,
+          offsetY: (clip as any).offsetY ?? 0,
+        }));
+        const migratedProject: VideoProject = {
+          ...project,
+          stickerOverlays: project.stickerOverlays || [],
+          sceneMarkers: project.sceneMarkers || [],
+          beatMarkers: project.beatMarkers || [],
+          clips: migratedClips,
+        };
+        const serialized = JSON.stringify(migratedProject);
+        set({ project: migratedProject, history: [serialized], historyIndex: 0 });
+        return;
+      }
+    } catch { /* IndexedDB error, fall through to localStorage */ }
+
+    // Fallback: try localStorage for migration from older versions
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
@@ -584,6 +624,8 @@ export const useVideoStore = create<VStore>((set, get) => ({
           clips: migratedClips,
         };
         set({ project: migratedProject, history: [raw], historyIndex: 0 });
+        // Migrate to IndexedDB
+        saveToIndexedDB(STORAGE_KEY, migratedProject);
       }
     } catch { /* parse error */ }
   },
