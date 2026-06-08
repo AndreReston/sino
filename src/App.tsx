@@ -165,73 +165,14 @@ export default function App() {
 
     // Listen for auth state changes (login/logout from other tabs, etc.)
     const { data: { subscription } } = onAuthStateChange(async (newUser, event) => {
-      // On tab focus (INITIAL_SESSION), restore the last viewed workspace
+      // On tab focus (INITIAL_SESSION), just refresh user data without resetting the view
       if (event === 'INITIAL_SESSION') {
         if (newUser) {
           setUser(newUser);
           await fetchUsername(newUser.id);
-          const savedDesigns = await fetchDesigns(newUser.id);
-
-          const lastView = localStorage.getItem(LAST_VIEW_KEY);
-          const lastDesignId = localStorage.getItem(LAST_DESIGN_KEY);
-
-          if (lastView === 'workspace') {
-            if (lastDesignId) {
-              const design = savedDesigns.find(d => d.id === lastDesignId);
-              if (design) {
-                setActiveDesign(design);
-                await store.loadDesign(design);
-                setView('workspace');
-                return;
-              }
-            }
-            store.resetWorkspace();
-            setView('workspace');
-            return;
-          }
-
-          if (lastView === 'video-workspace') {
-            if (lastDesignId) {
-              const design = savedDesigns.find(d => d.id === lastDesignId && d.projectMode === 'video');
-              if (design) {
-                setActiveDesign(design);
-                useVideoStore.getState().resetStore();
-                const savedProject = design.pages[0]?.canvas_data as any;
-                if (savedProject?.id) {
-                  useVideoStore.getState().loadProject(savedProject);
-                } else {
-                  useVideoStore.getState().createProject(design.title);
-                }
-                setView('video-workspace');
-                return;
-              }
-            }
-            const idbProject2 = await loadFromIndexedDB(VIDEO_PROJECT_STORAGE_KEY) as any;
-            const rawProject2 = idbProject2 ? JSON.stringify(idbProject2) : localStorage.getItem(VIDEO_PROJECT_STORAGE_KEY);
-            if (rawProject2) {
-              try {
-                const parsed = JSON.parse(rawProject2);
-                useVideoStore.getState().resetStore();
-                if (parsed?.id) {
-                  useVideoStore.getState().loadProject(parsed);
-                } else {
-                  useVideoStore.getState().createProject('Untitled Video');
-                }
-                setView('video-workspace');
-                return;
-              } catch { /* fall through */ }
-            }
-            useVideoStore.getState().resetStore();
-            useVideoStore.getState().createProject('Untitled Video');
-            setView('video-workspace');
-            return;
-          }
-
-          if (lastView === 'dashboard') {
-            setView('dashboard');
-            return;
-          }
+          fetchDesigns(newUser.id);
         }
+        // Do NOT change view or reset stores — the user is already where they want to be
         return;
       }
 
