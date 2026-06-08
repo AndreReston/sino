@@ -666,6 +666,39 @@ function UploadsPanel({
     });
   };
 
+  const compressVideo = async (file: File): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      const url = URL.createObjectURL(file);
+
+      video.src = url;
+      video.onloadedmetadata = () => {
+        canvas.width = Math.min(1280, video.videoWidth);
+        canvas.height = (canvas.width / video.videoWidth) * video.videoHeight;
+        video.currentTime = 0;
+      };
+
+      video.onseeked = () => {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(
+          (blob) => {
+            URL.revokeObjectURL(url);
+            resolve(blob || file);
+          },
+          'video/mp4',
+          0.5
+        );
+      };
+
+      video.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(file);
+      };
+    });
+  };
+
   const handleUpload = async (file: File) => {
     setUploading(true);
     setError(null);
@@ -679,9 +712,18 @@ function UploadsPanel({
     }
 
     try {
+      let uploadFile = file;
+
+      // Compress video if too large
+      if (isVideo && file.size > 100 * 1024 * 1024) {
+        setError('Compressing video...');
+        const compressed = await compressVideo(file);
+        uploadFile = new File([compressed], file.name, { type: 'video/mp4' });
+      }
+
       // Upload file to server first
       const body = new FormData();
-      body.append('file', file);
+      body.append('file', uploadFile);
       const res = await fetch('/api/media/upload', {
         method: 'POST',
         body,
@@ -698,7 +740,7 @@ function UploadsPanel({
       let thumbnailUrl: string | undefined;
       let duration: number | undefined;
       if (isVideo) {
-        const extracted = await extractVideoThumbnail(file);
+        const extracted = await extractVideoThumbnail(uploadFile);
         thumbnailUrl = extracted.thumbnailUrl;
         duration = extracted.duration;
       }
