@@ -74,7 +74,7 @@ export async function uploadMediaForPersistence(
   }
 
   if (user) {
-    const url = await uploadMediaFile(file);
+    const { url, error: uploadError } = await uploadMediaFile(file);
     if (url) {
       saveUserMedia({
         name: file.name,
@@ -85,7 +85,7 @@ export async function uploadMediaForPersistence(
     }
     return {
       url: null,
-      error: 'Cloud upload failed. Check your connection and try again.',
+      error: uploadError ?? 'Cloud upload failed. Check your connection and try again.',
     };
   }
 

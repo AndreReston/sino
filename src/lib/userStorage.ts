@@ -261,16 +261,31 @@ export const deleteUserMedia = async (mediaId: string) => {
 
 // ── Supabase Storage Upload ──────────────────────────────────────────
 
-const CONTENT_TYPE_ALIASES: Record<string, string> = {
-  'audio/mp3': 'audio/mpeg',
-  'audio/x-mp3': 'audio/mpeg',
-  'audio/x-mpeg': 'audio/mpeg',
-  'audio/x-mpeg-3': 'audio/mpeg',
-};
-
-function normalizeUploadContentType(file: File): string | undefined {
-  if (!file.type) return undefined;
-  return CONTENT_TYPE_ALIASES[file.type] ?? file.type;
+// Strip codec parameters (e.g. "video/mp4; codecs=avc1") and normalize aliases
+// so Supabase bucket MIME allowlist matching works reliably.
+function normalizeUploadContentType(file: File): string {
+  const raw = (file.type || '').split(';')[0].trim().toLowerCase();
+  const aliases: Record<string, string> = {
+    'audio/mp3': 'audio/mpeg',
+    'audio/x-mp3': 'audio/mpeg',
+    'audio/x-mpeg': 'audio/mpeg',
+    'audio/x-mpeg-3': 'audio/mpeg',
+    'video/mpeg': 'video/mp4',
+    'video/x-mp4': 'video/mp4',
+    'video/x-m4v': 'video/mp4',
+  };
+  if (raw) return aliases[raw] ?? raw;
+  // Fallback: guess from file extension
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  const extMap: Record<string, string> = {
+    mp4: 'video/mp4', m4v: 'video/mp4', mov: 'video/quicktime',
+    webm: 'video/webm', avi: 'video/x-msvideo',
+    mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg',
+    aac: 'audio/aac', m4a: 'audio/mp4',
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+    webp: 'image/webp', gif: 'image/gif',
+  };
+  return extMap[ext] ?? 'application/octet-stream';
 }
 
 function sanitizeFileName(fileName: string): string {
@@ -279,9 +294,9 @@ function sanitizeFileName(fileName: string): string {
   return safeName || 'upload';
 }
 
-export const uploadMediaFile = async (file: File): Promise<string | null> => {
+export const uploadMediaFile = async (file: File): Promise<{ url: string | null; error: string | null }> => {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) return { url: null, error: 'Not signed in.' };
 
   const path = `${user.id}/${Date.now()}_${sanitizeFileName(file.name)}`;
   const contentType = normalizeUploadContentType(file);
@@ -292,14 +307,14 @@ export const uploadMediaFile = async (file: File): Promise<string | null> => {
 
   if (error) {
     console.error('Failed to upload media file:', error);
-    return null;
+    return { url: null, error: error.message };
   }
 
   const { data: urlData } = supabase.storage
     .from('media')
     .getPublicUrl(path);
 
-  return urlData.publicUrl;
+  return { url: urlData.publicUrl, error: null };
 };
 
 export const deleteMediaFile = async (url: string): Promise<void> => {
