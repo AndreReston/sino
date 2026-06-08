@@ -135,11 +135,16 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Check for existing session
+    // Track whether the startup IIFE has completed its session check.
+    // onAuthStateChange must NOT navigate while boot is in progress.
+    let bootComplete = false;
+
+    // Check for existing session — runs once on mount
     (async () => {
       const currentUser = await getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
+        userRef.current = currentUser;
         await fetchUsername(currentUser.id);
         const savedDesigns = await fetchDesigns(currentUser.id);
 
@@ -153,22 +158,23 @@ export default function App() {
               setActiveDesign(design);
               await store.loadDesign(design);
               setView('workspace');
+              bootComplete = true;
               return;
             }
           }
-          // New unsaved workspace — restore canvas state from store's own localStorage
           store.resetWorkspace();
           setView('workspace');
+          bootComplete = true;
           return;
         }
 
         if (lastView === 'dashboard') {
           setView('dashboard');
+          bootComplete = true;
           return;
         }
 
         if (lastView === 'video-workspace') {
-          // Try to restore from a saved design first
           if (lastDesignId) {
             const design = savedDesigns.find(d => d.id === lastDesignId && d.projectMode === 'video');
             if (design) {
@@ -181,6 +187,7 @@ export default function App() {
                 useVideoStore.getState().createProject(design.title);
               }
               setView('video-workspace');
+              bootComplete = true;
               return;
             }
           }
@@ -197,55 +204,56 @@ export default function App() {
                 useVideoStore.getState().createProject('Untitled Video');
               }
               setView('video-workspace');
+              bootComplete = true;
               return;
             } catch { /* fall through */ }
           }
-          // No project data — open a fresh video workspace
           useVideoStore.getState().resetStore();
           useVideoStore.getState().createProject('Untitled Video');
           setView('video-workspace');
+          bootComplete = true;
           return;
         }
 
         setView('dashboard');
       }
+      bootComplete = true;
     })();
 
-    // Listen for auth state changes — only act on real sign-in/sign-out events.
-    // INITIAL_SESSION fires on page load AND on every tab focus (Supabase rehydrates the session).
-    // TOKEN_REFRESHED fires silently in the background.
-    // Neither should touch navigation — the startup IIFE above already handles the initial restore.
+    // Auth listener — ONLY handles real sign-out and brand-new logins.
+    // Every other event (INITIAL_SESSION, TOKEN_REFRESHED, SIGNED_IN on session
+    // rehydration) must NEVER change navigation — they only keep the user object fresh.
     const { data: { subscription } } = onAuthStateChange((newUser, event) => {
-      if (event === 'SIGNED_IN') {
-        // Only redirect when coming from a logged-out state (e.g. just completed login)
-        if (!user) {
-          setUser(newUser);
-          if (newUser) {
-            fetchUsername(newUser.id);
-            fetchDesigns(newUser.id);
-            persistView('dashboard');
-          }
-        } else {
-          // Already authenticated — session was silently refreshed, do nothing
-          setUser(newUser);
-        }
-        return;
-      }
-
-      if (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        // Silent session refresh — keep user object current, never touch navigation
-        if (newUser) setUser(newUser);
-        return;
+      // Always keep user ref current for autosave etc.
+      if (newUser) {
+        setUser(newUser);
+        userRef.current = newUser;
       }
 
       if (event === 'SIGNED_OUT') {
         setUser(null);
+        userRef.current = null;
         setUsername('Guest');
         setDesigns([]);
         persistActiveDesign(null);
         persistView('landing');
         store.resetWorkspace();
+        return;
       }
+
+      // SIGNED_IN fires on: fresh login, page load session restore, tab focus token refresh.
+      // Only treat it as a real login when:
+      //  1. Boot is complete (initial restore already ran), AND
+      //  2. There was no user before this event (genuinely unauthenticated → authenticated)
+      if (event === 'SIGNED_IN' && bootComplete && !userRef.current) {
+        if (newUser) {
+          fetchUsername(newUser.id);
+          fetchDesigns(newUser.id);
+          persistView('dashboard');
+        }
+      }
+      // All other events (TOKEN_REFRESHED, INITIAL_SESSION, SIGNED_IN during active session)
+      // → silently ignored for navigation
     });
 
     return () => {
