@@ -666,39 +666,6 @@ function UploadsPanel({
     });
   };
 
-  const compressVideo = async (file: File): Promise<Blob> => {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
-      const url = URL.createObjectURL(file);
-
-      video.src = url;
-      video.onloadedmetadata = () => {
-        canvas.width = Math.min(1280, video.videoWidth);
-        canvas.height = (canvas.width / video.videoWidth) * video.videoHeight;
-        video.currentTime = 0;
-      };
-
-      video.onseeked = () => {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob(
-          (blob) => {
-            URL.revokeObjectURL(url);
-            resolve(blob || file);
-          },
-          'video/mp4',
-          0.5
-        );
-      };
-
-      video.onerror = () => {
-        URL.revokeObjectURL(url);
-        resolve(file);
-      };
-    });
-  };
-
   const handleUpload = async (file: File) => {
     setUploading(true);
     setError(null);
@@ -712,24 +679,16 @@ function UploadsPanel({
     }
 
     try {
-      let uploadFile = file;
-
-      // Compress video if too large
-      if (isVideo && file.size > 100 * 1024 * 1024) {
-        setError('Compressing video...');
-        const compressed = await compressVideo(file);
-        uploadFile = new File([compressed], file.name, { type: 'video/mp4' });
-      }
-
-      // Upload file to server first
+      // Upload file to local server (stored in public/uploads)
       const body = new FormData();
-      body.append('file', uploadFile);
+      body.append('file', file);
       const res = await fetch('/api/media/upload', {
         method: 'POST',
         body,
       });
       if (!res.ok) {
-        throw new Error('Upload failed');
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Upload failed');
       }
       const payload = await res.json();
       if (!payload.url) {
@@ -740,12 +699,12 @@ function UploadsPanel({
       let thumbnailUrl: string | undefined;
       let duration: number | undefined;
       if (isVideo) {
-        const extracted = await extractVideoThumbnail(uploadFile);
+        const extracted = await extractVideoThumbnail(file);
         thumbnailUrl = extracted.thumbnailUrl;
         duration = extracted.duration;
       }
 
-      // Save to Supabase
+      // Save metadata to Supabase database (not the file itself)
       const savedMedia = await saveUserMedia({
         name: payload.name,
         url: payload.url,
@@ -774,7 +733,7 @@ function UploadsPanel({
         addImage(payload.url);
       }
     } catch (err) {
-      setError('Upload failed. Please try again.');
+      setError((err as Error).message || 'Upload failed. Please try again.');
     } finally {
       setUploading(false);
     }
