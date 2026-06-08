@@ -201,8 +201,9 @@ export default function VideoSidebar() {
     project, activeClipId, updateClip, addClip, removeClip, reorderClip,
     addTextOverlay, removeTextOverlay,
     addSubtitle, removeSubtitle, updateSubtitle,
-    setClipFilter, resetClipFilters, removeAudioTrack, setBackgroundMusic,
-    setActiveClipId, setActiveTextId, activeTextId,
+    setClipFilter, resetClipFilters, removeAudioTrack, setBackgroundMusic, updateBackgroundMusic,
+    setActiveClipId, setActiveTextId, setActiveStickerOverlayId, setActiveAudioTrackId,
+    activeTextId, activeStickerOverlayId, activeAudioTrackId,
     startExport, isExporting, exportProgress, setClipEffect,
     addStickerOverlay, removeStickerOverlay,
     addSceneMarker, removeSceneMarker, updateSceneMarker, jumpToMarker,
@@ -400,7 +401,13 @@ export default function VideoSidebar() {
                 <div className="pt-2 border-t border-white/[0.06]">
                   <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Photo Overlays</p>
                   {(project?.stickerOverlays || []).filter(s => s.type === 'photo').map(s => (
-                    <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-[#151519] border border-white/[0.06] mb-1">
+                    <div key={s.id}
+                      onClick={() => setActiveStickerOverlayId(s.id)}
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded-lg mb-1 cursor-pointer transition-all ${
+                        activeStickerOverlayId === s.id
+                          ? 'bg-teal-500/10 border border-teal-500/40'
+                          : 'bg-[#151519] border border-white/[0.06] hover:border-white/[0.12]'
+                      }`}>
                       <div className="w-10 h-7 rounded overflow-hidden bg-zinc-900 shrink-0">
                         <img src={s.content} alt="" className="w-full h-full object-cover" />
                       </div>
@@ -409,7 +416,7 @@ export default function VideoSidebar() {
                         <p className="text-[9px] text-zinc-600">{s.startTime.toFixed(1)}s – {s.endTime.toFixed(1)}s</p>
                       </div>
                       <Move className="w-3 h-3 text-zinc-600" />
-                      <button onClick={() => removeStickerOverlay(s.id)} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); removeStickerOverlay(s.id); }} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                     </div>
                   ))}
                 </div>
@@ -583,26 +590,32 @@ export default function VideoSidebar() {
                     onChange={e => { const f = e.target.files?.[0]; if (f) handleAudioUpload(f); e.target.value = ''; }} />
                 </label>
                 {project?.backgroundMusic && (
-                  <div className="space-y-2 p-3 rounded-lg bg-[#151519] border border-emerald-500/20">
+                  <div
+                    onClick={() => setActiveAudioTrackId(project.backgroundMusic!.id)}
+                    className={`space-y-2 p-3 rounded-lg cursor-pointer transition-all ${
+                      activeAudioTrackId === project.backgroundMusic.id
+                        ? 'bg-emerald-500/10 border border-emerald-500/40'
+                        : 'bg-[#151519] border border-emerald-500/20 hover:border-emerald-500/30'
+                    }`}>
                     <div className="flex items-center gap-2">
                       <Mic className="w-3 h-3 text-emerald-400 shrink-0" />
                       <span className="text-xs text-zinc-300 truncate flex-1">{project.backgroundMusic.name}</span>
                       {project.backgroundMusic.duration > 0 && (
                         <span className="text-[9px] text-zinc-500 font-mono shrink-0">{formatDuration(project.backgroundMusic.duration)}</span>
                       )}
-                      <button onClick={() => setBackgroundMusic(null)} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); setBackgroundMusic(null); }} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                       <Volume2 className="w-3 h-3 text-zinc-500 shrink-0" />
                       <input type="range" min={0} max={1} step={0.01}
                         value={project.backgroundMusic.volume ?? 0.8}
-                        onChange={e => setBackgroundMusic({ ...project.backgroundMusic!, volume: parseFloat(e.target.value) })}
+                        onChange={e => updateBackgroundMusic({ volume: parseFloat(e.target.value) })}
                         className="flex-1 accent-emerald-500" />
                       <span className="text-[9px] text-zinc-400 w-8 text-right tabular-nums">
                         {Math.round((project.backgroundMusic.volume ?? 0.8) * 100)}%
                       </span>
                     </div>
-                    <p className="text-[9px] text-zinc-600">Drag the bar in the timeline to set start offset. Loops automatically.</p>
+                    <p className="text-[9px] text-zinc-600">Click to edit in the properties panel. Drag on timeline to set start offset.</p>
                   </div>
                 )}
               </div>
@@ -610,10 +623,19 @@ export default function VideoSidebar() {
               <div>
                 <p className="text-[11px] text-zinc-500 mb-2">Audio Tracks</p>
                 {project?.audioTracks.map(track => (
-                  <div key={track.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#151519] border border-white/[0.06] mb-1">
+                  <div key={track.id}
+                    onClick={() => setActiveAudioTrackId(track.id)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-1 cursor-pointer transition-all ${
+                      activeAudioTrackId === track.id
+                        ? 'border-violet-500/40 bg-violet-500/10'
+                        : 'bg-[#151519] border border-white/[0.06] hover:border-white/[0.12]'
+                    }`}>
                     <Volume2 className="w-3 h-3 text-sky-400 shrink-0" />
                     <span className="text-xs text-zinc-300 truncate flex-1">{track.name}</span>
-                    <button onClick={() => removeAudioTrack(track.id)} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                    {track.duration > 0 && (
+                      <span className="text-[9px] text-zinc-500 font-mono shrink-0">{formatDuration(track.duration)}</span>
+                    )}
+                    <button onClick={(e) => { e.stopPropagation(); removeAudioTrack(track.id); }} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                   </div>
                 ))}
               </div>

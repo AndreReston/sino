@@ -49,7 +49,8 @@ function buildAssetList() {
     }));
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: mode === 'electron' ? './' : '/',
   plugins: [react()],
   optimizeDeps: {
     exclude: ['lucide-react'],
@@ -184,4 +185,4 @@ export default defineConfig({
       next();
     });
   },
-});
+}));

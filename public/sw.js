@@ -1,17 +1,22 @@
-const CACHE_NAME = 'designforge-v1';
-const PRECACHE_URLS = [
-  '/',
-  '/index.html',
-];
+const CACHE_NAME = 'designforge-v3';
+
+const PRECACHE_URLS = ['./', './index.html'];
+
+function isCacheableRequest(request) {
+  const url = new URL(request.url);
+  if (request.method !== 'GET') return false;
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+  // Never intercept Vite dev server or extension URLs
+  if (url.pathname.startsWith('/@')) return false;
+  if (url.pathname.startsWith('/src/') && url.hostname === 'localhost') return false;
+  return true;
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_URLS).catch(() => {
-        // Gracefully handle cache failures
-        return Promise.resolve();
-      });
-    })
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll(PRECACHE_URLS).catch(() => Promise.resolve())
+    )
   );
   self.skipWaiting();
 });
@@ -26,17 +31,23 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  if (!isCacheableRequest(event.request)) return;
+
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request).then((response) => {
-        if (response && response.status === 200 && response.type === 'basic') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+    (async () => {
+      try {
+        const networkResponse = await fetch(event.request);
+        if (networkResponse.ok && networkResponse.type === 'basic') {
+          const clone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, clone).catch(() => {});
+          });
         }
-        return response;
-      }).catch(() => cached);
-      return cached || fetchPromise;
-    })
+        return networkResponse;
+      } catch {
+        const cached = await caches.match(event.request);
+        return cached || Response.error();
+      }
+    })()
   );
 });

@@ -176,7 +176,8 @@ export default function VideoWorkspace({ onBack }: Props) {
       }
       st.setCurrentTime(next);
       const info = st.getClipAtTime(next);
-      if (info && info.clip.id !== st.activeClipId) {
+      const hasNonClipSelection = st.activeStickerOverlayId || st.activeTextId || st.activeSubtitleId || st.activeAudioTrackId;
+      if (info && info.clip.id !== st.activeClipId && !hasNonClipSelection) {
         st.setActiveClipId(info.clip.id);
       }
 
@@ -284,7 +285,15 @@ export default function VideoWorkspace({ onBack }: Props) {
           st.removeClip(st.activeClipId);
         } else if (st.activeAudioTrackId) {
           e.preventDefault();
-          st.removeAudioTrack(st.activeAudioTrackId);
+          const bgm = st.project?.backgroundMusic;
+          if (bgm && bgm.id === st.activeAudioTrackId) {
+            st.setBackgroundMusic(null);
+          } else {
+            st.removeAudioTrack(st.activeAudioTrackId);
+          }
+        } else if (st.activeStickerOverlayId) {
+          e.preventDefault();
+          st.removeStickerOverlay(st.activeStickerOverlayId);
         } else if (st.activeTextId) {
           e.preventDefault();
           st.removeTextOverlay(st.activeTextId);

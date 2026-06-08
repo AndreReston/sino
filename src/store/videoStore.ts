@@ -96,14 +96,18 @@ export interface TextOverlay {
 export interface StickerOverlay {
   id: string;
   type: 'emoji' | 'shape' | 'arrow' | 'speech-bubble' | 'photo';
-  content: string;       // emoji char or SVG path key
-  x: number;
-  y: number;
-  scale: number;
-  rotation: number;
-  startTime: number;
-  endTime: number;
+  content: string;       // emoji char or SVG path key or image URL for photos
+  x: number;             // percentage 0-100
+  y: number;             // percentage 0-100
+  scale: number;         // 0.1 - 5, default 1
+  rotation: number;      // 0-360
+  startTime: number;     // seconds on timeline
+  endTime: number;        // seconds on timeline
   color: string;
+  transitionIn?: TransitionType;
+  transitionOut?: TransitionType;
+  transitionDuration?: number;  // seconds, default 0.5
+  opacity?: number;      // 0-1, default 1
 }
 
 export interface SubtitleEntry {
@@ -257,6 +261,7 @@ export interface VideoStoreActions {
   updateAudioTrack: (id: string, updates: Partial<AudioTrack>) => void;
   splitAudioTrack: (id: string, timeFromStart: number) => void;
   setBackgroundMusic: (track: AudioTrack | null) => void;
+  updateBackgroundMusic: (updates: Partial<AudioTrack>) => void;
 
   // Scene markers
   addSceneMarker: (time: number, label: string, color?: string) => void;
@@ -990,7 +995,14 @@ export const useVideoStore = create<VStore>((set, get) => ({
       endTime: Math.min(currentTime + 5, total || currentTime + 5),
       color: '#ffffff',
     };
-    set({ project: { ...project, stickerOverlays: [...(project.stickerOverlays || []), sticker] }, activeStickerOverlayId: sticker.id });
+    set({
+      project: { ...project, stickerOverlays: [...(project.stickerOverlays || []), sticker] },
+      activeStickerOverlayId: sticker.id,
+      activeClipId: null,
+      activeTextId: null,
+      activeSubtitleId: null,
+      activeAudioTrackId: null,
+    });
     get().pushHistory();
   },
 
@@ -1124,10 +1136,28 @@ export const useVideoStore = create<VStore>((set, get) => ({
   },
 
   setBackgroundMusic: (track) => {
-    const { project } = get();
+    const { project, activeAudioTrackId } = get();
     if (!project) return;
-    set({ project: { ...project, backgroundMusic: track } });
+    const wasBgmSelected = project.backgroundMusic?.id === activeAudioTrackId;
+    set({
+      project: { ...project, backgroundMusic: track },
+      ...(track
+        ? {
+            activeAudioTrackId: track.id,
+            activeClipId: null,
+            activeTextId: null,
+            activeSubtitleId: null,
+            activeStickerOverlayId: null,
+          }
+        : wasBgmSelected ? { activeAudioTrackId: null } : {}),
+    });
     get().pushHistory();
+  },
+
+  updateBackgroundMusic: (updates) => {
+    const { project } = get();
+    if (!project?.backgroundMusic) return;
+    set({ project: { ...project, backgroundMusic: { ...project.backgroundMusic, ...updates } } });
   },
 
   // ─── Scene Markers ─────────────────────────────────────────────
@@ -1345,18 +1375,32 @@ export const useVideoStore = create<VStore>((set, get) => ({
 
   // ─── Export ───────────────────────────────────────────────────────
 
-  startExport: () => {
+  startExport: async () => {
+    const { project } = get();
+    if (!project) return;
+    
     set({ isExporting: true, exportProgress: 0 });
-    const interval = setInterval(() => {
-      const prog = get().exportProgress;
-      if (prog >= 100) {
-        clearInterval(interval);
-        set({ isExporting: false, exportProgress: 0 });
-        get().addToExportQueue('WebM');
-      } else {
-        set({ exportProgress: prog + 5 });
-      }
-    }, 200);
+    
+    try {
+      const { exportVideo, downloadBlob } = await import('../lib/videoExport');
+      
+      const blob = await exportVideo(project, {
+        fps: 30,
+        onProgress: (progress) => {
+          set({ exportProgress: Math.round(progress) });
+        },
+      });
+      
+      // Download the file
+      const filename = `${project.title || 'video'}_${new Date().getTime()}.webm`;
+      downloadBlob(blob, filename);
+      
+      set({ isExporting: false, exportProgress: 0 });
+      get().addToExportQueue('WebM');
+    } catch (error) {
+      console.error('Export failed:', error);
+      set({ isExporting: false, exportProgress: 0 });
+    }
   },
 
   // ─── Computed ─────────────────────────────────────────────────────

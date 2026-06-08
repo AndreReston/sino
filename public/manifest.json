@@ -1,8 +1,9 @@
 {
   "name": "DesignForge",
   "short_name": "DesignForge",
-  "description": "Visual design platform for creators",
-  "start_url": "/",
+  "description": "Visual design and video editing platform for creators",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#07070a",
   "theme_color": "#07070a",

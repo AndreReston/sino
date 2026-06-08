@@ -28,6 +28,8 @@ export default function VideoTimeline() {
   const updateTextOverlay = useVideoStore(s => s.updateTextOverlay);
   const updateSubtitle = useVideoStore(s => s.updateSubtitle);
   const updateStickerOverlay = useVideoStore(s => s.updateStickerOverlay);
+  const setActiveStickerOverlayId = useVideoStore(s => s.setActiveStickerOverlayId);
+  const setActiveAudioTrackId = useVideoStore(s => s.setActiveAudioTrackId);
   const getTotalDuration = useVideoStore(s => s.getTotalDuration);
   const showBeatMarkers = useVideoStore(s => s.showBeatMarkers);
   const jumpToMarker = useVideoStore(s => s.jumpToMarker);
@@ -47,6 +49,7 @@ export default function VideoTimeline() {
   const [trimSubtitleId, setTrimSubtitleId] = useState<{ id: string; side: 'left' | 'right' } | null>(null);
 
   const [dragStickerId, setDragStickerId] = useState<string | null>(null);
+  const [trimPhotoId, setTrimPhotoId] = useState<{ id: string; side: 'left' | 'right' } | null>(null);
 
   const [draggingPlayhead, setDraggingPlayhead] = useState(false);
 
@@ -308,6 +311,28 @@ export default function VideoTimeline() {
     window.addEventListener('mouseup', up);
     return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
   }, [dragStickerId, updateStickerOverlay]);
+
+  // ── Photo overlay trim ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!trimPhotoId) return;
+    const { id, side } = trimPhotoId;
+    const sticker = project?.stickerOverlays?.find(s => s.id === id);
+    if (!sticker) return;
+    const { origStart, origEnd, startX } = dragInitRef.current as { origStart: number; origEnd: number; startX: number };
+
+    const move = (e: MouseEvent) => {
+      const deltaSec = (e.clientX - startX) / ppsRef.current;
+      if (side === 'left') {
+        updateStickerOverlay(id, { startTime: Math.max(0, Math.min(origEnd - 0.1, origStart + deltaSec)) });
+      } else {
+        updateStickerOverlay(id, { endTime: Math.max(origStart + 0.1, origEnd + deltaSec) });
+      }
+    };
+    const up = () => setTrimPhotoId(null);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+  }, [trimPhotoId, updateStickerOverlay]);
 
   if (!project) return null;
 
@@ -630,20 +655,46 @@ export default function VideoTimeline() {
                     const isActive = activeStickerOverlayId === sticker.id;
                     return (
                       <div key={sticker.id} data-noseek="1"
-                        className={`absolute top-0.5 bottom-0.5 rounded border border-teal-500/30 flex items-center px-1.5 cursor-grab active:cursor-grabbing transition-all ${
-                          isActive ? 'bg-teal-500/25 ring-1 ring-teal-400/60' : 'bg-teal-500/15 hover:bg-teal-500/25'
+                        className={`absolute top-0.5 bottom-0.5 rounded border border-teal-500/30 flex items-center group ${
+                          isActive ? 'bg-teal-500/25 ring-2 ring-teal-400/60' : 'bg-teal-500/15 hover:bg-teal-500/25'
                         }`}
                         style={{ left, width }}
-                        onMouseDown={(e) => {
+                        onClick={(e) => {
                           e.stopPropagation();
-                          useVideoStore.getState().setActiveStickerOverlayId(sticker.id);
-                          dragInitRef.current = { startX: e.clientX, origStart: sticker.startTime, origEnd: sticker.endTime };
-                          setDragStickerId(sticker.id);
+                          setActiveStickerOverlayId(sticker.id);
                         }}
                         title="Photo overlay"
                       >
-                        <ImageIcon className="w-2.5 h-2.5 text-teal-400 shrink-0 mr-1" />
-                        <span className="text-[9px] text-teal-200 truncate">Photo</span>
+                        <div data-trim="left"
+                          className="absolute top-0 bottom-0 left-0 w-2.5 cursor-col-resize hover:bg-teal-400/20 z-10 flex items-center justify-start pl-0.5 transition-colors"
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            dragInitRef.current = { startX: e.clientX, origStart: sticker.startTime, origEnd: sticker.endTime };
+                            setTrimPhotoId({ id: sticker.id, side: 'left' });
+                          }}>
+                          <div className="w-0.5 h-4 bg-teal-400/60 rounded-full" />
+                        </div>
+                        <div className="flex-1 flex items-center px-3 h-full overflow-hidden cursor-grab active:cursor-grabbing"
+                          onMouseDown={(e) => {
+                            if ((e.target as HTMLElement).closest('[data-trim]')) return;
+                            e.stopPropagation();
+                            setActiveStickerOverlayId(sticker.id);
+                            dragInitRef.current = { startX: e.clientX, origStart: sticker.startTime, origEnd: sticker.endTime };
+                            setDragStickerId(sticker.id);
+                          }}>
+                          <ImageIcon className="w-2.5 h-2.5 text-teal-400 shrink-0 mr-1" />
+                          <span className="text-[9px] text-teal-200 truncate flex-1">Photo</span>
+                          {width > 50 && <span className="text-[8px] text-teal-400/50 font-mono ml-1 shrink-0">{dur.toFixed(1)}s</span>}
+                        </div>
+                        <div data-trim="right"
+                          className="absolute top-0 bottom-0 right-0 w-2.5 cursor-col-resize hover:bg-teal-400/20 z-10 flex items-center justify-end pr-0.5 transition-colors"
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            dragInitRef.current = { startX: e.clientX, origStart: sticker.startTime, origEnd: sticker.endTime };
+                            setTrimPhotoId({ id: sticker.id, side: 'right' });
+                          }}>
+                          <div className="w-0.5 h-4 bg-teal-400/60 rounded-full" />
+                        </div>
                       </div>
                     );
                   });
@@ -664,7 +715,7 @@ export default function VideoTimeline() {
                       style={{ left, width }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        useVideoStore.getState().setActiveAudioTrackId(track.id);
+                        setActiveAudioTrackId(track.id);
                       }}
                       onMouseDown={(e) => {
                         e.stopPropagation();
@@ -693,18 +744,29 @@ export default function VideoTimeline() {
                   const bgm = project.backgroundMusic;
                   const left = (bgm.startTime ?? 0) * pps;
                   const width = bgm.duration > 0 ? bgm.duration * pps : Math.max(8, totalDuration * pps);
+                  const isSelected = activeAudioTrackId === bgm.id;
                   return (
                     <div data-noseek="1"
-                      className="absolute top-0.5 bottom-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 flex items-center px-1.5 cursor-grab active:cursor-grabbing select-none"
+                      className={`absolute top-0.5 bottom-0.5 rounded flex items-center px-1.5 cursor-pointer select-none ${
+                        isSelected ? 'bg-emerald-500/25 border-2 border-emerald-400/60' : 'bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20'
+                      }`}
                       style={{ left, width }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveAudioTrackId(bgm.id);
+                      }}
                       onMouseDown={(e) => {
                         e.stopPropagation();
+                        setActiveAudioTrackId(bgm.id);
                         const startX = e.clientX;
                         const origStart = bgm.startTime ?? 0;
+                        let hasMoved = false;
                         const move = (me: MouseEvent) => {
-                          const delta = (me.clientX - startX) / ppsRef.current;
-                          const newStart = Math.max(0, origStart + delta);
-                          useVideoStore.getState().setBackgroundMusic({ ...bgm, startTime: newStart });
+                          if (!hasMoved && Math.abs(me.clientX - startX) > 3) hasMoved = true;
+                          if (hasMoved) {
+                            const delta = (me.clientX - startX) / ppsRef.current;
+                            useVideoStore.getState().updateBackgroundMusic({ startTime: Math.max(0, origStart + delta) });
+                          }
                         };
                         const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
                         window.addEventListener('mousemove', move);
@@ -785,7 +847,7 @@ export default function VideoTimeline() {
       <div className="flex items-center gap-3 px-3 py-1 border-t border-zinc-800/40 shrink-0">
         <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">Space</kbd> Play/Pause</span>
         <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">S</kbd> Split at playhead</span>
-        <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">Del</kbd> Remove clip</span>
+        <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">Del</kbd> Remove selected</span>
         <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">Ctrl+Z</kbd> Undo</span>
         <span className="text-[9px] text-zinc-600 opacity-50">Drag clips to reorder • Double-click to split • Drag edges to trim</span>
       </div>

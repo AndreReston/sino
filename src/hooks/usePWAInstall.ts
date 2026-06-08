@@ -9,11 +9,20 @@ export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isDesktopApp] = useState(
+    () => !!(window as Window).designForgeDesktop?.isDesktopApp,
+  );
 
   useEffect(() => {
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    if (isDesktopApp) {
+      setIsInstalled(true);
+      return;
+    }
+
+    // Register service worker in production only — it breaks Vite HMR in dev
+    if ('serviceWorker' in navigator && window.location.protocol !== 'file:' && import.meta.env.PROD) {
+      const swPath = import.meta.env.BASE_URL + 'sw.js';
+      navigator.serviceWorker.register(swPath).catch(() => {});
     }
 
     // Check if already installed
@@ -60,22 +69,43 @@ export function usePWAInstall() {
       window.removeEventListener('beforeinstallprompt', handler);
       window.removeEventListener('appinstalled', installedHandler);
     };
-  }, []);
+  }, [isDesktopApp]);
 
   const installApp = async () => {
-    if (!deferredPrompt) return;
-    try {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setIsInstalled(true);
-        setIsInstallable(false);
-        setDeferredPrompt(null);
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setIsInstalled(true);
+          setIsInstallable(false);
+          setDeferredPrompt(null);
+        }
+        return;
+      } catch {
+        // fall through to manual instructions
       }
-    } catch {
-      // Handle prompt errors gracefully
     }
+
+    const isMac = /Mac|iPhone|iPad/.test(navigator.userAgent);
+    const isEdge = /Edg\//.test(navigator.userAgent);
+    const isChrome = /Chrome\//.test(navigator.userAgent) && !isEdge;
+
+    let message = 'To install DesignForge:\n\n';
+    if (isMac && /iPhone|iPad/.test(navigator.userAgent)) {
+      message += 'Tap Share → Add to Home Screen in Safari.';
+    } else if (isMac) {
+      message += 'In Safari: File → Add to Dock.\nIn Chrome: ⋮ menu → Install DesignForge.';
+    } else if (isEdge) {
+      message += 'Click the ⊕ App available icon in the address bar, or use Settings → Apps → Install this site as an app.';
+    } else if (isChrome) {
+      message += 'Click the install icon in the address bar, or use ⋮ menu → Save and share → Install page as app.';
+    } else {
+      message += 'Use your browser menu to install this site as an app (requires HTTPS).';
+    }
+    message += '\n\nFor a shareable Windows .exe, build with: npm run package:win';
+    alert(message);
   };
 
-  return { isInstallable, isInstalled, installApp };
+  return { isInstallable, isInstalled, installApp, isDesktopApp };
 }

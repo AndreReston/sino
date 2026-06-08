@@ -1,5 +1,5 @@
 import { Trash2, Scissors, RotateCcw, Volume2, VolumeX, Gauge, Sparkles, Diamond, Layers, Activity, Zap, ArrowRightLeft, Move, Maximize2, Music } from 'lucide-react';
-import { useVideoStore, VideoFilters, ClipEffect, TransitionType, Keyframe, VideoClip, TextOverlay, SubtitleEntry, MotionPreset, AudioTrack } from '../../store/videoStore';
+import { useVideoStore, VideoFilters, ClipEffect, TransitionType, Keyframe, VideoClip, TextOverlay, SubtitleEntry, MotionPreset, AudioTrack, StickerOverlay } from '../../store/videoStore';
 
 const EFFECTS: { id: ClipEffect; label: string }[] = [
   { id: 'none', label: 'None' }, { id: 'shake', label: 'Shake' },
@@ -38,16 +38,22 @@ export default function VideoProperties() {
   const activeTextId = useVideoStore(s => s.activeTextId);
   const activeSubtitleId = useVideoStore(s => s.activeSubtitleId);
   const activeAudioTrackId = useVideoStore(s => s.activeAudioTrackId);
+  const activeStickerOverlayId = useVideoStore(s => s.activeStickerOverlayId);
   const activeClip = useVideoStore(s => s.project?.clips.find(c => c.id === s.activeClipId) ?? null);
-  const activeAudioTrack = useVideoStore(s => s.project?.audioTracks.find(a => a.id === s.activeAudioTrackId) ?? null);
+  const bgm = project?.backgroundMusic ?? null;
+  const isBackgroundMusicSelected = !!(bgm && activeAudioTrackId === bgm.id);
+  const activeAudioTrack = isBackgroundMusicSelected
+    ? bgm
+    : project?.audioTracks.find(a => a.id === activeAudioTrackId) ?? null;
+  const activeStickerOverlay = useVideoStore(s => s.project?.stickerOverlays.find(s => s.id === s.activeStickerOverlayId) ?? null);
 
-  const hasSelection = activeClipId || activeTextId || activeSubtitleId || activeAudioTrackId;
+  const hasSelection = activeClipId || activeTextId || activeSubtitleId || activeAudioTrackId || activeStickerOverlayId;
 
   if (!hasSelection) {
     return (
       <div className="w-64 bg-[#111115] border-l border-zinc-800 p-6 flex items-center justify-center min-h-screen">
         <p className="text-zinc-400 text-sm text-center">
-          Select a clip, text, subtitle, or audio track to edit properties
+          Select a clip, photo, text, subtitle, or audio track to edit properties
         </p>
       </div>
     );
@@ -68,8 +74,11 @@ export default function VideoProperties() {
           subtitle={project.subtitles.find(s => s.id === activeSubtitleId) as SubtitleEntry | undefined}
         />
       )}
+      {activeStickerOverlayId && activeStickerOverlay && (
+        <StickerProperties sticker={activeStickerOverlay} />
+      )}
       {activeAudioTrackId && activeAudioTrack && (
-        <AudioTrackProperties track={activeAudioTrack} />
+        <AudioTrackProperties track={activeAudioTrack} isBackgroundMusic={isBackgroundMusicSelected} />
       )}
     </div>
   );
@@ -675,32 +684,146 @@ function SubtitleProperties({ subtitle }: SubtitlePropertiesProps) {
   );
 }
 
-interface AudioTrackPropertiesProps {
-  track: AudioTrack;
+interface StickerPropertiesProps {
+  sticker: StickerOverlay;
 }
 
-function AudioTrackProperties({ track }: AudioTrackPropertiesProps) {
-  const updateAudioTrack = useVideoStore(s => s.updateAudioTrack);
-  const removeAudioTrack = useVideoStore(s => s.removeAudioTrack);
-  const splitAudioTrack = useVideoStore(s => s.splitAudioTrack);
+function StickerProperties({ sticker }: StickerPropertiesProps) {
+  const updateStickerOverlay = useVideoStore(s => s.updateStickerOverlay);
+  const removeStickerOverlay = useVideoStore(s => s.removeStickerOverlay);
 
-  const handleUpdate = (updates: Partial<AudioTrack>) => {
-    updateAudioTrack(track.id, updates);
-  };
-
-  const handleSplit = () => {
-    splitAudioTrack(track.id, track.duration / 2);
+  const handleUpdate = (updates: Partial<StickerOverlay>) => {
+    updateStickerOverlay(sticker.id, updates);
   };
 
   const handleDelete = () => {
-    removeAudioTrack(track.id);
+    removeStickerOverlay(sticker.id);
   };
 
   return (
     <div className="p-4 space-y-4">
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
-          <Music className="w-3.5 h-3.5 text-violet-400" /> Audio Track
+          <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Photo Properties
+        </h3>
+        <div className="bg-zinc-900 border border-zinc-700 rounded p-3 space-y-2">
+          {sticker.type === 'photo' && (
+            <div className="w-full h-20 rounded overflow-hidden border border-zinc-700 bg-zinc-800">
+              <img src={sticker.content} alt="Photo" className="w-full h-full object-cover" />
+            </div>
+          )}
+          <div className="flex justify-between text-xs">
+            <span className="text-zinc-400">Type</span>
+            <span className="text-zinc-300 capitalize">{sticker.type}</span>
+          </div>
+        </div>
+      </div>
+
+      <SectionDivider />
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-zinc-200">Scale & Transform</h3>
+        <LabeledSlider label="Position X" icon={<Move className="w-3 h-3" />} value={sticker.x} min={0} max={100} step={1}
+          display={`${Math.round(sticker.x)}%`} onChange={v => handleUpdate({ x: v })} />
+        <LabeledSlider label="Position Y" icon={<Move className="w-3 h-3" />} value={sticker.y} min={0} max={100} step={1}
+          display={`${Math.round(sticker.y)}%`} onChange={v => handleUpdate({ y: v })} />
+        <LabeledSlider label="Scale" icon={<Maximize2 className="w-3 h-3" />} value={sticker.scale} min={0.1} max={5} step={0.1}
+          display={`${(sticker.scale * 100).toFixed(0)}%`} onChange={v => handleUpdate({ scale: v })} />
+        <LabeledSlider label="Rotation" icon={<RotateCcw className="w-3 h-3" />} value={sticker.rotation} min={0} max={360} step={5}
+          display={`${sticker.rotation}°`} onChange={v => handleUpdate({ rotation: v })} />
+        <LabeledSlider label="Opacity" icon={<Diamond className="w-3 h-3" />} value={sticker.opacity ?? 1} min={0} max={1} step={0.05}
+          display={`${Math.round((sticker.opacity ?? 1) * 100)}%`} onChange={v => handleUpdate({ opacity: v })} />
+      </div>
+
+      <SectionDivider />
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-zinc-200">Timing</h3>
+        <div className="space-y-2">
+          <div className="space-y-1">
+            <label className="text-xs text-zinc-400">Start Time</label>
+            <input type="number" value={sticker.startTime.toFixed(2)} onChange={e => handleUpdate({ startTime: parseFloat(e.target.value) || 0 })}
+              step={0.1} min={0}
+              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 text-sm focus:outline-none focus:border-sky-500" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-zinc-400">End Time</label>
+            <input type="number" value={sticker.endTime.toFixed(2)} onChange={e => handleUpdate({ endTime: parseFloat(e.target.value) || 0 })}
+              step={0.1} min={0}
+              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 text-sm focus:outline-none focus:border-sky-500" />
+          </div>
+        </div>
+      </div>
+
+      <SectionDivider />
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-zinc-200">Transitions</h3>
+        <div className="space-y-2">
+          <div className="space-y-1">
+            <label className="text-xs text-zinc-400">Transition In</label>
+            <select value={sticker.transitionIn ?? 'none'} onChange={e => handleUpdate({ transitionIn: e.target.value as TransitionType })}
+              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 text-sm focus:outline-none focus:border-sky-500">
+              {TRANSITIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-zinc-400">Transition Out</label>
+            <select value={sticker.transitionOut ?? 'none'} onChange={e => handleUpdate({ transitionOut: e.target.value as TransitionType })}
+              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 text-sm focus:outline-none focus:border-sky-500">
+              {TRANSITIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+            </select>
+          </div>
+          <LabeledSlider label="Duration" icon={<ArrowRightLeft className="w-3 h-3" />} value={sticker.transitionDuration ?? 0.5} min={0.1} max={2} step={0.1}
+            display={`${(sticker.transitionDuration ?? 0.5).toFixed(2)}s`} onChange={v => handleUpdate({ transitionDuration: v })} />
+        </div>
+      </div>
+
+      <SectionDivider />
+
+      <button onClick={handleDelete}
+        className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded bg-red-900/30 text-red-400 text-sm font-medium hover:bg-red-900/50 transition">
+        <Trash2 className="w-4 h-4" /> Delete Photo
+      </button>
+      <p className="text-[10px] text-zinc-500 text-center">
+        Press <kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400">Del</kbd> to remove · Drag on preview to reposition
+      </p>
+    </div>
+  );
+}
+
+interface AudioTrackPropertiesProps {
+  track: AudioTrack;
+  isBackgroundMusic?: boolean;
+}
+
+function AudioTrackProperties({ track, isBackgroundMusic = false }: AudioTrackPropertiesProps) {
+  const updateAudioTrack = useVideoStore(s => s.updateAudioTrack);
+  const updateBackgroundMusic = useVideoStore(s => s.updateBackgroundMusic);
+  const removeAudioTrack = useVideoStore(s => s.removeAudioTrack);
+  const setBackgroundMusic = useVideoStore(s => s.setBackgroundMusic);
+  const splitAudioTrack = useVideoStore(s => s.splitAudioTrack);
+
+  const handleUpdate = (updates: Partial<AudioTrack>) => {
+    if (isBackgroundMusic) updateBackgroundMusic(updates);
+    else updateAudioTrack(track.id, updates);
+  };
+
+  const handleSplit = () => {
+    if (isBackgroundMusic) return;
+    splitAudioTrack(track.id, track.duration / 2);
+  };
+
+  const handleDelete = () => {
+    if (isBackgroundMusic) setBackgroundMusic(null);
+    else removeAudioTrack(track.id);
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+          <Music className="w-3.5 h-3.5 text-violet-400" /> {isBackgroundMusic ? 'Background Music' : 'Audio Track'}
         </h3>
         <div className="bg-zinc-900 border border-zinc-700 rounded p-3 space-y-1">
           <div className="flex justify-between text-xs">
@@ -746,17 +869,22 @@ function AudioTrackProperties({ track }: AudioTrackPropertiesProps) {
       <SectionDivider />
 
       <div className="space-y-2">
-        <button onClick={handleSplit}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-sky-500 hover:bg-sky-600 rounded text-sm font-medium text-white transition">
-          <Scissors className="w-4 h-4" /> Split Audio
-        </button>
+        {!isBackgroundMusic && (
+          <button onClick={handleSplit}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-sky-500 hover:bg-sky-600 rounded text-sm font-medium text-white transition">
+            <Scissors className="w-4 h-4" /> Split Audio
+          </button>
+        )}
         <button onClick={handleDelete}
           className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium text-white transition">
-          <Trash2 className="w-4 h-4" /> Delete Audio
+          <Trash2 className="w-4 h-4" /> Delete {isBackgroundMusic ? 'Music' : 'Audio'}
         </button>
       </div>
 
-      <p className="text-[10px] text-zinc-600 text-center">Shortcuts apply to selected audio track</p>
+      <p className="text-[10px] text-zinc-500 text-center">
+        Press <kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400">Del</kbd> to remove
+        {!isBackgroundMusic && <> · <kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400">S</kbd> to split at playhead</>}
+      </p>
       <div className="pb-4" />
     </div>
   );

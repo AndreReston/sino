@@ -30,51 +30,52 @@ export default function VideoPreview({ videoRef }: Props) {
 
   const activeClip = project?.clips.find(c => c.id === activeClipId) ?? null;
 
-  // Compute the clip-local time for the active clip
-  const clipInfo = activeClip ? getClipAtTime(currentTime) : null;
-  // If the resolved clip differs from activeClipId (e.g. user seeked to another position), use active clip
-  const resolvedClipInfo = clipInfo?.clip.id === activeClipId ? clipInfo : null;
-  // clip-local time = offset within this clip's effective duration
+  // Always show the clip at the playhead; activeClipId only controls transform editing
+  const clipInfoAtPlayhead = project ? getClipAtTime(currentTime) : null;
+  const displayClip = clipInfoAtPlayhead?.clip ?? activeClip;
+  const isClipSelected = !!(activeClipId && displayClip?.id === activeClipId);
+
+  // Compute the clip-local time for the displayed clip
+  const resolvedClipInfo = clipInfoAtPlayhead?.clip.id === displayClip?.id ? clipInfoAtPlayhead : null;
   const clipLocalTime = resolvedClipInfo ? resolvedClipInfo.clipLocalTime : 0;
-  // actual video currentTime = trimStart + clipLocalTime * speed
-  const videoSeekTime = activeClip ? activeClip.trimStart + clipLocalTime * activeClip.speed : 0;
+  const videoSeekTime = displayClip ? displayClip.trimStart + clipLocalTime * displayClip.speed : 0;
 
   // Drag state for text overlays
   const [draggingTextId, setDraggingTextId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   // Drag state for sticker overlays
   const [draggingStickerData, setDraggingStickerData] = useState<{ id: string; ox: number; oy: number } | null>(null);
+  // Resize state for stickers
+  const [resizingStickerData, setResizingStickerData] = useState<{ id: string; startX: number; startY: number; startScale: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [resizing, setResizing] = useState<{ corner: string; startX: number; startY: number } | null>(null);
   const [panning, setPanning] = useState<{ startX: number; startY: number } | null>(null);
 
-  // Sync video src when active clip changes
+  // Sync video src when displayed clip changes
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !activeClip) return;
-    if (video.src !== activeClip.url) {
-      video.src = activeClip.url;
+    if (!video || !displayClip) return;
+    if (video.src !== displayClip.url) {
+      video.src = displayClip.url;
       video.load();
-      // After loading, seek to the clip-local position
       const st = useVideoStore.getState();
       const info = st.getClipAtTime(st.currentTime);
-      if (info?.clip.id === activeClip.id) {
-        const seekTo = activeClip.trimStart + info.clipLocalTime * activeClip.speed;
+      if (info?.clip.id === displayClip.id) {
+        const seekTo = displayClip.trimStart + info.clipLocalTime * displayClip.speed;
         video.addEventListener('loadedmetadata', () => { video.currentTime = seekTo; }, { once: true });
       }
     }
-  }, [activeClip?.id]);
+  }, [displayClip?.id]);
 
   // Sync playback state — when clip switches during playback, start playing new clip immediately
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !activeClip) return;
+    if (!video || !displayClip) return;
     if (isPlaying) {
-      // Seek to correct position then play
       const st = useVideoStore.getState();
       const info = st.getClipAtTime(st.currentTime);
-      if (info?.clip.id === activeClip.id) {
-        const seekTo = activeClip.trimStart + info.clipLocalTime * activeClip.speed;
+      if (info?.clip.id === displayClip.id) {
+        const seekTo = displayClip.trimStart + info.clipLocalTime * displayClip.speed;
         if (Math.abs(video.currentTime - seekTo) > 0.15) {
           video.currentTime = seekTo;
         }
@@ -83,20 +84,17 @@ export default function VideoPreview({ videoRef }: Props) {
     } else {
       video.pause();
     }
-  }, [isPlaying, activeClip?.id]);
+  }, [isPlaying, displayClip?.id]);
 
   // Sync seek — both during playback (when user manually scrubs) and when paused
   const lastExpectedTimeRef = useRef(videoSeekTime);
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !activeClip) return;
+    if (!video || !displayClip) return;
 
-    // Detect if this is a manual seek (large jump from expected position)
     const drift = Math.abs(videoSeekTime - lastExpectedTimeRef.current);
     const isManualSeek = drift > 0.3;
 
-    // During playback, only force-seek on large jumps (manual scrub)
-    // Small drift is normal playback — the video drives itself
     if (isPlaying && !isManualSeek) {
       lastExpectedTimeRef.current = videoSeekTime;
       return;
@@ -106,16 +104,16 @@ export default function VideoPreview({ videoRef }: Props) {
       video.currentTime = videoSeekTime;
     }
     lastExpectedTimeRef.current = videoSeekTime;
-  }, [currentTime, isPlaying, activeClip?.id]);
+  }, [currentTime, isPlaying, displayClip?.id]);
 
   // Sync speed and volume
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !activeClip) return;
-    video.playbackRate = activeClip.speed * playbackSpeed;
-    video.muted = activeClip.muted;
-    video.volume = activeClip.volume;
-  }, [playbackSpeed, activeClip?.speed, activeClip?.volume, activeClip?.muted, activeClip?.id]);
+    if (!video || !displayClip) return;
+    video.playbackRate = displayClip.speed * playbackSpeed;
+    video.muted = displayClip.muted;
+    video.volume = displayClip.volume;
+  }, [playbackSpeed, displayClip?.speed, displayClip?.volume, displayClip?.muted, displayClip?.id]);
 
   // Time update — video drives nothing during playback (RAF loop in VideoWorkspace drives currentTime)
   // But we still need to handle manual seeks on the video element itself
@@ -187,44 +185,62 @@ export default function VideoPreview({ videoRef }: Props) {
     };
   }, [draggingStickerData, updateStickerOverlay]);
 
+  // ── Sticker resize ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!resizingStickerData) return;
+    const handleMove = (e: MouseEvent) => {
+      const deltaX = (e.clientX - resizingStickerData.startX) / 300;
+      const deltaY = (e.clientY - resizingStickerData.startY) / 300;
+      const delta = (deltaX + deltaY) / 2;
+      const newScale = Math.max(0.1, Math.min(5, resizingStickerData.startScale + delta));
+      updateStickerOverlay(resizingStickerData.id, { scale: newScale });
+    };
+    const handleUp = () => setResizingStickerData(null);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [resizingStickerData, updateStickerOverlay]);
+
   // ── Clip resize for both overlay and full-frame modes ──────────────────
   useEffect(() => {
-    if (!resizing || !activeClip) return;
-    const currentActiveClip = activeClip;
+    if (!resizing || !displayClip || !isClipSelected) return;
+    const currentDisplayClip = displayClip;
     const handleMove = (e: MouseEvent) => {
       const deltaX = (e.clientX - resizing.startX) / 300;
       const deltaY = (e.clientY - resizing.startY) / 300;
       const { corner } = resizing;
 
       // For full-frame mode, scale proportionally from corners
-      if (currentActiveClip.overlayMode === 'full') {
-        const delta = (deltaX + deltaY) / 2; // average for proportional scaling
+      if (currentDisplayClip.overlayMode === 'full') {
+        const delta = (deltaX + deltaY) / 2;
         if (['se', 'e', 's'].includes(corner)) {
-          const newScale = Math.max(0.2, Math.min(3, currentActiveClip.scaleX + delta));
-          updateClip(currentActiveClip.id, { scaleX: newScale, scaleY: newScale });
+          const newScale = Math.max(0.2, Math.min(3, currentDisplayClip.scaleX + delta));
+          updateClip(currentDisplayClip.id, { scaleX: newScale, scaleY: newScale });
         } else if (['nw', 'w', 'n'].includes(corner)) {
-          const newScale = Math.max(0.2, Math.min(3, currentActiveClip.scaleX - delta));
-          updateClip(currentActiveClip.id, { scaleX: newScale, scaleY: newScale });
+          const newScale = Math.max(0.2, Math.min(3, currentDisplayClip.scaleX - delta));
+          updateClip(currentDisplayClip.id, { scaleX: newScale, scaleY: newScale });
         } else if (corner === 'ne') {
-          const newScale = Math.max(0.2, Math.min(3, currentActiveClip.scaleX - deltaY + deltaX));
-          updateClip(currentActiveClip.id, { scaleX: newScale, scaleY: newScale });
+          const newScale = Math.max(0.2, Math.min(3, currentDisplayClip.scaleX - deltaY + deltaX));
+          updateClip(currentDisplayClip.id, { scaleX: newScale, scaleY: newScale });
         } else if (corner === 'sw') {
-          const newScale = Math.max(0.2, Math.min(3, currentActiveClip.scaleX + deltaY - deltaX));
-          updateClip(currentActiveClip.id, { scaleX: newScale, scaleY: newScale });
+          const newScale = Math.max(0.2, Math.min(3, currentDisplayClip.scaleX + deltaY - deltaX));
+          updateClip(currentDisplayClip.id, { scaleX: newScale, scaleY: newScale });
         }
         return;
       }
 
-      // Overlay mode: independent X/Y scaling
       if (corner.includes('e')) {
-        updateClip(currentActiveClip.id, { scaleX: Math.max(0.1, Math.min(2, currentActiveClip.scaleX + deltaX)) });
+        updateClip(currentDisplayClip.id, { scaleX: Math.max(0.1, Math.min(2, currentDisplayClip.scaleX + deltaX)) });
       } else if (corner.includes('w')) {
-        updateClip(currentActiveClip.id, { scaleX: Math.max(0.1, Math.min(2, currentActiveClip.scaleX - deltaX)) });
+        updateClip(currentDisplayClip.id, { scaleX: Math.max(0.1, Math.min(2, currentDisplayClip.scaleX - deltaX)) });
       }
       if (corner.includes('s')) {
-        updateClip(currentActiveClip.id, { scaleY: Math.max(0.1, Math.min(2, currentActiveClip.scaleY + deltaY)) });
+        updateClip(currentDisplayClip.id, { scaleY: Math.max(0.1, Math.min(2, currentDisplayClip.scaleY + deltaY)) });
       } else if (corner.includes('n')) {
-        updateClip(currentActiveClip.id, { scaleY: Math.max(0.1, Math.min(2, currentActiveClip.scaleY - deltaY)) });
+        updateClip(currentDisplayClip.id, { scaleY: Math.max(0.1, Math.min(2, currentDisplayClip.scaleY - deltaY)) });
       }
     };
     const handleUp = () => setResizing(null);
@@ -234,7 +250,7 @@ export default function VideoPreview({ videoRef }: Props) {
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
     };
-  }, [resizing, activeClip, updateClip]);
+  }, [resizing, displayClip, isClipSelected, updateClip]);
 
   // Active overlays and subtitles at current time
   const activeOverlays = project?.textOverlays.filter(
@@ -259,8 +275,8 @@ export default function VideoPreview({ videoRef }: Props) {
 
   // Build CSS filter string from clip filters
   const buildFilterString = (): string => {
-    if (!activeClip) return '';
-    const f = activeClip.filters;
+    if (!displayClip) return '';
+    const f = displayClip.filters;
     const parts: string[] = [];
     if (f.brightness !== 100) parts.push(`brightness(${f.brightness}%)`);
     if (f.contrast !== 100) parts.push(`contrast(${f.contrast}%)`);
@@ -274,8 +290,8 @@ export default function VideoPreview({ videoRef }: Props) {
 
   // Build effects CSS from the clip's effect field
   const buildEffectAnimation = (): React.CSSProperties => {
-    if (!activeClip?.effect) return {};
-    const clip = activeClip;
+    if (!displayClip?.effect) return {};
+    const clip = displayClip;
     const effect = clip.effect;
     const t = currentTime;
 
@@ -325,8 +341,8 @@ export default function VideoPreview({ videoRef }: Props) {
     }
   };
 
-  // No clip placeholder
-  if (!activeClip || !project) {
+  // No clip placeholder — only when there are no video clips at all
+  if (!displayClip || !project) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#0a0a0e] min-h-0 p-6">
         <div
@@ -353,26 +369,26 @@ export default function VideoPreview({ videoRef }: Props) {
         ref={containerRef}
         className="relative bg-zinc-950 rounded-lg overflow-hidden border border-zinc-800"
         style={{ ...getAspectRatioStyle(), maxWidth: '100%', maxHeight: '100%', width: 'auto', height: '100%' }}
-        onClick={() => setActiveClipId(activeClip.id)}
+        onClick={() => { if (displayClip) setActiveClipId(displayClip.id); }}
       >
         {/* Video element */}
         <video
           ref={videoRef}
-          key={activeClip.id}
-          className={activeClip.overlayMode === 'overlay' ? 'absolute object-cover' : 'absolute inset-0 w-full h-full object-cover'}
-          src={activeClip.url}
+          key={displayClip.id}
+          className={displayClip.overlayMode === 'overlay' ? 'absolute object-cover' : 'absolute inset-0 w-full h-full object-cover'}
+          src={displayClip.url}
           preload="metadata"
           playsInline
-          muted={activeClip.muted}
+          muted={displayClip.muted}
           style={{
-            ...(activeClip.overlayMode === 'overlay' ? {
-              left: `${activeClip.clipX}%`,
-              top: `${activeClip.clipY}%`,
+            ...(displayClip.overlayMode === 'overlay' ? {
+              left: `${displayClip.clipX}%`,
+              top: `${displayClip.clipY}%`,
               transform: 'translate(-50%, -50%)',
-              width: `${activeClip.scaleX * 50}%`,
-              height: `${activeClip.scaleY * 50}%`,
+              width: `${displayClip.scaleX * 50}%`,
+              height: `${displayClip.scaleY * 50}%`,
             } : {
-              transform: `translate(${activeClip.offsetX}%, ${activeClip.offsetY}%) scale(${activeClip.scaleX})`,
+              transform: `translate(${displayClip.offsetX}%, ${displayClip.offsetY}%) scale(${displayClip.scaleX})`,
             }),
             filter: buildFilterString(),
             ...buildEffectAnimation(),
@@ -380,8 +396,8 @@ export default function VideoPreview({ videoRef }: Props) {
           onTimeUpdate={handleTimeUpdate}
         />
 
-        {/* Pan/drag area for full frame mode */}
-        {activeClip.overlayMode === 'full' && (
+        {/* Pan/drag area for full frame mode — only when clip is selected for editing */}
+        {isClipSelected && displayClip.overlayMode === 'full' && (
           <div
             className="absolute inset-0 cursor-grab active:cursor-grabbing"
             onMouseDown={(e) => {
@@ -391,7 +407,7 @@ export default function VideoPreview({ videoRef }: Props) {
             }}
             onContextMenu={(e) => {
               e.preventDefault();
-              updateClip(activeClip.id, { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 });
+              updateClip(displayClip.id, { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 });
             }}
             title="Drag to pan, right-click to reset"
           >
@@ -400,9 +416,9 @@ export default function VideoPreview({ videoRef }: Props) {
                 onMouseMove={(e) => {
                   const deltaX = (e.clientX - panning.startX) / 10;
                   const deltaY = (e.clientY - panning.startY) / 10;
-                  updateClip(activeClip.id, {
-                    offsetX: Math.max(-50, Math.min(50, activeClip.offsetX + deltaX)),
-                    offsetY: Math.max(-50, Math.min(50, activeClip.offsetY + deltaY)),
+                  updateClip(displayClip.id, {
+                    offsetX: Math.max(-50, Math.min(50, displayClip.offsetX + deltaX)),
+                    offsetY: Math.max(-50, Math.min(50, displayClip.offsetY + deltaY)),
                   });
                   setPanning({ startX: e.clientX, startY: e.clientY });
                 }}
@@ -415,32 +431,31 @@ export default function VideoPreview({ videoRef }: Props) {
         )}
 
         {/* Scale indicator for full frame mode */}
-        {activeClip.overlayMode === 'full' && activeClip.scaleX !== 1 && (
+        {isClipSelected && displayClip.overlayMode === 'full' && displayClip.scaleX !== 1 && (
             <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-[10px] text-sky-300 px-2 py-1 rounded pointer-events-none z-20 font-mono">
-              {Math.round(activeClip.scaleX * 100)}%
+              {Math.round(displayClip.scaleX * 100)}%
             </div>
         )}
 
         {/* Resize handles for overlay mode */}
-        {activeClip.overlayMode === 'overlay' && (
+        {isClipSelected && displayClip.overlayMode === 'overlay' && (
           <>
             <div
               className="absolute border-2 border-dashed border-sky-400/50 pointer-events-none"
               style={{
-                left: `${activeClip.clipX - activeClip.scaleX * 25}%`,
-                top: `${activeClip.clipY - activeClip.scaleY * 25}%`,
-                width: `${activeClip.scaleX * 50}%`,
-                height: `${activeClip.scaleY * 50}%`,
+                left: `${displayClip.clipX - displayClip.scaleX * 25}%`,
+                top: `${displayClip.clipY - displayClip.scaleY * 25}%`,
+                width: `${displayClip.scaleX * 50}%`,
+                height: `${displayClip.scaleY * 50}%`,
               }}
             />
-            {/* Corner resize handles */}
             {['nw', 'ne', 'sw', 'se'].map(corner => (
               <div
                 key={corner}
                 className="absolute w-2 h-2 bg-sky-400 rounded-full cursor-nwse-resize z-20"
                 style={{
-                  left: corner.includes('e') ? `${activeClip.clipX + activeClip.scaleX * 25}%` : `${activeClip.clipX - activeClip.scaleX * 25}%`,
-                  top: corner.includes('s') ? `${activeClip.clipY + activeClip.scaleY * 25}%` : `${activeClip.clipY - activeClip.scaleY * 25}%`,
+                  left: corner.includes('e') ? `${displayClip.clipX + displayClip.scaleX * 25}%` : `${displayClip.clipX - displayClip.scaleX * 25}%`,
+                  top: corner.includes('s') ? `${displayClip.clipY + displayClip.scaleY * 25}%` : `${displayClip.clipY - displayClip.scaleY * 25}%`,
                   transform: 'translate(-50%, -50%)',
                 }}
                 onMouseDown={(e) => {
@@ -469,7 +484,7 @@ export default function VideoPreview({ videoRef }: Props) {
           </div>
         )}
 
-        {/* Sticker overlays — draggable */}
+        {/* Sticker overlays — draggable and resizable */}
         {activeStickers.map(sticker => (
           <div
             key={sticker.id}
@@ -497,6 +512,17 @@ export default function VideoPreview({ videoRef }: Props) {
               <span style={{ fontSize: sticker.type === 'emoji' ? '2rem' : sticker.type === 'shape' || sticker.type === 'arrow' ? '1.75rem' : '2rem' }}>
                 {sticker.content}
               </span>
+            )}
+            
+            {/* Resize handle for sticker */}
+            {activeStickerOverlayId === sticker.id && sticker.type === 'photo' && (
+              <div
+                className="absolute -bottom-2 -right-2 w-4 h-4 bg-sky-400 rounded-full cursor-nwse-resize z-30"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  setResizingStickerData({ id: sticker.id, startX: e.clientX, startY: e.clientY, startScale: sticker.scale });
+                }}
+              />
             )}
           </div>
         ))}
