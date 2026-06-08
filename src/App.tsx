@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { fabric } from 'fabric';
 import { useStore, SavedDesign, ProjectMode } from './store/useStore';
@@ -38,6 +38,54 @@ export default function App() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [activeDesign, setActiveDesign] = useState<SavedDesign | null>(null);
   const store = useStore();
+
+  // Refs for autosave — keep stable references to avoid closure issues
+  const userRef = useRef<User | null>(null);
+  const viewRef = useRef<AppView>('landing');
+  const activeDesignRef = useRef<SavedDesign | null>(null);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { userRef.current = user; }, [user]);
+  useEffect(() => { viewRef.current = view; }, [view]);
+  useEffect(() => { activeDesignRef.current = activeDesign; }, [activeDesign]);
+
+  // Video project autosave to Supabase — debounced 4 seconds after last change
+  useEffect(() => {
+    const unsub = useVideoStore.subscribe((state) => {
+      if (!state.project || viewRef.current !== 'video-workspace' || !userRef.current) return;
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = setTimeout(async () => {
+        const u = userRef.current;
+        const vp = useVideoStore.getState().project;
+        if (!u || !vp) return;
+        const now = new Date().toISOString();
+        const cur = activeDesignRef.current;
+        const dims = vp.aspectRatio === '16:9' ? { canvasWidth: 1920, canvasHeight: 1080 }
+          : vp.aspectRatio === '1:1' ? { canvasWidth: 1080, canvasHeight: 1080 }
+          : { canvasWidth: 1080, canvasHeight: 1920 };
+        const savedDesign: SavedDesign = {
+          id: cur?.id ?? `design_${Date.now()}`,
+          title: vp.title || 'Untitled Video',
+          pages: [{ page_id: cur?.pages?.[0]?.page_id ?? `page_${Date.now()}`, canvas_data: vp, thumbnail: '' }],
+          canvasWidth: dims.canvasWidth,
+          canvasHeight: dims.canvasHeight,
+          canvasBackground: '#000000',
+          canvasName: vp.title || 'Untitled Video',
+          projectMode: 'video',
+          createdAt: cur?.createdAt ?? now,
+          updatedAt: now,
+        };
+        try {
+          const actualId = await saveUserDesign(u.id, savedDesign);
+          savedDesign.id = actualId;
+          activeDesignRef.current = savedDesign;
+          setActiveDesign(savedDesign);
+          localStorage.setItem(LAST_DESIGN_KEY, actualId);
+        } catch { /* silent fail */ }
+      }, 4000);
+    });
+    return () => { unsub(); if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current); };
+  }, []);
 
   const persistView = (nextView: AppView) => {
     setView(nextView);
@@ -163,99 +211,34 @@ export default function App() {
       }
     })();
 
-    // Listen for auth state changes (login/logout from other tabs, etc.)
-    const { data: { subscription } } = onAuthStateChange(async (newUser, event) => {
-      // On tab focus (INITIAL_SESSION), fully restore the workspace state
-      if (event === 'INITIAL_SESSION') {
-        if (newUser) {
+    // Listen for auth state changes — only act on real sign-in/sign-out events.
+    // INITIAL_SESSION fires on page load AND on every tab focus (Supabase rehydrates the session).
+    // TOKEN_REFRESHED fires silently in the background.
+    // Neither should touch navigation — the startup IIFE above already handles the initial restore.
+    const { data: { subscription } } = onAuthStateChange((newUser, event) => {
+      if (event === 'SIGNED_IN') {
+        // Only redirect when coming from a logged-out state (e.g. just completed login)
+        if (!user) {
           setUser(newUser);
-          await fetchUsername(newUser.id);
-          const savedDesigns = await fetchDesigns(newUser.id);
-
-          const lastView = localStorage.getItem(LAST_VIEW_KEY);
-          const lastDesignId = localStorage.getItem(LAST_DESIGN_KEY);
-
-          if (lastView === 'workspace') {
-            if (lastDesignId) {
-              const design = savedDesigns.find(d => d.id === lastDesignId);
-              if (design) {
-                setActiveDesign(design);
-                await store.loadDesign(design);
-                setView('workspace');
-                return;
-              }
-            }
-            store.resetWorkspace();
-            setView('workspace');
-            return;
+          if (newUser) {
+            fetchUsername(newUser.id);
+            fetchDesigns(newUser.id);
+            persistView('dashboard');
           }
-
-          if (lastView === 'video-workspace') {
-            // Try to restore from a saved design first
-            if (lastDesignId) {
-              const design = savedDesigns.find(d => d.id === lastDesignId && d.projectMode === 'video');
-              if (design) {
-                setActiveDesign(design);
-                useVideoStore.getState().resetStore();
-                const savedProject = design.pages[0]?.canvas_data as any;
-                if (savedProject?.id) {
-                  useVideoStore.getState().loadProject(savedProject);
-                } else {
-                  useVideoStore.getState().createProject(design.title);
-                }
-                setView('video-workspace');
-                return;
-              }
-            }
-            // Fall back to the in-progress video project stored in IndexedDB / localStorage
-            const idbProject = await loadFromIndexedDB(VIDEO_PROJECT_STORAGE_KEY) as any;
-            const rawProject = idbProject ? JSON.stringify(idbProject) : localStorage.getItem(VIDEO_PROJECT_STORAGE_KEY);
-            if (rawProject) {
-              try {
-                const parsed = JSON.parse(rawProject);
-                useVideoStore.getState().resetStore();
-                if (parsed?.id) {
-                  useVideoStore.getState().loadProject(parsed);
-                } else {
-                  useVideoStore.getState().createProject('Untitled Video');
-                }
-                setView('video-workspace');
-                return;
-              } catch { /* fall through */ }
-            }
-            // No project data — open a fresh video workspace
-            useVideoStore.getState().resetStore();
-            useVideoStore.getState().createProject('Untitled Video');
-            setView('video-workspace');
-            return;
-          }
-
-          if (lastView === 'dashboard') {
-            setView('dashboard');
-            return;
-          }
+        } else {
+          // Already authenticated — session was silently refreshed, do nothing
+          setUser(newUser);
         }
         return;
       }
 
-      // TOKEN_REFRESHED just keeps session fresh
-      if (event === 'TOKEN_REFRESHED') {
-        if (newUser) {
-          setUser(newUser);
-          fetchUsername(newUser.id);
-        }
+      if (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+        // Silent session refresh — keep user object current, never touch navigation
+        if (newUser) setUser(newUser);
         return;
       }
-      if (newUser) {
-        // Only redirect to dashboard on a real sign-in, not a session restore
-        const alreadyAuthed = !!user;
-        setUser(newUser);
-        fetchUsername(newUser.id);
-        fetchDesigns(newUser.id);
-        if (!alreadyAuthed) {
-          persistView('dashboard');
-        }
-      } else {
+
+      if (event === 'SIGNED_OUT') {
         setUser(null);
         setUsername('Guest');
         setDesigns([]);
