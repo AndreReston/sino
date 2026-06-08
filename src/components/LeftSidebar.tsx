@@ -1119,6 +1119,56 @@ function AdjustmentsPanel() {
           </button>
         </div>
       )}
+      {/* Filter presets */}
+      <div className="mt-4">
+        <p className="text-xs text-zinc-500 mb-2">Filter Presets</p>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { id: 'vintage', label: 'Vintage', adj: { brightness: -10, contrast: 5, saturation: -20, hue: -10 } },
+            { id: 'cinematic', label: 'Cinematic', adj: { brightness: -5, contrast: 15, saturation: -10, hue: 5 } },
+            { id: 'bw', label: 'B & W', adj: { brightness: 0, contrast: 10, saturation: -100, hue: 0 } },
+            { id: 'bright', label: 'Bright', adj: { brightness: 20, contrast: 5, saturation: 10, hue: 0 } },
+            { id: 'cool', label: 'Cool', adj: { brightness: 0, contrast: 0, saturation: -5, hue: -10 } },
+          ] as const).map((p) => (
+            <button
+              key={p.id}
+              onClick={() => {
+                const next = { ...selectedObjectAdjustments, ...p.adj } as any;
+                setObjectAdjustments(next);
+                if (isImage && activeObject) applyAdjustmentsToObject(activeObject, next);
+              }}
+              className="px-3 py-2 rounded-xl bg-panel-light border border-panel-border text-xs text-zinc-200 hover:text-white hover:bg-panel-hover transition-colors"
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Page transition control */}
+      <div className="mt-4">
+        <p className="text-xs text-zinc-500 mb-2">Page Transition</p>
+        <PageTransitionSelector />
+      </div>
+    </div>
+  );
+}
+
+function PageTransitionSelector() {
+  const { pageTransitionType, setPageTransitionType } = useStore();
+  const TRANS: PageTransition[] = ['fade', 'slide-left', 'slide-right', 'slide-up', 'slide-down', 'zoom-in', 'zoom-out', 'rotate', 'wipe-left', 'wipe-right'];
+  return (
+    <div className="space-y-2">
+      <select
+        value={pageTransitionType}
+        onChange={(e) => setPageTransitionType(e.target.value as any)}
+        className="w-full input-field text-sm"
+      >
+        {TRANS.map((t) => (
+          <option key={t} value={t}>{t.replace(/-/g, ' ')}</option>
+        ))}
+      </select>
+      <p className="text-[11px] text-zinc-500">Sets the default page transition between pages when navigating or exporting.</p>
     </div>
   );
 }

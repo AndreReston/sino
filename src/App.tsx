@@ -23,6 +23,7 @@ import {
   getUserProfile,
   onAuthStateChange,
 } from './lib/userStorage';
+import { projectHasEphemeralUrls } from './lib/mediaUpload';
 
 type AppView = 'landing' | 'auth' | 'dashboard' | 'workspace' | 'video-workspace';
 
@@ -57,7 +58,7 @@ export default function App() {
       autosaveTimerRef.current = setTimeout(async () => {
         const u = userRef.current;
         const vp = useVideoStore.getState().project;
-        if (!u || !vp) return;
+        if (!u || !vp || projectHasEphemeralUrls(vp)) return;
         const now = new Date().toISOString();
         const cur = activeDesignRef.current;
         const dims = vp.aspectRatio === '16:9' ? { canvasWidth: 1920, canvasHeight: 1080 }
@@ -372,6 +373,10 @@ export default function App() {
     if (view === 'video-workspace') {
       const videoProject = useVideoStore.getState().project;
       if (!videoProject) return;
+      if (projectHasEphemeralUrls(videoProject)) {
+        console.warn('Cannot save project: some media files were not uploaded to the cloud. Sign in and re-upload them.');
+        return;
+      }
 
       const dims = getVideoCanvasSize(videoProject.aspectRatio);
       savedDesign = {

@@ -9,8 +9,12 @@ import {
   useVideoStore, DEFAULT_FILTERS, VideoFilters, TransitionType,
   CaptionStyle, ClipEffect, MotionPreset,
 } from '../../store/videoStore';
-import { uploadMediaFile } from '../../lib/userStorage';
-import { supabase } from '../../lib/supabase';
+import {
+  uploadMediaForPersistence,
+  getVideoDuration,
+  getAudioDuration,
+  countEphemeralUrls,
+} from '../../lib/mediaUpload';
 
 type Panel = 'clips' | 'photos' | 'text' | 'filters' | 'effects' | 'audio' | 'transitions' | 'subtitles' | 'export' | 'stickers' | 'markers' | 'beats' | 'stats' | 'presets';
 
@@ -192,6 +196,8 @@ function AutoSubtitleDistributor() {
 
 export default function VideoSidebar() {
   const [activePanel, setActivePanel] = useState<Panel>('clips');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -222,44 +228,51 @@ export default function VideoSidebar() {
   const stats = getProjectStats();
 
   const handleVideoUpload = async (file: File) => {
-    const blobUrl = URL.createObjectURL(file);
-    const video = document.createElement('video');
-    video.preload = 'metadata';
-    video.onloadedmetadata = async () => {
-      let persistentUrl = blobUrl;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const storageUrl = await uploadMediaFile(file);
-        if (storageUrl) persistentUrl = storageUrl;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const [{ url, error }, duration] = await Promise.all([
+        uploadMediaForPersistence(file),
+        getVideoDuration(file),
+      ]);
+      if (!url) {
+        setUploadError(error ?? 'Upload failed');
+        return;
       }
-      addClip({ url: persistentUrl, name: file.name, duration: video.duration, trimStart: 0, trimEnd: 0, volume: 1 });
-    };
-    video.src = blobUrl;
+      addClip({ url, name: file.name, duration, trimStart: 0, trimEnd: 0, volume: 1 });
+    } catch {
+      setUploadError('Could not read video file.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleAudioUpload = async (file: File) => {
-    const blobUrl = URL.createObjectURL(file);
-    const tempAudio = new Audio(blobUrl);
-    tempAudio.preload = 'metadata';
-    tempAudio.addEventListener('loadedmetadata', async () => {
-      const dur = isFinite(tempAudio.duration) ? tempAudio.duration : 0;
-      let persistentUrl = blobUrl;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const storageUrl = await uploadMediaFile(file);
-        if (storageUrl) persistentUrl = storageUrl;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const [{ url, error }, duration] = await Promise.all([
+        uploadMediaForPersistence(file),
+        getAudioDuration(file),
+      ]);
+      if (!url) {
+        setUploadError(error ?? 'Upload failed');
+        return;
       }
       setBackgroundMusic({
         id: `bg_${Date.now()}`,
-        url: persistentUrl,
+        url,
         name: file.name,
         volume: 0.8,
         muted: false,
         startTime: 0,
-        duration: dur,
+        duration,
       });
-    }, { once: true });
-    tempAudio.load();
+    } catch {
+      setUploadError('Could not read audio file.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleBeatAudioUpload = (file: File) => {
@@ -268,14 +281,18 @@ export default function VideoSidebar() {
   };
 
   const handlePhotoUpload = async (file: File) => {
-    const blobUrl = URL.createObjectURL(file);
-    let persistentUrl = blobUrl;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const storageUrl = await uploadMediaFile(file);
-      if (storageUrl) persistentUrl = storageUrl;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const { url, error } = await uploadMediaForPersistence(file);
+      if (!url) {
+        setUploadError(error ?? 'Upload failed');
+        return;
+      }
+      addStickerOverlay('photo', url);
+    } finally {
+      setUploading(false);
     }
-    addStickerOverlay('photo', persistentUrl);
   };
 
   const handleStockPhoto = (url: string) => {
@@ -303,6 +320,25 @@ export default function VideoSidebar() {
         <div className="px-4 py-3 border-b border-white/[0.06] shrink-0">
           <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">{PANELS.find(p => p.id === activePanel)?.label}</p>
         </div>
+        {(uploading || uploadError || (project && countEphemeralUrls(project) > 0)) && (
+          <div className="px-3 pt-3 shrink-0 space-y-2">
+            {uploading && (
+              <p className="text-[11px] text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-lg px-3 py-2">
+                Uploading to cloud…
+              </p>
+            )}
+            {uploadError && (
+              <p className="text-[11px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                {uploadError}
+              </p>
+            )}
+            {!uploading && project && countEphemeralUrls(project) > 0 && (
+              <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                {countEphemeralUrls(project)} file(s) in this project are missing — re-upload them while signed in.
+              </p>
+            )}
+          </div>
+        )}
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
 
           {/* ── Clips Panel ─────────────────────────────────── */}

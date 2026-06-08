@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useVideoStore } from '../../store/videoStore';
 import VideoSidebar from './VideoSidebar';
 import VideoPreview from './VideoPreview';
@@ -7,8 +7,7 @@ import VideoTimeline from './VideoTimeline';
 import PlaybackControls from './PlaybackControls';
 import VideoTopBar from './VideoTopBar';
 import { ArrowLeft, Film, Upload } from 'lucide-react';
-import { uploadMediaFile } from '../../lib/userStorage';
-import { supabase } from '../../lib/supabase';
+import { uploadMediaForPersistence, getVideoDuration, countEphemeralUrls } from '../../lib/mediaUpload';
 
 interface Props {
   onBack?: () => void;
@@ -57,6 +56,7 @@ export default function VideoWorkspace({ onBack }: Props) {
   const createProject = useVideoStore(s => s.createProject);
   const addClip = useVideoStore(s => s.addClip);
 
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const bgAudioRef = useRef<HTMLAudioElement>(null);
@@ -321,26 +321,21 @@ export default function VideoWorkspace({ onBack }: Props) {
   }, []);
 
   const handleVideoUpload = async (file: File) => {
-    // Immediately create a blob URL for instant preview
-    const blobUrl = URL.createObjectURL(file);
-    const video = document.createElement('video');
-    video.preload = 'metadata';
-    video.onloadedmetadata = async () => {
-      if (!useVideoStore.getState().project) createProject();
-
-      // Try to upload to Supabase Storage for persistence
-      let persistentUrl = blobUrl;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const storageUrl = await uploadMediaFile(file);
-        if (storageUrl) {
-          persistentUrl = storageUrl;
-        }
+    setUploadError(null);
+    if (!useVideoStore.getState().project) createProject();
+    try {
+      const [{ url, error }, duration] = await Promise.all([
+        uploadMediaForPersistence(file),
+        getVideoDuration(file),
+      ]);
+      if (!url) {
+        setUploadError(error ?? 'Upload failed');
+        return;
       }
-
-      addClip({ url: persistentUrl, name: file.name, duration: video.duration, trimStart: 0, trimEnd: 0, volume: 1 });
-    };
-    video.src = blobUrl;
+      addClip({ url, name: file.name, duration, trimStart: 0, trimEnd: 0, volume: 1 });
+    } catch {
+      setUploadError('Could not read video file.');
+    }
   };
 
   if (!project) {
@@ -394,12 +389,27 @@ export default function VideoWorkspace({ onBack }: Props) {
     );
   }
 
+  const brokenMediaCount = project ? countEphemeralUrls(project) : 0;
+
   return (
     <div className="flex h-screen bg-[#07070a] text-white overflow-hidden select-none">
       {/* Hidden audio element for background music */}
       <audio ref={bgAudioRef} preload="auto" />
       <VideoSidebar />
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
+        {(uploadError || brokenMediaCount > 0) && (
+          <div className="shrink-0 px-4 py-2 border-b border-white/[0.06] bg-[#0f0f12] space-y-1">
+            {uploadError && (
+              <p className="text-xs text-red-300">{uploadError}</p>
+            )}
+            {brokenMediaCount > 0 && (
+              <p className="text-xs text-amber-300">
+                {brokenMediaCount} media file{brokenMediaCount > 1 ? 's' : ''} could not be loaded (temporary links expired).
+                Sign in and re-upload your clips, audio, and photos.
+              </p>
+            )}
+          </div>
+        )}
         <VideoTopBar onBack={onBack} />
         <div className="flex flex-1 min-w-0 min-h-0">
           <VideoPreview videoRef={videoRef} />

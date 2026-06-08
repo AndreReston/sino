@@ -261,15 +261,34 @@ export const deleteUserMedia = async (mediaId: string) => {
 
 // ── Supabase Storage Upload ──────────────────────────────────────────
 
+const CONTENT_TYPE_ALIASES: Record<string, string> = {
+  'audio/mp3': 'audio/mpeg',
+  'audio/x-mp3': 'audio/mpeg',
+  'audio/x-mpeg': 'audio/mpeg',
+  'audio/x-mpeg-3': 'audio/mpeg',
+};
+
+function normalizeUploadContentType(file: File): string | undefined {
+  if (!file.type) return undefined;
+  return CONTENT_TYPE_ALIASES[file.type] ?? file.type;
+}
+
+function sanitizeFileName(fileName: string): string {
+  const normalized = fileName.normalize('NFKD').replace(/[\u0000-\u001F\u007F]+/g, '');
+  const safeName = normalized.replace(/[^a-zA-Z0-9._-]+/g, '_');
+  return safeName || 'upload';
+}
+
 export const uploadMediaFile = async (file: File): Promise<string | null> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const path = `${user.id}/${Date.now()}_${file.name}`;
+  const path = `${user.id}/${Date.now()}_${sanitizeFileName(file.name)}`;
+  const contentType = normalizeUploadContentType(file);
 
   const { error } = await supabase.storage
     .from('media')
-    .upload(path, file, { upsert: false });
+    .upload(path, file, { upsert: false, contentType });
 
   if (error) {
     console.error('Failed to upload media file:', error);
