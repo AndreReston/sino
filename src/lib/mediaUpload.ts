@@ -59,7 +59,7 @@ async function uploadToLocalServer(file: File): Promise<string | null> {
  * Upload a file to durable storage. Prefers Supabase when signed in.
  * Never returns a blob: URL — those only work in the current browser session.
  */
-export const MAX_MEDIA_FILE_SIZE = 50 * 1024 * 1024;
+export const MAX_MEDIA_FILE_SIZE = 250 * 1024 * 1024;
 
 export async function uploadMediaForPersistence(
   file: File
@@ -69,7 +69,7 @@ export async function uploadMediaForPersistence(
   if (file.size > MAX_MEDIA_FILE_SIZE) {
     return {
       url: null,
-      error: 'File is too large for upload. Maximum allowed size is 50 MB.',
+      error: 'File is too large for upload. Maximum allowed size is 250 MB.',
     };
   }
 
