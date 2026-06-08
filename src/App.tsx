@@ -165,14 +165,19 @@ export default function App() {
 
     // Listen for auth state changes (login/logout from other tabs, etc.)
     const { data: { subscription } } = onAuthStateChange(async (newUser, event) => {
-      // On tab focus (INITIAL_SESSION), just refresh user data without resetting the view
+      // On tab focus (INITIAL_SESSION), restore the persisted view
       if (event === 'INITIAL_SESSION') {
         if (newUser) {
           setUser(newUser);
           await fetchUsername(newUser.id);
-          fetchDesigns(newUser.id);
+          await fetchDesigns(newUser.id);
+
+          // Restore the view the user was on before switching tabs
+          const lastView = localStorage.getItem(LAST_VIEW_KEY);
+          if (lastView && (lastView === 'workspace' || lastView === 'video-workspace')) {
+            setView(lastView as AppView);
+          }
         }
-        // Do NOT change view or reset stores — the user is already where they want to be
         return;
       }
 
