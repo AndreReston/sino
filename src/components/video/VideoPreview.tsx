@@ -296,8 +296,9 @@ export default function VideoPreview({ videoRef }: Props) {
     const t = currentTime;
 
     const getAnimatedValue = (startVal: number, endVal: number, startTime: number, endTime: number) => {
-      const progress = Math.max(0, Math.min(1, (t - startTime) / (endTime - startTime)));
-      return startVal + (endVal - startVal) * progress;
+      const progress = Math.max(0, Math.min(1, (clipLocalTime - startTime) / Math.max(0.001, endTime - startTime)));
+      const ease = 1 - Math.pow(1 - progress, 2);
+      return startVal + (endVal - startVal) * ease;
     };
 
     const effStart = 0;
@@ -325,6 +326,36 @@ export default function VideoPreview({ videoRef }: Props) {
         return { filter: 'sepia(30%) contrast(120%) brightness(90%) saturate(130%)' };
       case 'glitch':
         return { animation: 'glitch 0.3s infinite' };
+      default:
+        return {};
+    }
+  };
+
+  const getTransitionOutStyle = (): React.CSSProperties => {
+    if (!displayClip || !displayClip.transitionOut || displayClip.transitionOut === 'none') return {};
+    const dur = displayClip.transitionDuration ?? 0.5;
+    const clipEffectiveDur = (displayClip.duration - displayClip.trimStart - displayClip.trimEnd) / Math.max(0.25, displayClip.speed);
+    if (clipLocalTime < clipEffectiveDur - dur) return {};
+    const progress = Math.max(0, Math.min(1, (clipEffectiveDur - clipLocalTime) / dur));
+    const ease = 1 - Math.pow(1 - progress, 2);
+    const opacity = displayClip.opacity ?? 1;
+
+    switch (displayClip.transitionOut) {
+      case 'fade':
+      case 'crossfade':
+        return { opacity: opacity * ease };
+      case 'slide-left':
+        return { clipPath: `inset(0 ${Math.round((1 - ease) * 100)}% 0 0)` };
+      case 'slide-right':
+        return { clipPath: `inset(0 0 0 ${Math.round((1 - ease) * 100)}%)` };
+      case 'slide-up':
+        return { clipPath: `inset(${Math.round((1 - ease) * 100)}% 0 0 0)` };
+      case 'slide-down':
+        return { clipPath: `inset(0 0 ${Math.round((1 - ease) * 100)}% 0)` };
+      case 'wipe-left':
+        return { clipPath: `inset(0 ${Math.round((1 - ease) * 100)}% 0 0)` };
+      case 'wipe-right':
+        return { clipPath: `inset(0 0 0 ${Math.round((1 - ease) * 100)}%)` };
       default:
         return {};
     }
@@ -439,7 +470,6 @@ export default function VideoPreview({ videoRef }: Props) {
           return (
             <video
               ref={videoRef}
-              key={displayClip.id}
               className={displayClip.overlayMode === 'overlay' ? 'absolute object-cover' : 'absolute inset-0 w-full h-full object-cover'}
               src={displayClip.url}
               preload="metadata"
@@ -456,8 +486,9 @@ export default function VideoPreview({ videoRef }: Props) {
                   transform: fullTransform,
                 }),
                 filter: combinedFilter,
-                opacity: finalOpacity,
-                clipPath: transStyle.clipPath,
+                opacity: transOutStyle.opacity !== undefined ? transOutStyle.opacity : finalOpacity,
+                clipPath: transStyle.clipPath || transOutStyle.clipPath,
+                transition: transOutStyle.clipPath ? 'clip-path 0.05s linear' : undefined,
                 ...(effectAnim.animation ? { animation: effectAnim.animation as string } : {}),
               }}
               onTimeUpdate={handleTimeUpdate}

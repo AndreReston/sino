@@ -35,6 +35,7 @@ export interface VideoClip {
   muted: boolean;
   filters: VideoFilters;
   transitionIn: TransitionType;
+  transitionOut: TransitionType;
   transitionDuration: number;  // seconds, default 0.5
   effectDuration: number;      // seconds for in/out effects, default = full clip
   thumbnails: string[];   // data URLs of frame snapshots
@@ -672,6 +673,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
       muted: false,
       filters: { ...DEFAULT_FILTERS },
       transitionIn: 'none',
+      transitionOut: 'none',
       transitionDuration: 0.5,
       effectDuration: 0,  // 0 = full clip duration
       thumbnails: [],

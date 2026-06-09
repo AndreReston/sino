@@ -279,7 +279,7 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
 
       <SectionDivider />
 
-      {/* Transition */}
+      {/* Transition In */}
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
           <ArrowRightLeft className="w-3.5 h-3.5 text-sky-400" /> Transition In
@@ -298,6 +298,36 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
               value={clip.transitionDuration ?? 0.5}
               onChange={e => updateClip(clip.id, { transitionDuration: parseFloat(e.target.value) })}
               className="w-full h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+            />
+            <div className="flex justify-between text-[10px] text-zinc-600">
+              <span>0.1s</span>
+              <span>{Math.min(3, effectiveDuration * 0.5).toFixed(1)}s max</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <SectionDivider />
+
+      {/* Transition Out */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+          <ArrowRightLeft className="w-3.5 h-3.5 text-orange-400" /> Transition Out
+        </h3>
+        <select value={clip.transitionOut} onChange={e => updateClip(clip.id, { transitionOut: e.target.value as TransitionType })}
+          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 text-sm focus:outline-none focus:border-sky-500">
+          {TRANSITIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+        </select>
+        {clip.transitionOut !== 'none' && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded p-2.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-400">Duration</span>
+              <span className="text-xs text-zinc-200 font-mono">{(clip.transitionDuration ?? 0.5).toFixed(1)}s</span>
+            </div>
+            <input type="range" min={0.1} max={Math.min(3, effectiveDuration * 0.5)} step={0.1}
+              value={clip.transitionDuration ?? 0.5}
+              onChange={e => updateClip(clip.id, { transitionDuration: parseFloat(e.target.value) })}
+              className="w-full h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
             />
             <div className="flex justify-between text-[10px] text-zinc-600">
               <span>0.1s</span>
