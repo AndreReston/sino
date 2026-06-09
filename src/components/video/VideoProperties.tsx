@@ -1,5 +1,5 @@
 import { Trash2, Scissors, RotateCcw, Volume2, VolumeX, Gauge, Sparkles, Diamond, Layers, Activity, Zap, ArrowRightLeft, Move, Maximize2, Music } from 'lucide-react';
-import { useVideoStore, VideoFilters, ClipEffect, TransitionType, Keyframe, VideoClip, TextOverlay, SubtitleEntry, MotionPreset, AudioTrack, StickerOverlay } from '../../store/videoStore';
+import { useVideoStore, VideoFilters, DEFAULT_FILTERS, ClipEffect, TransitionType, Keyframe, VideoClip, TextOverlay, SubtitleEntry, MotionPreset, AudioTrack, StickerOverlay } from '../../store/videoStore';
 
 const EFFECTS: { id: ClipEffect; label: string }[] = [
   { id: 'none', label: 'None' }, { id: 'shake', label: 'Shake' },
@@ -237,6 +237,8 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
             <option value="full">Full Frame (with Pan/Crop)</option>
             <option value="overlay">Overlay / PIP</option>
           </select>
+          <LabeledSlider label="Opacity" value={clip.opacity ?? 1} min={0} max={1} step={0.01}
+            display={`${Math.round((clip.opacity ?? 1) * 100)}%`} onChange={v => updateClip(clip.id, { opacity: v })} />
 
           {/* Pan/Crop controls for full frame mode */}
           {clip.overlayMode === 'full' && (
@@ -674,6 +676,27 @@ function SubtitleProperties({ subtitle }: SubtitlePropertiesProps) {
 
       <SectionDivider />
 
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-zinc-200">Position</h3>
+        <div className="grid grid-cols-3 gap-1.5">
+          {(['top', 'middle', 'bottom'] as const).map(pos => (
+            <button
+              key={pos}
+              onClick={() => handleUpdate({ position: pos })}
+              className={`px-2 py-2 rounded text-xs font-medium transition-all ${
+                (subtitle.position ?? 'bottom') === pos
+                  ? 'bg-sky-500 text-white'
+                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+              }`}
+            >
+              {pos.charAt(0).toUpperCase() + pos.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <SectionDivider />
+
       <button onClick={handleDelete}
         className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium text-white transition">
         <Trash2 className="w-4 h-4" /> Delete Subtitle
@@ -778,6 +801,45 @@ function StickerProperties({ sticker }: StickerPropertiesProps) {
             display={`${(sticker.transitionDuration ?? 0.5).toFixed(2)}s`} onChange={v => handleUpdate({ transitionDuration: v })} />
         </div>
       </div>
+
+      {sticker.type === 'photo' && (
+        <>
+          <SectionDivider />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-zinc-200">Filters</h3>
+              <button
+                onClick={() => handleUpdate({ photoFilters: { ...DEFAULT_FILTERS } })}
+                className="text-[10px] text-zinc-500 hover:text-sky-300 transition-colors"
+              >
+                Reset
+              </button>
+            </div>
+            <div className="space-y-2">
+              {(Object.keys(DEFAULT_FILTERS) as (keyof VideoFilters)[]).map(key => {
+                const ranges: Record<keyof VideoFilters, [number, number]> = {
+                  brightness: [0, 200], contrast: [0, 200], saturation: [0, 200],
+                  blur: [0, 20], grayscale: [0, 100], sepia: [0, 100], hueRotate: [0, 360],
+                };
+                const [min, max] = ranges[key];
+                const filters = sticker.photoFilters ?? DEFAULT_FILTERS;
+                const value = filters[key];
+                return (
+                  <div key={key} className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs text-zinc-400 capitalize">{key.replace(/([A-Z])/g, ' $1')}</label>
+                      <span className="text-xs text-zinc-300">{value}{key === 'blur' ? 'px' : key === 'hueRotate' ? 'deg' : '%'}</span>
+                    </div>
+                    <input type="range" min={min} max={max} step={1} value={value}
+                      onChange={e => handleUpdate({ photoFilters: { ...(sticker.photoFilters ?? DEFAULT_FILTERS), [key]: parseFloat(e.target.value) } })}
+                      className="w-full h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-sky-500" />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
 
       <SectionDivider />
 

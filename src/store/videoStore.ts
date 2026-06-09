@@ -48,6 +48,7 @@ export interface VideoClip {
   clipX: number;         // percentage 0-100, default 50 (center)
   clipY: number;         // percentage 0-100, default 50 (center)
   overlayMode: 'full' | 'overlay';  // full = fill frame, overlay = positioned
+  opacity: number;       // 0-1, default 1
   offsetX: number;       // pan/crop X offset as percentage -100 to 100, default 0
   offsetY: number;       // pan/crop Y offset as percentage -100 to 100, default 0
   // health data
@@ -108,6 +109,7 @@ export interface StickerOverlay {
   transitionOut?: TransitionType;
   transitionDuration?: number;  // seconds, default 0.5
   opacity?: number;      // 0-1, default 1
+  photoFilters?: VideoFilters; // per-photo filters, only for type === 'photo'
 }
 
 export interface SubtitleEntry {
@@ -116,6 +118,7 @@ export interface SubtitleEntry {
   startTime: number;
   endTime: number;
   style: CaptionStyle;
+  position?: 'top' | 'middle' | 'bottom';
 }
 
 export interface AudioTrack {
@@ -525,6 +528,11 @@ export const useVideoStore = create<VStore>((set, get) => ({
         effect: c.effect || 'none',
         keyframes: c.keyframes || [],
         effectStack: c.effectStack || [],
+        opacity: (c as any).opacity ?? 1,
+      })),
+      subtitles: (project.subtitles || []).map((s: any) => ({
+        ...s,
+        position: s.position ?? 'bottom',
       })),
     };
     set({
@@ -585,8 +593,13 @@ export const useVideoStore = create<VStore>((set, get) => ({
           clipX: (clip as any).clipX ?? 50,
           clipY: (clip as any).clipY ?? 50,
           overlayMode: (clip as any).overlayMode ?? 'full',
+          opacity: (clip as any).opacity ?? 1,
           offsetX: (clip as any).offsetX ?? 0,
           offsetY: (clip as any).offsetY ?? 0,
+        }));
+        const migratedSubtitles = (project.subtitles || []).map((s: any) => ({
+          ...s,
+          position: s.position ?? 'bottom',
         }));
         const migratedProject: VideoProject = {
           ...project,
@@ -594,6 +607,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
           sceneMarkers: project.sceneMarkers || [],
           beatMarkers: project.beatMarkers || [],
           clips: migratedClips,
+          subtitles: migratedSubtitles,
         };
         const serialized = JSON.stringify(migratedProject);
         set({ project: migratedProject, history: [serialized], historyIndex: 0 });
@@ -618,8 +632,13 @@ export const useVideoStore = create<VStore>((set, get) => ({
           clipX: (clip as any).clipX ?? 50,
           clipY: (clip as any).clipY ?? 50,
           overlayMode: (clip as any).overlayMode ?? 'full',
+          opacity: (clip as any).opacity ?? 1,
           offsetX: (clip as any).offsetX ?? 0,
           offsetY: (clip as any).offsetY ?? 0,
+        }));
+        const migratedSubtitles2 = (project.subtitles || []).map((s: any) => ({
+          ...s,
+          position: s.position ?? 'bottom',
         }));
         const migratedProject: VideoProject = {
           ...project,
@@ -627,6 +646,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
           sceneMarkers: project.sceneMarkers || [],
           beatMarkers: project.beatMarkers || [],
           clips: migratedClips,
+          subtitles: migratedSubtitles2,
         };
         set({ project: migratedProject, history: [raw], historyIndex: 0 });
         // Migrate to IndexedDB
@@ -664,6 +684,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
       clipX: 50,
       clipY: 50,
       overlayMode: 'full',
+      opacity: 1,
       offsetX: 0,
       offsetY: 0,
     };
@@ -994,6 +1015,8 @@ export const useVideoStore = create<VStore>((set, get) => ({
       startTime: currentTime,
       endTime: Math.min(currentTime + 5, total || currentTime + 5),
       color: '#ffffff',
+      opacity: 1,
+      ...(type === 'photo' ? { photoFilters: { ...DEFAULT_FILTERS } } : {}),
     };
     set({
       project: { ...project, stickerOverlays: [...(project.stickerOverlays || []), sticker] },
@@ -1034,6 +1057,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
       startTime: start ?? currentTime,
       endTime: end ?? currentTime + 3,
       style: 'tiktok',
+      position: 'bottom',
     };
     set({ project: { ...project, subtitles: [...project.subtitles, sub] }, activeSubtitleId: sub.id });
     get().pushHistory();
@@ -1067,6 +1091,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
       startTime: i * segDuration,
       endTime: (i + 1) * segDuration,
       style: 'tiktok' as CaptionStyle,
+      position: 'bottom' as const,
     }));
     set({ project: { ...project, subtitles: [...project.subtitles, ...subtitles] } });
     get().pushHistory();

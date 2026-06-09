@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { useVideoStore } from '../../store/videoStore';
+import { useVideoStore, DEFAULT_FILTERS } from '../../store/videoStore';
 import { Play } from 'lucide-react';
 
 interface Props {
@@ -341,6 +341,50 @@ export default function VideoPreview({ videoRef }: Props) {
     }
   };
 
+  // Compute transition overlay opacity/clipPath at clip start
+  const buildTransitionStyle = (): React.CSSProperties => {
+    if (!displayClip || displayClip.transitionIn === 'none') return {};
+    const dur = displayClip.transitionDuration ?? 0.5;
+    if (clipLocalTime >= dur) return {};
+    const progress = clipLocalTime / dur;
+    const ease = 1 - Math.pow(1 - progress, 2); // ease-out quadratic
+
+    switch (displayClip.transitionIn) {
+      case 'fade':
+      case 'crossfade':
+        return { opacity: (displayClip.opacity ?? 1) * ease };
+      case 'slide-left':
+        return { clipPath: `inset(0 ${Math.round((1 - ease) * 100)}% 0 0)` };
+      case 'slide-right':
+        return { clipPath: `inset(0 0 0 ${Math.round((1 - ease) * 100)}%)` };
+      case 'slide-up':
+        return { clipPath: `inset(${Math.round((1 - ease) * 100)}% 0 0 0)` };
+      case 'slide-down':
+        return { clipPath: `inset(0 0 ${Math.round((1 - ease) * 100)}% 0)` };
+      case 'wipe-left':
+        return { clipPath: `inset(0 ${Math.round((1 - ease) * 100)}% 0 0)` };
+      case 'wipe-right':
+        return { clipPath: `inset(0 0 0 ${Math.round((1 - ease) * 100)}%)` };
+      default:
+        return {};
+    }
+  };
+
+  // Build photo overlay CSS filter string
+  const buildPhotoFilterString = (sticker: { photoFilters?: typeof DEFAULT_FILTERS }): string => {
+    const f = sticker.photoFilters;
+    if (!f) return '';
+    const parts: string[] = [];
+    if (f.brightness !== 100) parts.push(`brightness(${f.brightness}%)`);
+    if (f.contrast !== 100) parts.push(`contrast(${f.contrast}%)`);
+    if (f.saturation !== 100) parts.push(`saturate(${f.saturation}%)`);
+    if (f.blur !== 0) parts.push(`blur(${f.blur}px)`);
+    if (f.grayscale !== 0) parts.push(`grayscale(${f.grayscale}%)`);
+    if (f.sepia !== 0) parts.push(`sepia(${f.sepia}%)`);
+    if (f.hueRotate !== 0) parts.push(`hue-rotate(${f.hueRotate}deg)`);
+    return parts.join(' ');
+  };
+
   // No clip placeholder — only when there are no video clips at all
   if (!displayClip || !project) {
     return (
@@ -372,29 +416,54 @@ export default function VideoPreview({ videoRef }: Props) {
         onClick={() => { if (displayClip) setActiveClipId(displayClip.id); }}
       >
         {/* Video element */}
-        <video
-          ref={videoRef}
-          key={displayClip.id}
-          className={displayClip.overlayMode === 'overlay' ? 'absolute object-cover' : 'absolute inset-0 w-full h-full object-cover'}
-          src={displayClip.url}
-          preload="metadata"
-          playsInline
-          muted={displayClip.muted}
-          style={{
-            ...(displayClip.overlayMode === 'overlay' ? {
-              left: `${displayClip.clipX}%`,
-              top: `${displayClip.clipY}%`,
-              transform: 'translate(-50%, -50%)',
-              width: `${displayClip.scaleX * 50}%`,
-              height: `${displayClip.scaleY * 50}%`,
-            } : {
-              transform: `translate(${displayClip.offsetX}%, ${displayClip.offsetY}%) scale(${displayClip.scaleX})`,
-            }),
-            filter: buildFilterString(),
-            ...buildEffectAnimation(),
-          }}
-          onTimeUpdate={handleTimeUpdate}
-        />
+        {(() => {
+          const transStyle = buildTransitionStyle();
+          const baseOpacity = displayClip.opacity ?? 1;
+          const effectAnim = buildEffectAnimation();
+
+          // Combine effect scale/translate with positioning transform
+          const effectTransform = effectAnim.transform as string | undefined;
+          const posTransformFull = `translate(${displayClip.offsetX}%, ${displayClip.offsetY}%) scale(${displayClip.scaleX})`;
+          const fullTransform = effectTransform ? `${effectTransform} ${posTransformFull}` : posTransformFull;
+
+          // Combine filters: user filters + effect filters
+          const userFilter = buildFilterString();
+          const effectFilter = effectAnim.filter as string | undefined;
+          const combinedFilter = [userFilter, effectFilter].filter(Boolean).join(' ') || undefined;
+
+          // Opacity: base × effect × transition (transition wins on fade)
+          const effectOpacity = effectAnim.opacity as number | undefined;
+          let finalOpacity = effectOpacity !== undefined ? effectOpacity * baseOpacity : baseOpacity;
+          if (transStyle.opacity !== undefined) finalOpacity = transStyle.opacity;
+
+          return (
+            <video
+              ref={videoRef}
+              key={displayClip.id}
+              className={displayClip.overlayMode === 'overlay' ? 'absolute object-cover' : 'absolute inset-0 w-full h-full object-cover'}
+              src={displayClip.url}
+              preload="metadata"
+              playsInline
+              muted={displayClip.muted}
+              style={{
+                ...(displayClip.overlayMode === 'overlay' ? {
+                  left: `${displayClip.clipX}%`,
+                  top: `${displayClip.clipY}%`,
+                  transform: 'translate(-50%, -50%)',
+                  width: `${displayClip.scaleX * 50}%`,
+                  height: `${displayClip.scaleY * 50}%`,
+                } : {
+                  transform: fullTransform,
+                }),
+                filter: combinedFilter,
+                opacity: finalOpacity,
+                clipPath: transStyle.clipPath,
+                ...(effectAnim.animation ? { animation: effectAnim.animation as string } : {}),
+              }}
+              onTimeUpdate={handleTimeUpdate}
+            />
+          );
+        })()}
 
         {/* Pan/drag area for full frame mode — only when clip is selected for editing */}
         {isClipSelected && displayClip.overlayMode === 'full' && (
@@ -507,6 +576,7 @@ export default function VideoPreview({ videoRef }: Props) {
                 alt="Photo overlay"
                 className="w-32 h-auto rounded shadow-lg object-cover pointer-events-none"
                 draggable={false}
+                style={{ filter: buildPhotoFilterString(sticker) || undefined }}
               />
             ) : (
               <span style={{ fontSize: sticker.type === 'emoji' ? '2rem' : sticker.type === 'shape' || sticker.type === 'arrow' ? '1.75rem' : '2rem' }}>
@@ -560,19 +630,28 @@ export default function VideoPreview({ videoRef }: Props) {
           </div>
         ))}
 
-        {/* Subtitles */}
-        {activeSubtitles.length > 0 && (
-          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-full px-4 flex flex-col items-center gap-2 pointer-events-none z-10">
-            {activeSubtitles.map(subtitle => (
-              <div
-                key={subtitle.id}
-                className={`text-white text-center ${getSubtitleStyleClasses(subtitle.style)}`}
-              >
-                {subtitle.text}
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Subtitles — grouped by position */}
+        {(['top', 'middle', 'bottom'] as const).map(pos => {
+          const posSubtitles = activeSubtitles.filter(s => (s.position ?? 'bottom') === pos);
+          if (posSubtitles.length === 0) return null;
+          const posClass = pos === 'top'
+            ? 'top-6'
+            : pos === 'middle'
+              ? 'top-1/2 -translate-y-1/2'
+              : 'bottom-6';
+          return (
+            <div key={pos} className={`absolute ${posClass} left-1/2 -translate-x-1/2 w-full px-4 flex flex-col items-center gap-2 pointer-events-none z-10`}>
+              {posSubtitles.map(subtitle => (
+                <div
+                  key={subtitle.id}
+                  className={`text-white text-center ${getSubtitleStyleClasses(subtitle.style)}`}
+                >
+                  {subtitle.text}
+                </div>
+              ))}
+            </div>
+          );
+        })}
 
         {/* Keyframe animation styles */}
         <style>{`

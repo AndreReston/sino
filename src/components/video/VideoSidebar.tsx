@@ -719,6 +719,21 @@ export default function VideoSidebar() {
                       {CAPTION_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
+                  <div className="flex gap-1">
+                    {(['top', 'middle', 'bottom'] as const).map(pos => (
+                      <button
+                        key={pos}
+                        onClick={() => updateSubtitle(sub.id, { position: pos })}
+                        className={`flex-1 py-0.5 rounded text-[9px] font-medium transition-all ${
+                          (sub.position ?? 'bottom') === pos
+                            ? 'bg-sky-500/30 text-sky-300 border border-sky-500/40'
+                            : 'bg-[#1a1a1f] text-zinc-500 border border-white/[0.04] hover:text-zinc-300'
+                        }`}
+                      >
+                        {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ))}
               <AutoSubtitleDistributor />
