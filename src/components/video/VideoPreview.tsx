@@ -401,6 +401,37 @@ export default function VideoPreview({ videoRef }: Props) {
     }
   };
 
+  // Compute transition-out opacity/clipPath at clip end
+  const buildTransitionOutStyle = (): React.CSSProperties => {
+    if (!displayClip || displayClip.transitionOut === 'none') return {};
+    const dur = displayClip.transitionDuration ?? 0.5;
+    const visibleDuration = (displayClip.duration - displayClip.trimStart - displayClip.trimEnd) / displayClip.speed;
+    const timeUntilEnd = visibleDuration - clipLocalTime;
+    if (timeUntilEnd >= dur) return {};
+    const progress = Math.max(0, timeUntilEnd / dur); // 1 → 0
+    const ease = Math.pow(progress, 2); // ease-in quadratic
+
+    switch (displayClip.transitionOut) {
+      case 'fade':
+      case 'crossfade':
+        return { opacity: (displayClip.opacity ?? 1) * ease };
+      case 'slide-left':
+        return { clipPath: `inset(0 0 0 ${Math.round((1 - ease) * 100)}%)` };
+      case 'slide-right':
+        return { clipPath: `inset(0 ${Math.round((1 - ease) * 100)}% 0 0)` };
+      case 'slide-up':
+        return { clipPath: `inset(0 0 ${Math.round((1 - ease) * 100)}% 0)` };
+      case 'slide-down':
+        return { clipPath: `inset(${Math.round((1 - ease) * 100)}% 0 0 0)` };
+      case 'wipe-left':
+        return { clipPath: `inset(0 0 0 ${Math.round((1 - ease) * 100)}%)` };
+      case 'wipe-right':
+        return { clipPath: `inset(0 ${Math.round((1 - ease) * 100)}% 0 0)` };
+      default:
+        return {};
+    }
+  };
+
   // Build photo overlay CSS filter string
   const buildPhotoFilterString = (sticker: { photoFilters?: typeof DEFAULT_FILTERS }): string => {
     const f = sticker.photoFilters;
@@ -449,6 +480,7 @@ export default function VideoPreview({ videoRef }: Props) {
         {/* Video element */}
         {(() => {
           const transStyle = buildTransitionStyle();
+          const transOutStyle = buildTransitionOutStyle();
           const baseOpacity = displayClip.opacity ?? 1;
           const effectAnim = buildEffectAnimation();
 
