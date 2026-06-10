@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Layers, ArrowLeft, Mail, Lock, User } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, User, Image, Film, Sparkles, LayoutGrid } from 'lucide-react';
+
+const LOGO_SRC = '/Gemini_Generated_Image_9jhwhi9jhwhi9jhw_(1).png';
 
 type AuthMode = 'login' | 'register';
 
@@ -10,6 +12,13 @@ type Props = {
   onRegister: (email: string, password: string, username: string) => Promise<{ success: boolean; message: string }>;
   onBack: () => void;
 };
+
+const PERKS = [
+  { icon: <LayoutGrid className="w-4 h-4" />, text: 'Multi-page canvas projects' },
+  { icon: <Film className="w-4 h-4" />, text: 'CapCut-style video studio' },
+  { icon: <Image className="w-4 h-4" />, text: 'Export PNG, JPG, SVG & more' },
+  { icon: <Sparkles className="w-4 h-4" />, text: 'Cloud saves & auto-sync' },
+];
 
 export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBack }: Props) {
   const [email, setEmail] = useState('');
@@ -22,18 +31,11 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
     event.preventDefault();
     setError('');
     setLoading(true);
-
     try {
-      let result;
-      if (mode === 'login') {
-        result = await onLogin(email, password);
-      } else {
-        result = await onRegister(email, password, displayName);
-      }
-
-      if (!result.success) {
-        setError(result.message);
-      }
+      const result = mode === 'login'
+        ? await onLogin(email, password)
+        : await onRegister(email, password, displayName);
+      if (!result.success) setError(result.message);
     } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
@@ -42,36 +44,87 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
   };
 
   return (
-    <div className="flex min-h-screen bg-[#07070a]">
-      {/* Left side — decorative panel */}
-      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden bg-gradient-to-br from-emerald-500/[0.06] via-[#07070a] to-sky-500/[0.04] flex-col items-center justify-center p-12">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-[15%] left-[20%] w-[400px] h-[400px] rounded-full bg-emerald-500/[0.06] blur-[100px]" />
-          <div className="absolute bottom-[10%] right-[15%] w-[300px] h-[300px] rounded-full bg-sky-500/[0.05] blur-[80px]" />
-        </div>
-
-        <div className="relative z-10 max-w-md text-center">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto mb-8">
-            <Layers className="w-7 h-7 text-emerald-400" strokeWidth={2} />
-          </div>
-          <h2 className="text-3xl font-bold text-white mb-4">
-            {mode === 'login' ? 'Welcome back to DesignForge' : 'Join DesignForge'}
-          </h2>
-          <p className="text-zinc-400 leading-relaxed">
-            {mode === 'login'
-              ? 'Your workspace, designs, and pages are waiting. Log in to pick up right where you left off.'
-              : 'Create your account and start designing. Save projects, export work, and build your portfolio.'}
-          </p>
-        </div>
-
-        {/* Decorative floating shapes */}
-        <div className="absolute top-20 right-20 w-16 h-16 rounded-xl border border-emerald-500/10 bg-emerald-500/5 rotate-12 animate-pulse" />
-        <div className="absolute bottom-32 left-16 w-12 h-12 rounded-full border border-sky-500/10 bg-sky-500/5" />
+    <div className="flex min-h-screen bg-[#07070d] text-white">
+      {/* Ambient glows */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-15%] left-[-10%] w-[600px] h-[600px] rounded-full bg-orange-500/[0.07] blur-[130px]" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-sky-500/[0.06] blur-[120px]" />
+        <div className="absolute top-[40%] left-[40%] w-[400px] h-[400px] rounded-full bg-purple-500/[0.04] blur-[110px]" />
+        <div
+          className="absolute inset-0 opacity-[0.025]"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)',
+            backgroundSize: '64px 64px',
+          }}
+        />
       </div>
 
+      {/* Left panel — decorative */}
+      <div className="hidden lg:flex lg:w-[46%] relative overflow-hidden flex-col items-center justify-center p-14">
+        {/* Inner glow accents */}
+        <div className="absolute top-[10%] left-[15%] w-[300px] h-[300px] rounded-full bg-orange-500/[0.09] blur-[90px] pointer-events-none" />
+        <div className="absolute bottom-[8%] right-[10%] w-[280px] h-[280px] rounded-full bg-sky-500/[0.08] blur-[80px] pointer-events-none" />
+
+        {/* Floating decorative shapes */}
+        <div className="absolute top-16 right-24 w-20 h-20 rounded-2xl border border-orange-500/15 bg-orange-500/5 rotate-12" />
+        <div className="absolute top-32 right-14 w-8 h-8 rounded-full border border-amber-400/20 bg-amber-400/5 rotate-6" />
+        <div className="absolute bottom-24 left-14 w-14 h-14 rounded-xl border border-sky-500/15 bg-sky-500/5 -rotate-6" />
+        <div className="absolute bottom-40 left-24 w-6 h-6 rounded-full border border-purple-400/20 bg-purple-400/5" />
+        <div className="absolute top-[45%] right-8 w-2 h-2 rounded-full bg-orange-400/40" />
+        <div className="absolute top-[35%] left-10 w-1.5 h-1.5 rounded-full bg-sky-400/40" />
+
+        {/* Content */}
+        <div className="relative z-10 max-w-md w-full">
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-12">
+            <img
+              src={LOGO_SRC}
+              alt="DesignForge"
+              className="w-11 h-11 rounded-xl object-cover shadow-[0_0_24px_rgba(249,115,22,0.45)]"
+            />
+            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-orange-400 via-amber-300 to-sky-400 bg-clip-text text-transparent">
+              DesignForge
+            </span>
+          </div>
+
+          <h2 className="text-3xl font-bold text-white mb-3 leading-tight">
+            {mode === 'login'
+              ? 'Welcome back, creator'
+              : 'Start creating today'}
+          </h2>
+          <p className="text-zinc-400 leading-relaxed mb-10 text-base">
+            {mode === 'login'
+              ? 'Your workspace, designs, and projects are waiting. Log in to pick up right where you left off.'
+              : 'Create your free account and unlock the full design and video studio — no credit card required.'}
+          </p>
+
+          {/* Perks */}
+          <div className="space-y-3.5">
+            {PERKS.map((perk, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.07] flex items-center justify-center text-orange-400 shrink-0">
+                  {perk.icon}
+                </div>
+                <span className="text-sm text-zinc-300">{perk.text}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Decorative gradient line */}
+          <div className="mt-12 h-px w-full bg-gradient-to-r from-orange-500/30 via-purple-500/20 to-sky-500/30" />
+          <p className="mt-4 text-xs text-zinc-600">
+            Join thousands of designers and video creators.
+          </p>
+        </div>
+      </div>
+
+      {/* Vertical divider */}
+      <div className="hidden lg:block w-px bg-gradient-to-b from-transparent via-white/[0.06] to-transparent" />
+
       {/* Right side — form */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-10">
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative z-10">
         <div className="w-full max-w-[420px]">
+
           {/* Back link */}
           <button
             type="button"
@@ -79,47 +132,53 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
             className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors mb-10 group"
           >
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-            Back home
+            Back to home
           </button>
+
+          {/* Mobile logo */}
+          <div className="lg:hidden flex items-center gap-3 mb-8">
+            <img
+              src={LOGO_SRC}
+              alt="DesignForge"
+              className="w-9 h-9 rounded-xl object-cover shadow-[0_0_18px_rgba(249,115,22,0.4)]"
+            />
+            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-orange-400 to-sky-400 bg-clip-text text-transparent">
+              DesignForge
+            </span>
+          </div>
 
           {/* Header */}
           <div className="mb-8">
-            <div className="lg:hidden flex items-center gap-2.5 mb-6">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
-                <Layers className="w-4 h-4 text-white" strokeWidth={2.5} />
-              </div>
-              <span className="text-lg font-bold tracking-tight text-white">DesignForge</span>
-            </div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">
-              {mode === 'login' ? 'Log in' : 'Create account'}
+            <h1 className="text-2xl font-bold text-white tracking-tight">
+              {mode === 'login' ? 'Log in to your account' : 'Create your account'}
             </h1>
             <p className="mt-2 text-sm text-zinc-500">
               {mode === 'login'
                 ? 'Enter your credentials to access your workspace.'
-                : 'Set up your account to start designing.'}
+                : 'Set up your account to start designing and editing.'}
             </p>
           </div>
 
           {/* Mode toggle */}
-          <div className="flex gap-1 p-1 rounded-xl bg-zinc-900 border border-zinc-800 mb-8">
+          <div className="flex gap-1 p-1 rounded-xl bg-zinc-900/80 border border-white/[0.07] mb-8">
             <button
               type="button"
-              onClick={() => onModeChange('login')}
-              className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+              onClick={() => { onModeChange('login'); setError(''); }}
+              className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                 mode === 'login'
-                  ? 'bg-emerald-500 text-zinc-950 shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-[0_2px_12px_rgba(249,115,22,0.3)]'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]'
               }`}
             >
               Log in
             </button>
             <button
               type="button"
-              onClick={() => onModeChange('register')}
-              className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+              onClick={() => { onModeChange('register'); setError(''); }}
+              className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                 mode === 'register'
-                  ? 'bg-emerald-500 text-zinc-950 shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-[0_2px_12px_rgba(249,115,22,0.3)]'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]'
               }`}
             >
               Register
@@ -130,13 +189,15 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Display name</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5 tracking-wide">
+                  Display name
+                </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                   <input
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="input-field w-full pl-10"
+                    className="w-full bg-zinc-900/70 border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500/50 focus:bg-zinc-900 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.1)] transition-all"
                     placeholder="Your name"
                   />
                 </div>
@@ -144,14 +205,16 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
             )}
 
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Email</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5 tracking-wide">
+                Email address
+              </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="input-field w-full pl-10"
+                  className="w-full bg-zinc-900/70 border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500/50 focus:bg-zinc-900 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.1)] transition-all"
                   placeholder="you@example.com"
                   required
                 />
@@ -159,14 +222,16 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Password</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5 tracking-wide">
+                Password
+              </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                 <input
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   type="password"
-                  className="input-field w-full pl-10"
+                  className="w-full bg-zinc-900/70 border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500/50 focus:bg-zinc-900 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.1)] transition-all"
                   placeholder="Min. 6 characters"
                   required
                   minLength={6}
@@ -175,7 +240,7 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
             </div>
 
             {error && (
-              <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+              <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
                 {error}
               </div>
             )}
@@ -183,17 +248,38 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-emerald-500 py-3.5 text-sm font-semibold text-zinc-950 transition-all hover:bg-emerald-400 hover:shadow-[0_8px_30px_rgba(16,185,129,0.25)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+              className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 py-3.5 text-sm font-semibold text-white transition-all hover:from-orange-400 hover:to-amber-400 hover:shadow-[0_8px_30px_rgba(249,115,22,0.35)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none mt-2"
             >
-              {loading ? 'Please wait...' : mode === 'login' ? 'Log in' : 'Create account'}
+              {loading
+                ? 'Please wait...'
+                : mode === 'login' ? 'Log in' : 'Create account'}
             </button>
           </form>
 
-          <p className="mt-8 text-center text-xs text-zinc-600">
+          {/* Switch mode */}
+          <p className="mt-7 text-center text-xs text-zinc-600">
             {mode === 'login' ? (
-              <>Don't have an account? <button type="button" onClick={() => onModeChange('register')} className="text-emerald-400 hover:text-emerald-300 transition-colors">Register</button></>
+              <>
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => { onModeChange('register'); setError(''); }}
+                  className="text-orange-400 hover:text-orange-300 transition-colors font-medium"
+                >
+                  Register for free
+                </button>
+              </>
             ) : (
-              <>Already have an account? <button type="button" onClick={() => onModeChange('login')} className="text-emerald-400 hover:text-emerald-300 transition-colors">Log in</button></>
+              <>
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => { onModeChange('login'); setError(''); }}
+                  className="text-orange-400 hover:text-orange-300 transition-colors font-medium"
+                >
+                  Log in
+                </button>
+              </>
             )}
           </p>
         </div>
