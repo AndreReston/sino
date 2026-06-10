@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Film, Undo2, Redo2, Download, Monitor, ChevronDown, Smartphone, Square, MonitorPlay, Check } from 'lucide-react';
+import { ArrowLeft, Undo2, Redo2, Download, Monitor, ChevronDown, Smartphone, Square, MonitorPlay, Check } from 'lucide-react';
 import { useVideoStore, AspectRatio } from '../../store/videoStore';
 
 const RATIOS: { id: AspectRatio; label: string; dims: string; icon: React.ReactNode }[] = [
@@ -38,9 +38,11 @@ export default function VideoTopBar({ onBack }: Props) {
             <ArrowLeft className="w-4 h-4" />
           </button>
         )}
-        <div className="w-7 h-7 rounded-md bg-sky-500 flex items-center justify-center">
-          <Film className="w-4 h-4 text-white" strokeWidth={2.5} />
-        </div>
+        <img
+          src="/Gemini_Generated_Image_9jhwhi9jhwhi9jhw_(1).png"
+          alt="DesignForge"
+          className="w-7 h-7 rounded-md object-cover shadow-[0_0_10px_rgba(56,189,248,0.35)]"
+        />
       </div>
 
       <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-sky-500/15 text-sky-400 border border-sky-500/25">Video</span>

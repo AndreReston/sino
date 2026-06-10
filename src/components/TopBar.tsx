@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Undo2, Redo2, ZoomIn, ZoomOut, Download, Save,
-  ChevronDown, Layers, Monitor,
+  ChevronDown, Monitor,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { usePWAInstall } from '../hooks/usePWAInstall';
@@ -94,10 +94,12 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
     <div className="flex items-center h-12 bg-panel border-b border-panel-border px-3 gap-2 z-50 shrink-0 select-none">
       {/* Logo */}
       <div className="flex items-center gap-2 pr-3 border-r border-panel-border mr-1">
-        <div className="w-7 h-7 rounded-md bg-neon-green flex items-center justify-center">
-          <Layers className="w-4 h-4 text-zinc-950" strokeWidth={2.5} />
-        </div>
-        <span className="text-sm font-bold text-zinc-100 tracking-tight">DesignForge</span>
+        <img
+          src="/Gemini_Generated_Image_9jhwhi9jhwhi9jhw_(1).png"
+          alt="DesignForge"
+          className="w-7 h-7 rounded-md object-cover shadow-[0_0_10px_rgba(249,115,22,0.35)]"
+        />
+        <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">DesignForge</span>
       </div>
 
       {/* Canvas Name */}
