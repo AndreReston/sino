@@ -449,18 +449,11 @@ export default function VideoPreview({ videoRef }: Props) {
 
   // No clip placeholder — only when there are no video clips at all
   if (!displayClip || !project) {
-    const emptyIsPortrait = project?.aspectRatio === '9:16';
-    const emptyContainerStyle: React.CSSProperties = {
-      ...getAspectRatioStyle(),
-      maxWidth: '100%',
-      maxHeight: '100%',
-      ...(emptyIsPortrait ? { height: '100%', width: 'auto' } : { width: '100%', height: 'auto' }),
-    };
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#0a0a0e] min-h-0 p-2 overflow-hidden">
+      <div className="flex-1 flex items-center justify-center bg-[#0a0a0e] min-h-0 p-6">
         <div
-          className="flex items-center justify-center bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-lg border border-zinc-800 flex-shrink-0"
-          style={emptyContainerStyle}
+          className="flex items-center justify-center bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-lg border border-zinc-800"
+          style={{ ...getAspectRatioStyle(), maxWidth: '100%', maxHeight: '100%', width: 'auto', height: '100%' }}
         >
           <div className="flex flex-col items-center gap-3 text-center p-8">
             <div className="p-3 rounded-full bg-zinc-800">
@@ -476,23 +469,12 @@ export default function VideoPreview({ videoRef }: Props) {
     );
   }
 
-  const isPortrait = project?.aspectRatio === '9:16';
-  const isSquare = project?.aspectRatio === '1:1';
-  const containerStyle: React.CSSProperties = {
-    ...getAspectRatioStyle(),
-    maxWidth: '100%',
-    maxHeight: '100%',
-    // Portrait: anchor height, let width be auto
-    // Landscape/square: anchor width, let height be auto
-    ...(isPortrait ? { height: '100%', width: 'auto' } : { width: '100%', height: 'auto' }),
-  };
-
   return (
-    <div className="flex-1 flex items-center justify-center bg-[#0a0a0e] min-h-0 p-2 overflow-hidden">
+    <div className="flex-1 flex items-center justify-center bg-[#0a0a0e] min-h-0 p-4">
       <div
         ref={containerRef}
-        className="relative bg-zinc-950 rounded-lg overflow-hidden border border-zinc-800 flex-shrink-0"
-        style={containerStyle}
+        className="relative bg-zinc-950 rounded-lg overflow-hidden border border-zinc-800"
+        style={{ ...getAspectRatioStyle(), maxWidth: '100%', maxHeight: '100%', width: 'auto', height: '100%' }}
         onClick={() => { if (displayClip) setActiveClipId(displayClip.id); }}
       >
         {/* Video element */}

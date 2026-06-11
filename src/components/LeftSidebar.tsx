@@ -5,7 +5,7 @@ import {
   MousePointer2, PenLine, Layers, Sparkles, Sliders, Eraser,
   Undo2, Redo2,
   Download, Monitor, ChevronDown,
-  Film, X,
+  Film,
 } from 'lucide-react';
 import { useStore, SidebarTab, ToolMode } from '../store/useStore';
 import { fabric } from 'fabric';
@@ -92,11 +92,7 @@ function starPoints(cx: number, cy: number, spikes: number, outerR: number, inne
 // Main component
 // ─────────────────────────────────────────────
 
-interface LeftSidebarProps {
-  onClose?: () => void;
-}
-
-export default function LeftSidebar({ onClose }: LeftSidebarProps) {
+export default function LeftSidebar() {
   const {
     sidebarTab, setSidebarTab,
     fabricCanvas,
@@ -246,15 +242,6 @@ export default function LeftSidebar({ onClose }: LeftSidebarProps) {
     <aside className="flex h-full bg-panel border-r border-panel-border shrink-0" style={{ width: 280 }}>
       {/* Icon rail */}
       <div className="flex flex-col items-center w-14 border-r border-panel-border py-3 gap-1 shrink-0">
-        {/* Mobile close button */}
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors mb-1"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
         {/* Logo */}
         <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center mb-3">
           <Layers className="w-4 h-4 text-white" strokeWidth={2.5} />

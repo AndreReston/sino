@@ -57,9 +57,6 @@ export default function VideoWorkspace({ onBack }: Props) {
   const addClip = useVideoStore(s => s.addClip);
 
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [mobilePropsOpen, setMobilePropsOpen] = useState(false);
-  const [timelineCollapsed, setTimelineCollapsed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const bgAudioRef = useRef<HTMLAudioElement>(null);
@@ -395,22 +392,10 @@ export default function VideoWorkspace({ onBack }: Props) {
   const brokenMediaCount = project ? countEphemeralUrls(project) : 0;
 
   return (
-    <div className="flex h-screen bg-[#07070a] text-white overflow-hidden select-none relative">
+    <div className="flex h-screen bg-[#07070a] text-white overflow-hidden select-none">
+      {/* Hidden audio element for background music */}
       <audio ref={bgAudioRef} preload="auto" />
-
-      {/* Mobile backdrop */}
-      {(mobileSidebarOpen || mobilePropsOpen) && (
-        <div
-          className="fixed inset-0 bg-black/60 z-40 md:hidden"
-          onClick={() => { setMobileSidebarOpen(false); setMobilePropsOpen(false); }}
-        />
-      )}
-
-      {/* Sidebar — fixed overlay on mobile, static on desktop */}
-      <div className={`fixed inset-y-0 left-0 z-50 md:static md:inset-auto md:z-auto md:translate-x-0 transition-transform duration-300 ease-in-out ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <VideoSidebar onClose={() => setMobileSidebarOpen(false)} />
-      </div>
-
+      <VideoSidebar />
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
         {(uploadError || brokenMediaCount > 0) && (
           <div className="shrink-0 px-4 py-2 border-b border-white/[0.06] bg-[#0f0f12] space-y-1">
@@ -425,19 +410,12 @@ export default function VideoWorkspace({ onBack }: Props) {
             )}
           </div>
         )}
-        <VideoTopBar
-          onBack={onBack}
-          onToggleSidebar={() => setMobileSidebarOpen(s => !s)}
-          onToggleProperties={() => setMobilePropsOpen(s => !s)}
-        />
-        <div className="flex flex-1 min-w-0 min-h-0 overflow-hidden">
+        <VideoTopBar onBack={onBack} />
+        <div className="flex flex-1 min-w-0 min-h-0">
           <VideoPreview videoRef={videoRef} />
-          {/* Properties panel — fixed bottom sheet on mobile, static on desktop */}
-          <div className={`fixed bottom-0 left-0 right-0 z-50 md:static md:inset-auto md:z-auto md:translate-y-0 transition-transform duration-300 ease-in-out ${mobilePropsOpen ? 'translate-y-0' : 'translate-y-full md:translate-y-0'}`}>
-            <VideoProperties onClose={() => setMobilePropsOpen(false)} />
-          </div>
+          <VideoProperties />
         </div>
-        <VideoTimeline collapsed={timelineCollapsed} onToggleCollapsed={() => setTimelineCollapsed(c => !c)} />
+        <VideoTimeline />
         <PlaybackControls videoRef={videoRef} />
       </div>
     </div>

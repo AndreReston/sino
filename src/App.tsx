@@ -38,8 +38,6 @@ export default function App() {
   const [designs, setDesigns] = useState<SavedDesign[]>([]);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [activeDesign, setActiveDesign] = useState<SavedDesign | null>(null);
-  const [mobileLeftOpen, setMobileLeftOpen] = useState(false);
-  const [mobileRightOpen, setMobileRightOpen] = useState(false);
   const store = useStore();
 
   // Refs for autosave — keep stable references to avoid closure issues
@@ -452,36 +450,15 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-canvas-bg select-none relative overflow-hidden">
-      {/* Mobile backdrop */}
-      {(mobileLeftOpen || mobileRightOpen) && (
-        <div
-          className="fixed inset-0 bg-black/60 z-40 md:hidden"
-          onClick={() => { setMobileLeftOpen(false); setMobileRightOpen(false); }}
-        />
-      )}
-
-      {/* Left Sidebar — fixed overlay on mobile, static on desktop */}
-      <div className={`fixed inset-y-0 left-0 z-50 md:static md:inset-auto md:z-auto md:translate-x-0 transition-transform duration-300 ease-in-out ${mobileLeftOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <LeftSidebar onClose={() => setMobileLeftOpen(false)} />
-      </div>
-
+    <div className="flex h-screen bg-canvas-bg select-none">
+      <LeftSidebar />
       <div className="flex flex-1 min-w-0 min-h-0">
         <div className="flex flex-col flex-1 min-w-0 min-h-0">
-          <TopBar
-            onSave={handleSaveDesign}
-            onBack={openDashboard}
-            onToggleLeft={() => setMobileLeftOpen(s => !s)}
-            onToggleRight={() => setMobileRightOpen(s => !s)}
-          />
+          <TopBar onSave={handleSaveDesign} onBack={openDashboard} />
           <ContextualToolbar />
           <CanvasWorkspace />
         </div>
-
-        {/* Right Panel — fixed overlay on mobile, static on desktop */}
-        <div className={`fixed inset-y-0 right-0 z-50 md:static md:inset-auto md:z-auto md:translate-x-0 transition-transform duration-300 ease-in-out ${mobileRightOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}>
-          <RightPanel onClose={() => setMobileRightOpen(false)} />
-        </div>
+        <RightPanel />
       </div>
     </div>
   );

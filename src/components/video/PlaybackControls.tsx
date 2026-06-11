@@ -149,7 +149,7 @@ export default function PlaybackControls({ videoRef }: Props) {
       {/* Stop Button */}
       <button
         onClick={handleStop}
-        className="hidden sm:flex p-1 hover:bg-white/[0.1] rounded transition-colors flex-shrink-0"
+        className="p-1 hover:bg-white/[0.1] rounded transition-colors flex-shrink-0"
         title="Stop and reset"
       >
         <Square size={16} className="text-white/70 hover:text-white" />
@@ -185,8 +185,8 @@ export default function PlaybackControls({ videoRef }: Props) {
       {/* Divider */}
       <div className="w-px h-5 bg-white/[0.1]" />
 
-      {/* Speed Control — full on desktop, compact on mobile */}
-      <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
+      {/* Speed Control */}
+      <div className="flex items-center gap-1 flex-shrink-0">
         <button
           className="text-xs px-1.5 py-0.5 rounded border border-transparent hover:bg-white/[0.1] transition-colors"
           onClick={() => {
@@ -229,21 +229,8 @@ export default function PlaybackControls({ videoRef }: Props) {
         </button>
       </div>
 
-      {/* Mobile speed cycle button */}
-      <button
-        className="sm:hidden text-xs px-2 py-0.5 rounded bg-white/[0.07] text-white/70 hover:bg-white/[0.12] transition-colors flex-shrink-0"
-        onClick={() => {
-          const currentIndex = SPEED_OPTIONS.indexOf(playbackSpeed);
-          const newIndex = (currentIndex + 1) % SPEED_OPTIONS.length;
-          setPlaybackSpeed(SPEED_OPTIONS[newIndex]);
-        }}
-        title="Cycle speed"
-      >
-        {playbackSpeed}x
-      </button>
-
       {/* Volume Control */}
-      <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
+      <div className="flex items-center gap-1 flex-shrink-0">
         {(activeClip?.volume ?? 1) === 0 ? (
           <VolumeX size={14} className="text-white/50" />
         ) : (

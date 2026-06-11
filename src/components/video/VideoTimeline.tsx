@@ -1,16 +1,11 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Trash2, ZoomIn, ZoomOut, Film, Type, Volume2,
-  Music, Smile, Maximize2, Image as ImageIcon, ChevronUp, ChevronDown,
+  Music, Smile, Maximize2, Image as ImageIcon,
 } from 'lucide-react';
 import { useVideoStore, VideoClip } from '../../store/videoStore';
 
-interface VideoTimelineProps {
-  collapsed?: boolean;
-  onToggleCollapsed?: () => void;
-}
-
-export default function VideoTimeline({ collapsed = false, onToggleCollapsed }: VideoTimelineProps) {
+export default function VideoTimeline() {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -344,14 +339,9 @@ export default function VideoTimeline({ collapsed = false, onToggleCollapsed }: 
   const rulerMarks = getRulerMarks();
 
   return (
-    <div className="bg-[#0c0c10] border-t border-zinc-800 flex flex-col select-none" style={{ minHeight: collapsed ? 0 : undefined }}>
+    <div className="bg-[#0c0c10] border-t border-zinc-800 flex flex-col select-none" style={{ minHeight: 200 }}>
       {/* Controls bar */}
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-zinc-800/60 shrink-0">
-        {onToggleCollapsed && (
-          <button onClick={onToggleCollapsed} className="w-6 h-6 flex items-center justify-center rounded text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors shrink-0">
-            {collapsed ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-        )}
         <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold mr-1">Timeline</span>
         <div className="flex-1" />
         <span className="text-[10px] text-zinc-600">{sortedClips.length} clip{sortedClips.length !== 1 ? 's' : ''}</span>
@@ -369,7 +359,7 @@ export default function VideoTimeline({ collapsed = false, onToggleCollapsed }: 
       </div>
 
       {/* Timeline scroll area */}
-      {!collapsed && <div ref={containerRef} className="flex-1 overflow-x-auto overflow-y-auto" style={{ minHeight: 0 }}>
+      <div ref={containerRef} className="flex-1 overflow-x-auto overflow-y-auto" style={{ minHeight: 0 }}>
         <div ref={scrollRef} className="relative" style={{ width: trackWidth }}>
 
           {/* Ruler */}
@@ -852,15 +842,15 @@ export default function VideoTimeline({ collapsed = false, onToggleCollapsed }: 
             </div>
           )}
         </div>
-      </div>}
+      </div>
 
-      {!collapsed && <div className="hidden sm:flex items-center gap-3 px-3 py-1 border-t border-zinc-800/40 shrink-0">
+      <div className="flex items-center gap-3 px-3 py-1 border-t border-zinc-800/40 shrink-0">
         <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">Space</kbd> Play/Pause</span>
         <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">S</kbd> Split at playhead</span>
         <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">Del</kbd> Remove selected</span>
         <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">Ctrl+Z</kbd> Undo</span>
         <span className="text-[9px] text-zinc-600 opacity-50">Drag clips to reorder • Double-click to split • Drag edges to trim</span>
-      </div>}
+      </div>
     </div>
   );
 }

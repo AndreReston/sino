@@ -3,7 +3,7 @@ import {
   Film, Type, Sliders, Volume2, Wand2, Download, Upload, Plus, Trash2,
   Music, Mic, ArrowLeft, ArrowRight, Sparkles, Layers, Bookmark,
   Zap, BarChart2, Package, ShieldCheck, RotateCcw, Check, Play,
-  SmilePlus, Move, Image as ImageIcon, X,
+  SmilePlus, Move, Image as ImageIcon,
 } from 'lucide-react';
 import {
   useVideoStore, DEFAULT_FILTERS, VideoFilters, TransitionType,
@@ -194,11 +194,7 @@ function AutoSubtitleDistributor() {
   );
 }
 
-interface VideoSidebarProps {
-  onClose?: () => void;
-}
-
-export default function VideoSidebar({ onClose }: VideoSidebarProps) {
+export default function VideoSidebar() {
   const [activePanel, setActivePanel] = useState<Panel>('clips');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -307,12 +303,6 @@ export default function VideoSidebar({ onClose }: VideoSidebarProps) {
     <aside className="flex h-full bg-[#0f0f12] border-r border-white/[0.06] shrink-0" style={{ width: 280 }}>
       {/* Icon rail */}
       <div className="flex flex-col items-center w-14 border-r border-white/[0.06] py-3 gap-1 shrink-0 overflow-y-auto">
-        {/* Mobile close button */}
-        {onClose && (
-          <button onClick={onClose} className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors mb-1 shrink-0">
-            <X className="w-4 h-4" />
-          </button>
-        )}
         <div className="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center mb-3 shrink-0">
           <Film className="w-4 h-4 text-white" strokeWidth={2.5} />
         </div>

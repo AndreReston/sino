@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Undo2, Redo2, ZoomIn, ZoomOut, Download, Save,
-  ChevronDown, Monitor, Menu, SlidersHorizontal, ArrowLeft,
+  ChevronDown, Monitor,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { usePWAInstall } from '../hooks/usePWAInstall';
@@ -19,11 +19,9 @@ const PRESETS = [
 interface TopBarProps {
   onSave?: () => void;
   onBack?: () => void;
-  onToggleLeft?: () => void;
-  onToggleRight?: () => void;
 }
 
-export default function TopBar({ onSave, onBack, onToggleLeft, onToggleRight }: TopBarProps) {
+export default function TopBar({ onSave, onBack }: TopBarProps) {
   const {
     canvasName, setCanvasName,
     zoom, setZoom,
@@ -94,13 +92,6 @@ export default function TopBar({ onSave, onBack, onToggleLeft, onToggleRight }: 
 
   return (
     <div className="flex items-center h-12 bg-panel border-b border-panel-border px-3 gap-2 z-50 shrink-0 select-none">
-      {/* Mobile: left panel toggle */}
-      {onToggleLeft && (
-        <button onClick={onToggleLeft} className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors">
-          <Menu className="w-4 h-4" />
-        </button>
-      )}
-
       {/* Logo */}
       <div className="flex items-center gap-2 pr-3 border-r border-panel-border mr-1">
         <img
@@ -108,7 +99,7 @@ export default function TopBar({ onSave, onBack, onToggleLeft, onToggleRight }: 
           alt="DesignForge"
           className="w-7 h-7 rounded-md object-cover shadow-[0_0_10px_rgba(249,115,22,0.35)]"
         />
-        <span className="hidden sm:block text-sm font-bold tracking-tight bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">DesignForge</span>
+        <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">DesignForge</span>
       </div>
 
       {/* Canvas Name */}
@@ -116,7 +107,7 @@ export default function TopBar({ onSave, onBack, onToggleLeft, onToggleRight }: 
         {editingName ? (
           <input
             autoFocus
-            className="input-field text-sm w-32 sm:w-44 h-7 py-0"
+            className="input-field text-sm w-44 h-7 py-0"
             value={canvasName}
             onChange={(e) => setCanvasName(e.target.value)}
             onBlur={() => setEditingName(false)}
@@ -125,7 +116,7 @@ export default function TopBar({ onSave, onBack, onToggleLeft, onToggleRight }: 
         ) : (
           <button
             onClick={() => setEditingName(true)}
-            className="text-sm text-zinc-300 hover:text-zinc-100 px-2 py-1 rounded hover:bg-panel-hover transition-colors max-w-[120px] sm:max-w-none truncate"
+            className="text-sm text-zinc-300 hover:text-zinc-100 px-2 py-1 rounded hover:bg-panel-hover transition-colors"
           >
             {canvasName}
           </button>
@@ -133,7 +124,7 @@ export default function TopBar({ onSave, onBack, onToggleLeft, onToggleRight }: 
       </div>
 
       {/* Canvas Presets */}
-      <div className="hidden sm:block relative">
+      <div className="relative">
         <button
           onClick={() => setShowPresets(!showPresets)}
           className="flex items-center gap-1 px-2 py-1 rounded text-xs text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
@@ -209,13 +200,6 @@ export default function TopBar({ onSave, onBack, onToggleLeft, onToggleRight }: 
 
       <div className="flex-1" />
 
-      {/* Mobile: Right panel toggle */}
-      {onToggleRight && (
-        <button onClick={onToggleRight} className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors">
-          <SlidersHorizontal className="w-4 h-4" />
-        </button>
-      )}
-
       {/* Right Actions */}
       <div className="flex items-center gap-2">
         {(() => {
@@ -238,34 +222,21 @@ export default function TopBar({ onSave, onBack, onToggleLeft, onToggleRight }: 
           return null;
         })()}
         {onBack && (
-          <>
-            {/* Mobile: icon only */}
-            <button
-              type="button"
-              onClick={onBack}
-              className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
-              title="Back to home"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            {/* Desktop: text */}
-            <button
-              type="button"
-              onClick={onBack}
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer"
-            >
-              Back to home
-            </button>
-          </>
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer"
+          >
+            Back to home
+          </button>
         )}
         <button
           type="button"
           onClick={onSave}
-          className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-md text-xs text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer"
-          title="Save"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer"
         >
           <Save className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">Save</span>
+          Save
         </button>
 
         {/* Quick Download — exports current page as PNG immediately */}
@@ -279,14 +250,14 @@ export default function TopBar({ onSave, onBack, onToggleLeft, onToggleRight }: 
             a.download = `${canvasName}.png`;
             a.click();
           }}
-          className="flex items-center gap-1.5 px-2 md:px-4 py-1.5 rounded-lg bg-emerald-500 text-zinc-950 text-xs font-semibold hover:bg-emerald-400 hover:shadow-[0_4px_20px_rgba(16,185,129,0.3)] transition-all cursor-pointer"
+          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-500 text-zinc-950 text-xs font-semibold hover:bg-emerald-400 hover:shadow-[0_4px_20px_rgba(16,185,129,0.3)] transition-all cursor-pointer"
         >
           <Download className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">Download</span>
+          Download
         </button>
 
-        {/* Export dropdown — hidden on mobile */}
-        <div className="relative hidden md:block">
+        {/* Export dropdown */}
+        <div className="relative">
           <button
             onClick={() => setShowExport(!showExport)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-300 hover:text-zinc-100 hover:bg-panel-hover border border-panel-border transition-colors cursor-pointer"
