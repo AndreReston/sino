@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Undo2, Redo2, ZoomIn, ZoomOut, Download, Save,
-  ChevronDown, Monitor,
+  ChevronDown, Monitor, Menu, SlidersHorizontal,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { usePWAInstall } from '../hooks/usePWAInstall';
@@ -19,9 +19,11 @@ const PRESETS = [
 interface TopBarProps {
   onSave?: () => void;
   onBack?: () => void;
+  onToggleLeft?: () => void;
+  onToggleRight?: () => void;
 }
 
-export default function TopBar({ onSave, onBack }: TopBarProps) {
+export default function TopBar({ onSave, onBack, onToggleLeft, onToggleRight }: TopBarProps) {
   const {
     canvasName, setCanvasName,
     zoom, setZoom,
@@ -92,6 +94,13 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
 
   return (
     <div className="flex items-center h-12 bg-panel border-b border-panel-border px-3 gap-2 z-50 shrink-0 select-none">
+      {/* Mobile: left panel toggle */}
+      {onToggleLeft && (
+        <button onClick={onToggleLeft} className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors">
+          <Menu className="w-4 h-4" />
+        </button>
+      )}
+
       {/* Logo */}
       <div className="flex items-center gap-2 pr-3 border-r border-panel-border mr-1">
         <img
@@ -99,7 +108,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
           alt="DesignForge"
           className="w-7 h-7 rounded-md object-cover shadow-[0_0_10px_rgba(249,115,22,0.35)]"
         />
-        <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">DesignForge</span>
+        <span className="hidden sm:block text-sm font-bold tracking-tight bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">DesignForge</span>
       </div>
 
       {/* Canvas Name */}
@@ -107,7 +116,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
         {editingName ? (
           <input
             autoFocus
-            className="input-field text-sm w-44 h-7 py-0"
+            className="input-field text-sm w-32 sm:w-44 h-7 py-0"
             value={canvasName}
             onChange={(e) => setCanvasName(e.target.value)}
             onBlur={() => setEditingName(false)}
@@ -116,7 +125,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
         ) : (
           <button
             onClick={() => setEditingName(true)}
-            className="text-sm text-zinc-300 hover:text-zinc-100 px-2 py-1 rounded hover:bg-panel-hover transition-colors"
+            className="text-sm text-zinc-300 hover:text-zinc-100 px-2 py-1 rounded hover:bg-panel-hover transition-colors max-w-[120px] sm:max-w-none truncate"
           >
             {canvasName}
           </button>
@@ -124,7 +133,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
       </div>
 
       {/* Canvas Presets */}
-      <div className="relative">
+      <div className="hidden sm:block relative">
         <button
           onClick={() => setShowPresets(!showPresets)}
           className="flex items-center gap-1 px-2 py-1 rounded text-xs text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
@@ -199,6 +208,13 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
       </div>
 
       <div className="flex-1" />
+
+      {/* Mobile: Right panel toggle */}
+      {onToggleRight && (
+        <button onClick={onToggleRight} className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors">
+          <SlidersHorizontal className="w-4 h-4" />
+        </button>
+      )}
 
       {/* Right Actions */}
       <div className="flex items-center gap-2">

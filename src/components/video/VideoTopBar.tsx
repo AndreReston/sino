@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Undo2, Redo2, Download, Monitor, ChevronDown, Smartphone, Square, MonitorPlay, Check } from 'lucide-react';
+import { ArrowLeft, Undo2, Redo2, Download, Monitor, ChevronDown, Smartphone, Square, MonitorPlay, Check, Menu, SlidersHorizontal } from 'lucide-react';
 import { useVideoStore, AspectRatio } from '../../store/videoStore';
 
 const RATIOS: { id: AspectRatio; label: string; dims: string; icon: React.ReactNode }[] = [
@@ -10,9 +10,11 @@ const RATIOS: { id: AspectRatio; label: string; dims: string; icon: React.ReactN
 
 interface Props {
   onBack?: () => void;
+  onToggleSidebar?: () => void;
+  onToggleProperties?: () => void;
 }
 
-export default function VideoTopBar({ onBack }: Props) {
+export default function VideoTopBar({ onBack, onToggleSidebar, onToggleProperties }: Props) {
   const { project, updateProject, undo, redo, historyIndex, history, startExport, isExporting, exportProgress } = useVideoStore();
   const [editingName, setEditingName] = useState(false);
   const [showRatio, setShowRatio] = useState(false);
@@ -32,6 +34,12 @@ export default function VideoTopBar({ onBack }: Props) {
 
   return (
     <div className="flex items-center h-12 bg-[#111115] border-b border-white/[0.06] px-3 gap-2 z-50 shrink-0">
+      {/* Mobile sidebar toggle */}
+      {onToggleSidebar && (
+        <button onClick={onToggleSidebar} className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors">
+          <Menu className="w-4 h-4" />
+        </button>
+      )}
       <div className="flex items-center gap-2 pr-3 border-r border-white/[0.06] mr-1">
         {onBack && (
           <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors">
@@ -45,20 +53,22 @@ export default function VideoTopBar({ onBack }: Props) {
         />
       </div>
 
-      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-sky-500/15 text-sky-400 border border-sky-500/25">Video</span>
+      <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-sky-500/15 text-sky-400 border border-sky-500/25">Video</span>
 
-      {editingName ? (
-        <input autoFocus className="bg-[#1a1a1f] border border-zinc-600 rounded-md px-2 py-0.5 text-sm text-white focus:outline-none focus:border-sky-500/50 w-40"
-          value={project.title} onChange={(e) => updateProject({ title: e.target.value })} onBlur={() => setEditingName(false)}
-          onKeyDown={(e) => e.key === 'Enter' && setEditingName(false)} />
-      ) : (
-        <button onClick={() => setEditingName(true)} className="text-sm text-zinc-300 hover:text-white px-2 py-1 rounded hover:bg-white/5 transition-colors truncate max-w-[200px]">
-          {project.title}
-        </button>
-      )}
+      <div className="hidden sm:flex items-center">
+        {editingName ? (
+          <input autoFocus className="bg-[#1a1a1f] border border-zinc-600 rounded-md px-2 py-0.5 text-sm text-white focus:outline-none focus:border-sky-500/50 w-40"
+            value={project.title} onChange={(e) => updateProject({ title: e.target.value })} onBlur={() => setEditingName(false)}
+            onKeyDown={(e) => e.key === 'Enter' && setEditingName(false)} />
+        ) : (
+          <button onClick={() => setEditingName(true)} className="text-sm text-zinc-300 hover:text-white px-2 py-1 rounded hover:bg-white/5 transition-colors truncate max-w-[200px]">
+            {project.title}
+          </button>
+        )}
+      </div>
 
       {/* Aspect ratio */}
-      <div className="relative">
+      <div className="hidden sm:block relative">
         <button onClick={() => setShowRatio(!showRatio)}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-white hover:bg-white/5 border border-white/[0.06] transition-colors">
           {RATIOS.find(r => r.id === project.aspectRatio)?.icon ?? <Monitor className="w-3.5 h-3.5" />}
@@ -89,28 +99,41 @@ export default function VideoTopBar({ onBack }: Props) {
         )}
       </div>
 
-      <div className="w-px h-6 bg-white/[0.06] mx-1" />
+      <div className="hidden sm:block w-px h-6 bg-white/[0.06] mx-1" />
 
       {/* Undo/Redo */}
-      <button onClick={undo} disabled={historyIndex <= 0} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30">
-        <Undo2 className="w-4 h-4" />
-      </button>
-      <button onClick={redo} disabled={historyIndex >= history.length - 1} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30">
-        <Redo2 className="w-4 h-4" />
-      </button>
+      <div className="hidden sm:flex items-center gap-0.5">
+        <button onClick={undo} disabled={historyIndex <= 0} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30">
+          <Undo2 className="w-4 h-4" />
+        </button>
+        <button onClick={redo} disabled={historyIndex >= history.length - 1} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30">
+          <Redo2 className="w-4 h-4" />
+        </button>
+      </div>
 
       <div className="flex-1" />
 
+      {/* Mobile: project title compact */}
+      <span className="sm:hidden text-xs text-zinc-400 truncate max-w-[100px]">{project.title}</span>
+
       {/* Auto-save indicator */}
       {autoSaveLabel && (
-        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-emerald-400/80 transition-opacity">
+        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-emerald-400/80 transition-opacity">
           <Check className="w-3 h-3" /> {autoSaveLabel}
         </div>
       )}
+
+      {/* Mobile: properties toggle */}
+      {onToggleProperties && (
+        <button onClick={onToggleProperties} className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors">
+          <SlidersHorizontal className="w-4 h-4" />
+        </button>
+      )}
+
       <button onClick={startExport} disabled={isExporting}
-        className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-sky-500 text-white text-xs font-semibold hover:bg-sky-400 hover:shadow-[0_4px_20px_rgba(56,189,248,0.3)] transition-all disabled:opacity-50">
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-500 text-white text-xs font-semibold hover:bg-sky-400 hover:shadow-[0_4px_20px_rgba(56,189,248,0.3)] transition-all disabled:opacity-50">
         <Download className="w-3.5 h-3.5" />
-        {isExporting ? `${exportProgress}%` : 'Download'}
+        <span className="hidden sm:inline">{isExporting ? `${exportProgress}%` : 'Export'}</span>
       </button>
     </div>
   );

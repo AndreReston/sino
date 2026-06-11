@@ -3,7 +3,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Bold, Italic, Underline, Strikethrough,
   ChevronUp, ChevronDown, Trash2, Copy, FlipHorizontal, FlipVertical,
-  AlignHorizontalSpaceAround, AlignVerticalSpaceAround,
+  AlignHorizontalSpaceAround, AlignVerticalSpaceAround, X,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { fabric } from 'fabric';
@@ -15,7 +15,11 @@ const FONT_FAMILIES = [
 
 const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64, 72, 96];
 
-export default function RightPanel() {
+interface RightPanelProps {
+  onClose?: () => void;
+}
+
+export default function RightPanel({ onClose }: RightPanelProps) {
   const {
     activeObject,
     fabricCanvas,
@@ -92,10 +96,18 @@ export default function RightPanel() {
 
   return (
     <div className="w-64 bg-panel border-l border-panel-border flex flex-col shrink-0 overflow-hidden">
-      <div className="px-4 py-3 border-b border-panel-border shrink-0">
+      <div className="px-4 py-3 border-b border-panel-border shrink-0 flex items-center justify-between">
         <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
           {obj ? `Properties · ${obj.type}` : 'Canvas'}
         </h3>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="md:hidden w-7 h-7 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto">

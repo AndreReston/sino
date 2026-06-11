@@ -1,4 +1,4 @@
-import { Trash2, Scissors, RotateCcw, Volume2, VolumeX, Gauge, Sparkles, Diamond, Layers, Activity, Zap, ArrowRightLeft, Move, Maximize2, Music } from 'lucide-react';
+import { Trash2, Scissors, RotateCcw, Volume2, VolumeX, Gauge, Sparkles, Diamond, Layers, Activity, Zap, ArrowRightLeft, Move, Maximize2, Music, X } from 'lucide-react';
 import { useVideoStore, VideoFilters, DEFAULT_FILTERS, ClipEffect, TransitionType, Keyframe, VideoClip, TextOverlay, SubtitleEntry, MotionPreset, AudioTrack, StickerOverlay } from '../../store/videoStore';
 
 const EFFECTS: { id: ClipEffect; label: string }[] = [
@@ -32,7 +32,11 @@ const MOTION_PRESETS: { id: MotionPreset; label: string }[] = [
   { id: 'elastic', label: 'Elastic' },
 ];
 
-export default function VideoProperties() {
+interface VideoPropertiesProps {
+  onClose?: () => void;
+}
+
+export default function VideoProperties({ onClose }: VideoPropertiesProps) {
   const project = useVideoStore(s => s.project);
   const activeClipId = useVideoStore(s => s.activeClipId);
   const activeTextId = useVideoStore(s => s.activeTextId);
@@ -49,18 +53,39 @@ export default function VideoProperties() {
 
   const hasSelection = activeClipId || activeTextId || activeSubtitleId || activeAudioTrackId || activeStickerOverlayId;
 
+  const mobileSheetClasses = "w-full md:w-64 bg-[#111115] border-t md:border-t-0 md:border-l border-zinc-800 rounded-t-2xl md:rounded-none";
+
   if (!hasSelection) {
     return (
-      <div className="w-64 bg-[#111115] border-l border-zinc-800 p-6 flex items-center justify-center min-h-screen">
-        <p className="text-zinc-400 text-sm text-center">
-          Select a clip, photo, text, subtitle, or audio track to edit properties
-        </p>
+      <div className={`${mobileSheetClasses} flex flex-col max-h-[75vh] md:max-h-none md:min-h-full`}>
+        <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
+          <div className="w-10 h-1 rounded-full bg-zinc-700 mx-auto" />
+          {onClose && (
+            <button onClick={onClose} className="absolute right-4 w-7 h-7 flex items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <div className="flex-1 flex items-center justify-center p-6">
+          <p className="text-zinc-400 text-sm text-center">
+            Select a clip, photo, text, subtitle, or audio track to edit properties
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-64 bg-[#111115] border-l border-zinc-800 overflow-y-auto max-h-screen">
+    <div className={`${mobileSheetClasses} flex flex-col overflow-y-auto max-h-[75vh] md:max-h-none md:min-h-full`}>
+      {/* Mobile drag handle + close */}
+      <div className="md:hidden flex items-center justify-center relative px-4 py-3 border-b border-zinc-800 shrink-0">
+        <div className="w-10 h-1 rounded-full bg-zinc-700" />
+        {onClose && (
+          <button onClick={onClose} className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
       {activeClipId && activeClip && (
         <ClipProperties clip={activeClip} />
       )}
