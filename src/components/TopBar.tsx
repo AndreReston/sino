@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Undo2, Redo2, ZoomIn, ZoomOut, Download, Save,
-  ChevronDown, Monitor, Menu, SlidersHorizontal,
+  ChevronDown, Monitor, Menu, SlidersHorizontal, ArrowLeft,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { usePWAInstall } from '../hooks/usePWAInstall';
@@ -238,21 +238,34 @@ export default function TopBar({ onSave, onBack, onToggleLeft, onToggleRight }: 
           return null;
         })()}
         {onBack && (
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer"
-          >
-            Back to home
-          </button>
+          <>
+            {/* Mobile: icon only */}
+            <button
+              type="button"
+              onClick={onBack}
+              className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
+              title="Back to home"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            {/* Desktop: text */}
+            <button
+              type="button"
+              onClick={onBack}
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer"
+            >
+              Back to home
+            </button>
+          </>
         )}
         <button
           type="button"
           onClick={onSave}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer"
+          className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-md text-xs text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer"
+          title="Save"
         >
           <Save className="w-3.5 h-3.5" />
-          Save
+          <span className="hidden md:inline">Save</span>
         </button>
 
         {/* Quick Download — exports current page as PNG immediately */}
@@ -266,14 +279,14 @@ export default function TopBar({ onSave, onBack, onToggleLeft, onToggleRight }: 
             a.download = `${canvasName}.png`;
             a.click();
           }}
-          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-500 text-zinc-950 text-xs font-semibold hover:bg-emerald-400 hover:shadow-[0_4px_20px_rgba(16,185,129,0.3)] transition-all cursor-pointer"
+          className="flex items-center gap-1.5 px-2 md:px-4 py-1.5 rounded-lg bg-emerald-500 text-zinc-950 text-xs font-semibold hover:bg-emerald-400 hover:shadow-[0_4px_20px_rgba(16,185,129,0.3)] transition-all cursor-pointer"
         >
           <Download className="w-3.5 h-3.5" />
-          Download
+          <span className="hidden md:inline">Download</span>
         </button>
 
-        {/* Export dropdown */}
-        <div className="relative">
+        {/* Export dropdown — hidden on mobile */}
+        <div className="relative hidden md:block">
           <button
             onClick={() => setShowExport(!showExport)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-300 hover:text-zinc-100 hover:bg-panel-hover border border-panel-border transition-colors cursor-pointer"
