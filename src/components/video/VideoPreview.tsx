@@ -13,6 +13,8 @@ const SAFE_ZONE_GUIDES = [
 ];
 
 export default function VideoPreview({ videoRef }: Props) {
+  // U4: Track video load errors
+  const [videoError, setVideoError] = useState<string | null>(null);
   const project = useVideoStore(s => s.project);
   const activeClipId = useVideoStore(s => s.activeClipId);
   const currentTime = useVideoStore(s => s.currentTime);
@@ -56,7 +58,24 @@ export default function VideoPreview({ videoRef }: Props) {
     const video = videoRef.current;
     if (!video || !displayClip) return;
     if (video.src !== displayClip.url) {
+      setVideoError(null); // Clear previous errors
       video.src = displayClip.url;
+      // U4: Add error handler for video load failures
+      const handleError = () => {
+        const error = video.error;
+        if (error?.code === error?.MEDIA_ERR_ABORTED) {
+          setVideoError('Video loading aborted');
+        } else if (error?.code === error?.MEDIA_ERR_NETWORK) {
+          setVideoError('Network error - check your connection');
+        } else if (error?.code === error?.MEDIA_ERR_DECODE) {
+          setVideoError('Video format not supported');
+        } else if (error?.code === error?.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+          setVideoError('Video source not accessible (CORS/404)');
+        } else {
+          setVideoError('Failed to load video');
+        }
+      };
+      video.addEventListener('error', handleError, { once: true });
       video.load();
       const st = useVideoStore.getState();
       const info = st.getClipAtTime(st.currentTime);
@@ -477,6 +496,16 @@ export default function VideoPreview({ videoRef }: Props) {
         style={{ ...getAspectRatioStyle(), maxWidth: '100%', maxHeight: '100%', width: 'auto', height: '100%' }}
         onClick={() => { if (displayClip) setActiveClipId(displayClip.id); }}
       >
+        {/* U4: Show error message if video fails to load */}
+        {videoError ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-center p-4">
+            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-sm text-red-300">
+              <p className="font-semibold mb-1">Unable to load video</p>
+              <p className="text-xs text-red-200">{videoError}</p>
+            </div>
+          </div>
+        ) : null}
+        
         {/* Video element */}
         {(() => {
           const transStyle = buildTransitionStyle();

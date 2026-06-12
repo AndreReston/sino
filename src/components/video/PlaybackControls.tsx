@@ -246,8 +246,10 @@ export default function PlaybackControls({ videoRef }: Props) {
             if (!activeClip) return;
             updateClip(activeClip.id, { volume: parseFloat(e.target.value) });
           }}
-          className="w-12 h-1 bg-panel-divider rounded-full appearance-none cursor-pointer accent-sky-500"
-          title={`Volume: ${Math.round((activeClip?.volume ?? 1) * 100)}%`}
+          className={`w-12 h-1 rounded-full appearance-none cursor-pointer accent-sky-500 transition-all ${
+            !activeClip ? 'opacity-30 cursor-not-allowed bg-panel-divider' : 'bg-panel-divider'
+          }`}
+          title={`Volume: ${Math.round((activeClip?.volume ?? 1) * 100)}%${!activeClip ? ' (no clip selected)' : ''}`}
           disabled={!activeClip}
         />
       </div>

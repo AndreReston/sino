@@ -185,6 +185,10 @@ export function useCanvas() {
     }
 
     return () => {
+      // S9: Remove event listeners before disposing canvas to prevent memory leaks
+      canvas.off('object:moving', updateGuides);
+      canvas.off('object:scaling', updateGuides);
+      canvas.off('mouse:up', clearGuides);
       setFabricCanvas(null);
       canvas.dispose();
     };

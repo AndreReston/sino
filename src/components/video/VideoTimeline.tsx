@@ -566,8 +566,10 @@ export default function VideoTimeline() {
                   return (
                     <div key={overlay.id} data-noseek="1"
                       className={`absolute top-0.5 bottom-0.5 rounded flex items-center group ${
+                        dragTextId === overlay.id ? 'opacity-50 scale-y-95 z-20' : ''
+                      } ${
                         isActive ? 'ring-2 ring-amber-400/60 bg-amber-500/20' : 'bg-amber-500/15 hover:bg-amber-500/25'
-                      } border border-amber-500/30`}
+                      } border border-amber-500/30 transition-all`}
                       style={{ left, width }}
                       onClick={(e) => { e.stopPropagation(); setActiveTextId(overlay.id); }}
                     >
@@ -619,19 +621,42 @@ export default function VideoTimeline() {
                   const isDragging = dragStickerId === sticker.id;
                   return (
                     <div key={sticker.id} data-noseek="1"
-                      className={`absolute top-0.5 bottom-0.5 rounded border border-pink-500/30 flex items-center px-1.5 cursor-grab active:cursor-grabbing transition-all ${
+                      className={`absolute top-0.5 bottom-0.5 rounded border border-pink-500/30 flex items-center group ${
                         isDragging ? 'opacity-50 bg-pink-500/30' : 'bg-pink-500/15 hover:bg-pink-500/25'
                       }`}
                       style={{ left, width }}
                       onMouseDown={(e) => {
+                        if ((e.target as HTMLElement).closest('[data-trim]')) return;
                         e.stopPropagation();
                         dragInitRef.current = { startX: e.clientX, origStart: sticker.startTime, origEnd: sticker.endTime };
                         setDragStickerId(sticker.id);
                       }}
                       title={sticker.content}
                     >
-                      <Smile className="w-2.5 h-2.5 text-pink-400 shrink-0 mr-1" />
-                      <span className="text-[9px] text-accent-pink-light truncate">{sticker.content}</span>
+                      {/* U3: Add trim handles for sticker overlays */}
+                      <div data-trim="left"
+                        className="absolute top-0 bottom-0 left-0 w-2.5 cursor-col-resize hover:bg-pink-400/20 z-10 flex items-center justify-start pl-0.5 transition-colors"
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          dragInitRef.current = { startX: e.clientX, origStart: sticker.startTime, origEnd: sticker.endTime };
+                          setTrimPhotoId({ id: sticker.id, side: 'left' });
+                        }}>
+                        <div className="w-0.5 h-4 bg-accent-pink rounded-full" />
+                      </div>
+                      <div className="flex-1 flex items-center px-3 h-full overflow-hidden cursor-grab active:cursor-grabbing">
+                        <Smile className="w-2.5 h-2.5 text-pink-400 shrink-0 mr-1" />
+                        <span className="text-[9px] text-accent-pink-light truncate flex-1">{sticker.content}</span>
+                        {width > 60 && <span className="text-[8px] text-accent-pink-muted font-mono ml-1 shrink-0">{(sticker.endTime - sticker.startTime).toFixed(1)}s</span>}
+                      </div>
+                      <div data-trim="right"
+                        className="absolute top-0 bottom-0 right-0 w-2.5 cursor-col-resize hover:bg-pink-400/20 z-10 flex items-center justify-end pr-0.5 transition-colors"
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          dragInitRef.current = { startX: e.clientX, origStart: sticker.startTime, origEnd: sticker.endTime };
+                          setTrimPhotoId({ id: sticker.id, side: 'right' });
+                        }}>
+                        <div className="w-0.5 h-4 bg-accent-pink rounded-full" />
+                      </div>
                     </div>
                   );
                 })}
@@ -790,8 +815,10 @@ export default function VideoTimeline() {
                   return (
                     <div key={sub.id} data-noseek="1"
                       className={`absolute top-0.5 bottom-0.5 rounded flex items-center group ${
-                        isActive ? 'ring-2 ring-rose-400/60 bg-rose-500/20' : 'bg-rose-500/15 hover:bg-rose-500/25'
-                      } border border-rose-500/30`}
+                        dragSubtitleId === sub.id ? 'opacity-50 scale-y-95 z-20' : ''
+                      } ${
+                        isActive ? 'ring-2 ring-cyan-400/60 bg-cyan-500/20' : 'bg-cyan-500/15 hover:bg-cyan-500/25'
+                      } border border-cyan-500/30 transition-all`}
                       style={{ left, width }}
                       onClick={(e) => { e.stopPropagation(); setActiveSubtitleId(sub.id); }}
                     >

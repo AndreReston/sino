@@ -77,9 +77,12 @@ export default function ContextualToolbar() {
 
   const deleteObj = () => {
     if (!obj || !fabricCanvas) return;
-    fabricCanvas.remove(obj);
-    fabricCanvas.discardActiveObject();
-    fabricCanvas.renderAll();
+    // S6: Add confirmation before destructive action
+    if (window.confirm(`Delete this ${obj.type}? This cannot be undone.`)) {
+      fabricCanvas.remove(obj);
+      fabricCanvas.discardActiveObject();
+      fabricCanvas.renderAll();
+    }
   };
 
   const duplicateObj = () => {

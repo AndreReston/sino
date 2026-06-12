@@ -225,7 +225,8 @@ export default function LeftSidebar() {
     }
 
     if (target === 'selected' && selectedPageIds.length === 0) {
-      alert('Select one or more pages before exporting selected pages.');
+      // S18: Log validation error instead of blocking user with alert()
+      console.warn('Cannot export selected pages: no pages selected');
       return;
     }
 
@@ -762,7 +763,10 @@ function UploadsPanel({
           </div>
           <span className="text-xs text-theme-muted">{uploading ? 'Uploading...' : 'Ready'}</span>
         </div>
-        <label className="relative flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-dashed border-panel-border hover:border-panel-hover bg-panel-light cursor-pointer transition-all group">
+        {/* S17: Disable upload area during upload to prevent concurrent uploads */}
+        <label className={`relative flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-dashed border-panel-border hover:border-panel-hover bg-panel-light cursor-pointer transition-all group ${
+          uploading ? 'opacity-50 cursor-not-allowed' : ''
+        }`}>
           <Upload className="w-6 h-6 text-theme-muted group-hover:text-theme-secondary transition-colors" />
           <span className="text-sm text-theme-muted group-hover:text-theme-secondary transition-colors">Click to upload</span>
           <span className="text-xs text-theme-dim">
@@ -772,6 +776,7 @@ function UploadsPanel({
             type="file"
             accept={isVideoMode ? 'image/png,image/jpeg,image/svg+xml,image/webp,video/mp4,video/quicktime,video/webm,video/x-msvideo' : 'image/png,image/jpeg,image/svg+xml,image/webp'}
             className="absolute inset-0 opacity-0 cursor-pointer"
+            disabled={uploading}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file) return;

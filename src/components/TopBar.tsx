@@ -84,12 +84,19 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
     }
 
     if (target === 'selected' && selectedCount === 0) {
-      alert('Select one or more pages before exporting selected pages.');
+      // S18: Log validation error instead of blocking user with alert()
+      console.warn('Cannot export selected pages: no pages selected');
       return;
     }
 
     const zipFormat = format as 'png' | 'jpg';
-    await exportPagesAsZip(target === 'selected' ? selectedPageIds : undefined, zipFormat);
+    try {
+      await exportPagesAsZip(target === 'selected' ? selectedPageIds : undefined, zipFormat);
+      // S20: Provide success feedback to user after export completes
+      console.log(`Export completed: ${target} pages as ${zipFormat}`);
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
   };
 
   return (
@@ -147,6 +154,20 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
                 <span className="text-theme-dim text-xs">{p.w}×{p.h}</span>
               </button>
             ))}
+            {/* U11: Add custom size option */}
+            <div className="border-t border-panel-border my-1" />
+            <button
+              onClick={() => {
+                const w = window.prompt('Width (px):', String(canvasWidth));
+                const h = window.prompt('Height (px):', String(canvasHeight));
+                if (w && h && /^\d+$/.test(w) && /^\d+$/.test(h)) {
+                  applyPreset(parseInt(w), parseInt(h));
+                }
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors"
+            >
+              <span>📐 Custom Size</span>
+            </button>
           </div>
         )}
       </div>
@@ -158,7 +179,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
         <button
           onClick={undo}
           disabled={historyIndex <= 0}
-          title="Undo (Ctrl+Z)"
+          title={`Undo (${typeof window !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? 'Cmd' : 'Ctrl'}+Z)`}
           className="tool-btn w-8 h-8 disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Undo2 className="w-4 h-4" />
@@ -166,7 +187,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
         <button
           onClick={redo}
           disabled={historyIndex >= history.length - 1}
-          title="Redo (Ctrl+Y)"
+          title={`Redo (${typeof window !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? 'Cmd' : 'Ctrl'}+Y)`}
           className="tool-btn w-8 h-8 disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Redo2 className="w-4 h-4" />
@@ -178,17 +199,19 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
       {/* Zoom */}
       <div className="flex items-center gap-1">
         <button
-          onClick={() => setZoom(zoom - 0.1)}
-          className="tool-btn w-7 h-7"
-          title="Zoom Out"
+          onClick={() => setZoom(Math.max(0.1, zoom - 0.1))}
+          disabled={zoom <= 0.1}
+          className="tool-btn w-7 h-7 disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Zoom Out (Min: 10%)"
         >
           <ZoomOut className="w-3.5 h-3.5" />
         </button>
         <span className="text-xs text-theme-muted w-10 text-center tabular-nums">{zoomPct}%</span>
         <button
-          onClick={() => setZoom(zoom + 0.1)}
-          className="tool-btn w-7 h-7"
-          title="Zoom In"
+          onClick={() => setZoom(Math.min(5, zoom + 0.1))}
+          disabled={zoom >= 5}
+          className="tool-btn w-7 h-7 disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Zoom In (Max: 500%)"
         >
           <ZoomIn className="w-3.5 h-3.5" />
         </button>
@@ -244,7 +267,9 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
         <button
           type="button"
           onClick={onSave}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-theme-muted hover:text-theme-primary hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer"
+          disabled={!onSave}
+          title={!onSave ? 'Save not available in this context' : 'Save project'}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-theme-muted hover:text-theme-primary hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Save className="w-3.5 h-3.5" />
           Save

@@ -144,7 +144,12 @@ export default function PageNavigator() {
               Dupe
             </button>
             <button
-              onClick={deleteCurrentPage}
+              onClick={() => {
+                // S6: Add confirmation before destructive action
+                if (window.confirm(`Delete page ${activePageIndex + 1}? This cannot be undone.`)) {
+                  deleteCurrentPage();
+                }
+              }}
               disabled={pages.length <= 1}
               title="Delete this page"
               className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-2xl bg-panel-hover text-theme-secondary text-xs font-medium border border-panel-border hover:border-red-500/30 hover:text-red-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"

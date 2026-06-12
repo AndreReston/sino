@@ -15,9 +15,11 @@ type Props = {
   onOpen: (design: SavedDesign) => void;
   onDownload: (design: SavedDesign) => void;
   onLogout: () => void;
+  hasPendingChanges: boolean;
+  syncStatus: string;
 };
 
-export default function Dashboard({ user, designs, onCreate, onOpen, onDownload, onLogout }: Props) {
+export default function Dashboard({ user, designs, onCreate, onOpen, onDownload, onLogout, hasPendingChanges, syncStatus }: Props) {
   const photoDesigns = designs.filter((d) => d.projectMode !== 'video');
   const videoProjects = designs.filter((d) => d.projectMode === 'video');
   const { isInstallable, isInstalled, installApp } = usePWAInstall();
@@ -74,6 +76,9 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onDownload,
             </div>
             <span className="text-sm text-theme-secondary font-medium">{user}</span>
           </div>
+          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${hasPendingChanges ? 'bg-amber-500/10 border border-amber-500/20 text-amber-300' : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'}`}>
+            {syncStatus}
+          </span>
           <button
             type="button"
             onClick={onLogout}

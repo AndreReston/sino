@@ -474,7 +474,10 @@ export const useStore = create<Store>((set, get) => ({
     const { history, historyIndex } = get();
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(json);
-    set({ history: newHistory, historyIndex: newHistory.length - 1 });
+    // S7: Cap history at 50 entries to prevent unbounded memory growth
+    const cappedHistory = newHistory.length > 50 ? newHistory.slice(-50) : newHistory;
+    const newIndex = cappedHistory.length - 1;
+    set({ history: cappedHistory, historyIndex: newIndex });
   },
   undo: () => {
     const { history, historyIndex, fabricCanvas } = get();

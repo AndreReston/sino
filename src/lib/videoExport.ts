@@ -239,59 +239,83 @@ export async function exportVideo(
   
   if ((project.audioTracks && project.audioTracks.length > 0) || project.backgroundMusic) {
     try {
-      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      audioDestination = audioContext.createMediaStreamDestination();
-      
-      // Load and setup audio tracks
-      for (const track of project.audioTracks || []) {
-        try {
-          const response = await fetch(track.url);
-          const arrayBuffer = await response.arrayBuffer();
-          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-          
-          const source = audioContext.createBufferSource();
-          source.buffer = audioBuffer;
-          source.playbackRate.value = 1; // Could use track.speed if available
-          source.loop = false;
-          
-          const gainNode = audioContext.createGain();
-          gainNode.gain.value = track.muted ? 0 : (track.volume || 0.8);
-          
-          source.connect(gainNode);
-          gainNode.connect(audioDestination);
-          
-          // Schedule to play at the right time
-          const now = audioContext.currentTime;
-          source.start(now + track.startTime);
-        } catch (e) {
-          console.warn(`Failed to load audio track: ${track.url}`);
+      // S13: Check for browser support and handle AudioContext creation safely
+      const AudioContextConstructor = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextConstructor) {
+        console.warn('AudioContext not supported in this browser');
+      } else {
+        audioContext = new AudioContextConstructor();
+        
+        // S13: Handle suspended AudioContext state
+        if (audioContext.state === 'suspended') {
+          audioContext.resume().catch(() => {
+            console.warn('Could not resume AudioContext');
+          });
         }
-      }
-      
-      // Setup background music
-      if (project.backgroundMusic) {
-        try {
-          const response = await fetch(project.backgroundMusic.url);
-          const arrayBuffer = await response.arrayBuffer();
-          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-          
-          const source = audioContext.createBufferSource();
-          source.buffer = audioBuffer;
-          source.loop = true;
-          
-          const gainNode = audioContext.createGain();
-          gainNode.gain.value = project.backgroundMusic.muted ? 0 : (project.backgroundMusic.volume || 0.5);
-          
-          source.connect(gainNode);
-          gainNode.connect(audioDestination);
-          
-          source.start(audioContext.currentTime);
-        } catch (e) {
-          console.warn(`Failed to load background music: ${project.backgroundMusic.url}`);
+        
+        audioDestination = audioContext.createMediaStreamDestination();
+        
+        // Load and setup audio tracks
+        for (const track of project.audioTracks || []) {
+          try {
+            // S13: Guard against missing audioDestination/audioContext
+            if (!audioContext || !audioDestination) break;
+            
+            const response = await fetch(track.url);
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            
+            const source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.playbackRate.value = 1; // Could use track.speed if available
+            source.loop = false;
+            
+            const gainNode = audioContext.createGain();
+            gainNode.gain.value = track.muted ? 0 : (track.volume || 0.8);
+            
+            source.connect(gainNode);
+            gainNode.connect(audioDestination);
+            
+            // Schedule to play at the right time
+            const now = audioContext.currentTime;
+            source.start(now + track.startTime);
+          } catch (e) {
+            console.warn(`Failed to load audio track: ${track.url}`);
+          }
+        }
+        
+        // Setup background music
+        if (project.backgroundMusic) {
+          try {
+            // S13: Guard against missing audioDestination/audioContext
+            if (!audioContext || !audioDestination) {
+              throw new Error('AudioContext or destination not available');
+            }
+            
+            const response = await fetch(project.backgroundMusic.url);
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            
+            const source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.loop = true;
+            
+            const gainNode = audioContext.createGain();
+            gainNode.gain.value = project.backgroundMusic.muted ? 0 : (project.backgroundMusic.volume || 0.5);
+            
+            source.connect(gainNode);
+            gainNode.connect(audioDestination);
+            
+            source.start(audioContext.currentTime);
+          } catch (e) {
+            console.warn(`Failed to load background music: ${project.backgroundMusic.url}`);
+          }
         }
       }
     } catch (e) {
       console.warn('Failed to setup audio context:', e);
+      audioContext = null;
+      audioDestination = null;
     }
   }
 

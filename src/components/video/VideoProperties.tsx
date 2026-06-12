@@ -1,4 +1,4 @@
-import { Trash2, Scissors, RotateCcw, Volume2, VolumeX, Gauge, Sparkles, Diamond, Layers, Activity, Zap, ArrowRightLeft, Move, Maximize2, Music } from 'lucide-react';
+import { Trash2, Scissors, RotateCcw, Volume2, VolumeX, Gauge, Sparkles, Diamond, Layers, Activity, Zap, ArrowRightLeft, Move, Maximize2, Music, Film } from 'lucide-react';
 import { useVideoStore, VideoFilters, DEFAULT_FILTERS, ClipEffect, TransitionType, Keyframe, VideoClip, TextOverlay, SubtitleEntry, MotionPreset, AudioTrack, StickerOverlay } from '../../store/videoStore';
 
 const EFFECTS: { id: ClipEffect; label: string }[] = [
@@ -140,16 +140,38 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
   };
 
   const handleSplitClip = () => {
+    // U9: Indicate split behavior
     splitClip(clip.id, effectiveDuration / 2);
   };
 
   const handleDeleteClip = () => {
-    removeClip(clip.id);
+    // S6: Add confirmation before destructive action
+    if (window.confirm(`Delete clip "${clip.name}"? This cannot be undone.`)) {
+      removeClip(clip.id);
+    }
   };
 
   return (
     <div className="p-4 space-y-4">
-      {/* Clip Name */}
+      {/* U16: Clip identification with thumbnail */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 mb-3">
+          {clip.thumbnails && clip.thumbnails.length > 0 ? (
+            <img src={clip.thumbnails[0]} alt={clip.name} className="w-12 h-12 rounded object-cover border border-panel-border" />
+          ) : (
+            <div className="w-12 h-12 rounded bg-panel-light border border-panel-border flex items-center justify-center">
+              <Film className="w-5 h-5 text-theme-muted" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-[9px] text-theme-muted uppercase tracking-wider">Clip</p>
+            <p className="text-sm font-semibold text-theme-primary truncate">{clip.name}</p>
+            <p className="text-[9px] text-theme-muted">{clip.duration.toFixed(1)}s</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Clip Name input */}
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-theme-primary">Clip Name</h3>
         <input type="text" value={clip.name} onChange={(e) => handleNameChange(e.target.value)}
@@ -523,10 +545,12 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
       {/* Actions */}
       <div className="space-y-2">
         <button onClick={handleSplitClip}
+          title="Split at midpoint (timeline splits at playhead)"
           className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-sky-500 hover:bg-sky-600 rounded text-sm font-medium text-white transition">
-          <Scissors className="w-4 h-4" /> Split Clip
+          <Scissors className="w-4 h-4" /> Split Clip at Midpoint
         </button>
         <button onClick={handleDeleteClip}
+          title="Delete clip (Ctrl+Z to undo)"
           className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium text-white transition">
           <Trash2 className="w-4 h-4" /> Delete Clip
         </button>
@@ -547,12 +571,30 @@ function TextOverlayProperties({ textOverlay }: TextOverlayPropertiesProps) {
 
   if (!textOverlay) return null;
 
+  // S3: Validate timing inputs
+  const handleStartTimeChange = (value: number) => {
+    const newValue = Math.max(0, parseFloat(String(value)) || 0);
+    // Ensure start < end
+    const validValue = Math.min(newValue, textOverlay.endTime);
+    updateTextOverlay(textOverlay.id, { startTime: validValue });
+  };
+
+  const handleEndTimeChange = (value: number) => {
+    const newValue = Math.max(0, parseFloat(String(value)) || 0);
+    // Ensure end > start
+    const validValue = Math.max(newValue, textOverlay.startTime);
+    updateTextOverlay(textOverlay.id, { endTime: validValue });
+  };
+
   const handleUpdate = (updates: Partial<TextOverlay>) => {
     updateTextOverlay(textOverlay.id, updates);
   };
 
   const handleDelete = () => {
-    removeTextOverlay(textOverlay.id);
+    // S6: Add confirmation before destructive action
+    if (window.confirm('Delete this text overlay? This cannot be undone.')) {
+      removeTextOverlay(textOverlay.id);
+    }
   };
 
   const fontFamilies = ['Inter', 'Arial', 'Georgia', 'Courier New', 'Impact'];
@@ -619,13 +661,13 @@ function TextOverlayProperties({ textOverlay }: TextOverlayPropertiesProps) {
         <div className="space-y-3">
           <div className="space-y-1">
             <label className="text-xs text-theme-muted">Start Time (seconds)</label>
-            <input type="number" value={textOverlay.startTime} onChange={e => handleUpdate({ startTime: parseFloat(e.target.value) || 0 })}
+            <input type="number" value={textOverlay.startTime} onChange={e => handleStartTimeChange(parseFloat(e.target.value))}
               step={0.1} min={0}
               className="w-full px-3 py-2 bg-panel-light border border-panel-border rounded text-theme-primary text-sm focus:outline-none focus:border-sky-500" />
           </div>
           <div className="space-y-1">
             <label className="text-xs text-theme-muted">End Time (seconds)</label>
-            <input type="number" value={textOverlay.endTime} onChange={e => handleUpdate({ endTime: parseFloat(e.target.value) || 0 })}
+            <input type="number" value={textOverlay.endTime} onChange={e => handleEndTimeChange(parseFloat(e.target.value))}
               step={0.1} min={0}
               className="w-full px-3 py-2 bg-panel-light border border-panel-border rounded text-theme-primary text-sm focus:outline-none focus:border-sky-500" />
           </div>
@@ -655,12 +697,30 @@ function SubtitleProperties({ subtitle }: SubtitlePropertiesProps) {
 
   if (!subtitle) return null;
 
+  // S3: Validate timing inputs
+  const handleStartTimeChange = (value: number) => {
+    const newValue = Math.max(0, parseFloat(String(value)) || 0);
+    // Ensure start < end
+    const validValue = Math.min(newValue, subtitle.endTime);
+    updateSubtitle(subtitle.id, { startTime: validValue });
+  };
+
+  const handleEndTimeChange = (value: number) => {
+    const newValue = Math.max(0, parseFloat(String(value)) || 0);
+    // Ensure end > start
+    const validValue = Math.max(newValue, subtitle.startTime);
+    updateSubtitle(subtitle.id, { endTime: validValue });
+  };
+
   const handleUpdate = (updates: Partial<SubtitleEntry>) => {
     updateSubtitle(subtitle.id, updates);
   };
 
   const handleDelete = () => {
-    removeSubtitle(subtitle.id);
+    // S6: Add confirmation before destructive action
+    if (window.confirm('Delete this subtitle? This cannot be undone.')) {
+      removeSubtitle(subtitle.id);
+    }
   };
 
   return (
@@ -679,13 +739,13 @@ function SubtitleProperties({ subtitle }: SubtitlePropertiesProps) {
         <div className="space-y-3">
           <div className="space-y-1">
             <label className="text-xs text-theme-muted">Start Time (seconds)</label>
-            <input type="number" value={subtitle.startTime} onChange={e => handleUpdate({ startTime: parseFloat(e.target.value) || 0 })}
+            <input type="number" value={subtitle.startTime} onChange={e => handleStartTimeChange(parseFloat(e.target.value))}
               step={0.1} min={0}
               className="w-full px-3 py-2 bg-panel-light border border-panel-border rounded text-theme-primary text-sm focus:outline-none focus:border-sky-500" />
           </div>
           <div className="space-y-1">
             <label className="text-xs text-theme-muted">End Time (seconds)</label>
-            <input type="number" value={subtitle.endTime} onChange={e => handleUpdate({ endTime: parseFloat(e.target.value) || 0 })}
+            <input type="number" value={subtitle.endTime} onChange={e => handleEndTimeChange(parseFloat(e.target.value))}
               step={0.1} min={0}
               className="w-full px-3 py-2 bg-panel-light border border-panel-border rounded text-theme-primary text-sm focus:outline-none focus:border-sky-500" />
           </div>

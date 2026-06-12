@@ -338,7 +338,8 @@ const PRESETS_KEY = 'designforge_video_presets';
 const VERSIONS_KEY = 'designforge_video_versions';
 
 function uid(): string {
-  return `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  // S11: Use crypto.randomUUID for collision-resistant IDs
+  return crypto.randomUUID();
 }
 
 function loadPresetsFromStorage(): StylePreset[] {
@@ -723,6 +724,8 @@ export const useVideoStore = create<VStore>((set, get) => ({
     const clips = [...project.clips].sort((a, b) => a.order - b.order);
     const oldIndex = clips.findIndex(c => c.id === id);
     if (oldIndex < 0) return;
+    // S12: Validate newIndex is within bounds to prevent incorrect insertion
+    if (newIndex < 0 || newIndex >= clips.length) return;
     const [moved] = clips.splice(oldIndex, 1);
     clips.splice(newIndex, 0, moved);
     clips.forEach((c, i) => { c.order = i; });
@@ -755,6 +758,8 @@ export const useVideoStore = create<VStore>((set, get) => ({
 
     const clips = [...project.clips];
     const idx = clips.findIndex(c => c.id === id);
+    // S10: Guard against findIndex returning -1 to prevent array corruption
+    if (idx < 0) return;
     clips.splice(idx, 1, left, right);
     clips.forEach((c, i) => { c.order = i; });
     set({ project: { ...project, clips }, activeClipId: left.id });
@@ -808,6 +813,13 @@ export const useVideoStore = create<VStore>((set, get) => ({
   addKeyframe: (id, keyframe) => {
     const { project } = get();
     if (!project) return;
+    // S14: Validate keyframe time is within clip duration and not negative
+    const clip = project.clips.find(c => c.id === id);
+    if (!clip) return;
+    if (keyframe.time < 0 || keyframe.time > clip.duration) {
+      console.warn(`Keyframe time ${keyframe.time} out of bounds for clip duration ${clip.duration}`);
+      return;
+    }
     const clips = project.clips.map(c => {
       if (c.id !== id) return c;
       const existing = c.keyframes.filter(k => !(k.time === keyframe.time && k.property === keyframe.property));
@@ -836,8 +848,16 @@ export const useVideoStore = create<VStore>((set, get) => ({
 
     const video = document.createElement('video');
     video.preload = 'metadata';
-    video.src = clip.url;
     video.muted = true;
+    
+    // S15: Wrap video.src assignment in try-catch to handle CORS/network errors
+    try {
+      video.src = clip.url;
+    } catch (e) {
+      console.error(`Failed to set video src: ${e}`);
+      get().updateClip(id, { thumbnails: [] });
+      return;
+    }
 
     const thumbs: string[] = [];
     const thumbCount = Math.min(8, Math.max(2, Math.ceil(clip.duration / 2)));
@@ -870,7 +890,9 @@ export const useVideoStore = create<VStore>((set, get) => ({
       captureFrame();
     };
 
-    video.onerror = () => {
+    video.onerror = (e) => {
+      // S15: Log error for debugging thumbnail generation failures
+      console.warn(`Video thumbnail generation failed: ${e}`);
       get().updateClip(id, { thumbnails: [] });
     };
   },

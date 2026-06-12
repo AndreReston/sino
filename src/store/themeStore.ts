@@ -8,8 +8,14 @@ interface ThemeStore {
   setMode: (m: ThemeMode) => void;
 }
 
-export const useThemeStore = create<ThemeStore>((set) => ({
-  mode: (localStorage.getItem('sino:theme') as ThemeMode) || 'dark',
+export const useThemeStore = create<ThemeStore>((set) => {
+  // S19: Validate theme value from localStorage to ensure it's 'dark' or 'light'
+  const storedTheme = localStorage.getItem('sino:theme');
+  const isValidTheme = storedTheme === 'dark' || storedTheme === 'light';
+  const initialMode: ThemeMode = isValidTheme ? (storedTheme as ThemeMode) : 'dark';
+  
+  return ({
+  mode: initialMode,
   toggle: () =>
     set((s) => {
       const next = s.mode === 'dark' ? 'light' : 'dark';
@@ -20,4 +26,5 @@ export const useThemeStore = create<ThemeStore>((set) => ({
     localStorage.setItem('sino:theme', m);
     set({ mode: m });
   },
-}));
+});
+});

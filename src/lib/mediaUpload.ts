@@ -61,17 +61,30 @@ async function uploadToLocalServer(file: File): Promise<string | null> {
  */
 export const MAX_MEDIA_FILE_SIZE = 1024 * 1024 * 1024; // 1 GB
 
-export async function uploadMediaForPersistence(
-  file: File
-): Promise<{ url: string | null; error: string | null }> {
-  const { data: { user } } = await supabase.auth.getUser();
-
+// S2: Client-side file size validation before upload
+export function validateMediaFile(file: File): { valid: boolean; error: string | null } {
   if (file.size > MAX_MEDIA_FILE_SIZE) {
     return {
-      url: null,
+      valid: false,
       error: 'File is too large for upload. Maximum allowed size is 1 GB.',
     };
   }
+  return { valid: true, error: null };
+}
+
+export async function uploadMediaForPersistence(
+  file: File
+): Promise<{ url: string | null; error: string | null }> {
+  // S2: Validate file size before attempting upload
+  const validation = validateMediaFile(file);
+  if (!validation.valid) {
+    return {
+      url: null,
+      error: validation.error,
+    };
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (user) {
     const { url, error: uploadError } = await uploadMediaFile(file);
@@ -102,15 +115,38 @@ export async function uploadMediaForPersistence(
 
 export async function getVideoDuration(file: File): Promise<number> {
   const blobUrl = URL.createObjectURL(file);
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
   try {
     return await new Promise((resolve, reject) => {
       const video = document.createElement('video');
       video.preload = 'metadata';
-      video.onloadedmetadata = () => resolve(video.duration);
-      video.onerror = () => reject(new Error('Could not read video metadata'));
+      
+      const cleanup = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        video.onloadedmetadata = null;
+        video.onerror = null;
+      };
+
+      video.onloadedmetadata = () => {
+        cleanup();
+        resolve(video.duration);
+      };
+
+      video.onerror = () => {
+        cleanup();
+        reject(new Error('Could not read video metadata'));
+      };
+
+      // S8: Set timeout to prevent hanging if loadedmetadata never fires
+      timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error('Video metadata load timed out'));
+      }, 10000); // 10 second timeout
+
       video.src = blobUrl;
     });
   } finally {
+    // S8: Always revoke the blob URL to prevent memory leaks
     URL.revokeObjectURL(blobUrl);
   }
 }

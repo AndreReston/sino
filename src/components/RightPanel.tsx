@@ -63,9 +63,12 @@ export default function RightPanel() {
 
   const deleteObj = () => {
     if (!obj || !fabricCanvas) return;
-    fabricCanvas.remove(obj);
-    fabricCanvas.discardActiveObject();
-    fabricCanvas.renderAll();
+    // S6: Add confirmation before destructive action
+    if (window.confirm(`Delete this ${obj.type}? This cannot be undone. You can undo with Ctrl/Cmd+Z.`)) {
+      fabricCanvas.remove(obj);
+      fabricCanvas.discardActiveObject();
+      fabricCanvas.renderAll();
+    }
   };
 
   const duplicateObj = () => {
@@ -472,17 +475,44 @@ function NumberField({
 }: {
   label: string; value: number; onChange: (v: number) => void; min?: number; max?: number;
 }) {
+  const clampValue = (next: number) => {
+    let valid = Number(next);
+    if (Number.isNaN(valid)) return;
+    if (typeof min === 'number') valid = Math.max(min, valid);
+    if (typeof max === 'number') valid = Math.min(max, valid);
+    onChange(valid);
+  };
+
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs text-theme-muted">{label}</label>
-      <input
-        type="number"
-        value={value}
-        min={min}
-        max={max}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="input-field text-xs text-center tabular-nums"
-      />
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => clampValue(value - 1)}
+          disabled={typeof min === 'number' && value <= min}
+          className="w-7 h-7 rounded border border-panel-border text-theme-muted hover:bg-panel-hover disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          −
+        </button>
+        <input
+          type="number"
+          value={value}
+          min={min}
+          max={max}
+          step={1}
+          onChange={(e) => clampValue(Number(e.target.value))}
+          className="input-field text-xs text-center tabular-nums flex-1"
+        />
+        <button
+          type="button"
+          onClick={() => clampValue(value + 1)}
+          disabled={typeof max === 'number' && value >= max}
+          className="w-7 h-7 rounded border border-panel-border text-theme-muted hover:bg-panel-hover disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          +
+        </button>
+      </div>
     </div>
   );
 }

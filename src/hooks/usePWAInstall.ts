@@ -22,7 +22,10 @@ export function usePWAInstall() {
     // Register service worker in production only — it breaks Vite HMR in dev
     if ('serviceWorker' in navigator && window.location.protocol !== 'file:' && import.meta.env.PROD) {
       const swPath = import.meta.env.BASE_URL + 'sw.js';
-      navigator.serviceWorker.register(swPath).catch(() => {});
+      // S16: Log service worker registration errors instead of silently swallowing them
+      navigator.serviceWorker.register(swPath).catch((error) => {
+        console.error('Service worker registration failed:', error);
+      });
     }
 
     // Check if already installed

@@ -373,7 +373,13 @@ export default function VideoSidebar() {
                         <p className="text-[9px] text-theme-muted">{((clip.duration - clip.trimStart - clip.trimEnd) / clip.speed).toFixed(1)}s</p>
                       </div>
                       {clip.effect !== 'none' && <span className="text-[8px] px-1 py-0.5 rounded bg-violet-500/20 text-violet-300 font-bold">{clip.effect}</span>}
-                      <button onClick={(e) => { e.stopPropagation(); removeClip(clip.id); }} className="p-1 rounded hover:bg-red-600 text-theme-dim hover:text-white transition-colors">
+                      <button onClick={(e) => {
+                        e.stopPropagation();
+                        // U1: Add confirmation before deleting clip
+                        if (window.confirm(`Delete clip "${clip.name}"? This cannot be undone.`)) {
+                          removeClip(clip.id);
+                        }
+                      }} className="p-1 rounded hover:bg-red-600 text-theme-dim hover:text-white transition-colors">
                         <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
@@ -388,7 +394,10 @@ export default function VideoSidebar() {
                         {clip.muted ? 'Muted' : 'Mute'}
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); updateClip(clip.id, { speed: Math.min(2, clip.speed + 0.25) }); }} className="text-[9px] px-1.5 py-0.5 rounded bg-panel-hover text-theme-muted">
-                        {clip.speed.toFixed(2)}x
+                        ▲ {clip.speed.toFixed(2)}x
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); updateClip(clip.id, { speed: Math.max(0.25, clip.speed - 0.25) }); }} className="text-[9px] px-1.5 py-0.5 rounded bg-panel-hover text-theme-muted">
+                        ▼
                       </button>
                     </div>
                   </div>
@@ -618,6 +627,7 @@ export default function VideoSidebar() {
             <div className="space-y-4">
               <div>
                 <p className="text-[11px] text-theme-muted mb-2">Background Music</p>
+                {/* U15: Removed misleading drag hint */}
               <div className="space-y-3">
                 <label className="flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-panel-border hover:border-sky-500/30 bg-panel-light cursor-pointer transition-all group">
                   <Music className="w-4 h-4 text-theme-muted group-hover:text-sky-400" />

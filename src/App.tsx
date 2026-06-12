@@ -38,6 +38,16 @@ export default function App() {
   const [designs, setDesigns] = useState<SavedDesign[]>([]);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [activeDesign, setActiveDesign] = useState<SavedDesign | null>(null);
+  const [workspaceDirty, setWorkspaceDirty] = useState(false);
+  const [videoDirty, setVideoDirty] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string>('');
+  const savedWorkspaceSnapshotRef = useRef<{
+    historyIndex: number;
+    canvasWidth: number;
+    canvasHeight: number;
+    canvasBackground: string;
+    canvasName: string;
+  } | null>(null);
   const store = useStore();
 
   // Refs for autosave — keep stable references to avoid closure issues
@@ -45,15 +55,65 @@ export default function App() {
   const viewRef = useRef<AppView>('landing');
   const activeDesignRef = useRef<SavedDesign | null>(null);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasPendingChangesRef = useRef<boolean>(false);
 
   useEffect(() => { userRef.current = user; }, [user]);
   useEffect(() => { viewRef.current = view; }, [view]);
   useEffect(() => { activeDesignRef.current = activeDesign; }, [activeDesign]);
 
+  const markWorkspaceClean = () => {
+    const state = store.getState();
+    savedWorkspaceSnapshotRef.current = {
+      historyIndex: state.historyIndex,
+      canvasWidth: state.canvasWidth,
+      canvasHeight: state.canvasHeight,
+      canvasBackground: state.canvasBackground,
+      canvasName: state.canvasName,
+    };
+    setWorkspaceDirty(false);
+  };
+
+  useEffect(() => {
+    // Subscribe to a small slice of the store using the hook's subscribe API
+    const unsubscribe = useStore.subscribe(
+      (s) => ({
+        historyIndex: s.historyIndex,
+        canvasWidth: s.canvasWidth,
+        canvasHeight: s.canvasHeight,
+        canvasBackground: s.canvasBackground,
+        canvasName: s.canvasName,
+      }),
+      (next) => {
+        if (viewRef.current !== 'workspace') return;
+        const saved = savedWorkspaceSnapshotRef.current;
+        const dirty = !saved
+          || next.historyIndex !== saved.historyIndex
+          || next.canvasWidth !== saved.canvasWidth
+          || next.canvasHeight !== saved.canvasHeight
+          || next.canvasBackground !== saved.canvasBackground
+          || next.canvasName !== saved.canvasName;
+        setWorkspaceDirty(dirty);
+      },
+    );
+
+    return () => unsubscribe();
+  }, [store]);
+
+  useEffect(() => {
+    hasPendingChangesRef.current = workspaceDirty || videoDirty;
+  }, [workspaceDirty, videoDirty]);
+
+  useEffect(() => {
+    document.title = `${workspaceDirty || videoDirty ? '• ' : ''}DesignForge`;
+  }, [workspaceDirty, videoDirty]);
+
   // Video project autosave to Supabase — debounced 4 seconds after last change
   useEffect(() => {
     const unsub = useVideoStore.subscribe((state) => {
       if (!state.project || viewRef.current !== 'video-workspace' || !userRef.current) return;
+      // S1: Mark that there are unsaved changes
+      hasPendingChangesRef.current = true;
+      setVideoDirty(true);
       if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
       autosaveTimerRef.current = setTimeout(async () => {
         const u = userRef.current;
@@ -82,10 +142,27 @@ export default function App() {
           activeDesignRef.current = savedDesign;
           setActiveDesign(savedDesign);
           localStorage.setItem(LAST_DESIGN_KEY, actualId);
+          // S1: Clear the pending changes flag after successful save
+          hasPendingChangesRef.current = false;
+          setVideoDirty(false);
+          setLastSyncedAt(new Date().toLocaleString());
         } catch { /* silent fail */ }
       }, 4000);
     });
     return () => { unsub(); if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current); };
+  }, []);
+
+  // S1: Add beforeunload warning for unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasPendingChangesRef.current && userRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
   const persistView = (nextView: AppView) => {
@@ -117,6 +194,7 @@ export default function App() {
   const fetchDesigns = async (userId: string) => {
     const result = await getUserDesigns(userId);
     setDesigns(result);
+    setLastSyncedAt(new Date().toLocaleString());
     return result;
   };
 
@@ -135,13 +213,22 @@ export default function App() {
     }
   };
 
+  // S4: Helper to validate canvas_data shape before deserialization
+  const isValidCanvasData = (data: any): data is Record<string, any> => {
+    if (!data || typeof data !== 'object') return false;
+    // Minimal check: must have expected properties for a video project or canvas design
+    const hasVideoProps = typeof data.id === 'string' && (Array.isArray(data.clips) || data.aspectRatio);
+    const hasCanvasProps = typeof data.version === 'string' && (Array.isArray(data.objects) || typeof data.background === 'string');
+    return hasVideoProps || hasCanvasProps;
+  };
+
   useEffect(() => {
-    // Track whether the startup IIFE has completed its session check.
-    // onAuthStateChange must NOT navigate while boot is in progress.
-    let bootComplete = false;
+    // S5: Track whether the startup sequence has completed using a ref
+    // This ensures the auth listener can see the updated value
+    let bootPromise: Promise<void> | null = null;
 
     // Check for existing session — runs once on mount
-    (async () => {
+    bootPromise = (async () => {
       const currentUser = await getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
@@ -158,20 +245,19 @@ export default function App() {
             if (design) {
               setActiveDesign(design);
               await store.loadDesign(design);
+              markWorkspaceClean();
               setView('workspace');
-              bootComplete = true;
               return;
             }
           }
           store.resetWorkspace();
+          markWorkspaceClean();
           setView('workspace');
-          bootComplete = true;
           return;
         }
 
         if (lastView === 'dashboard') {
           setView('dashboard');
-          bootComplete = true;
           return;
         }
 
@@ -182,13 +268,13 @@ export default function App() {
               setActiveDesign(design);
               useVideoStore.getState().resetStore();
               const savedProject = design.pages[0]?.canvas_data as any;
-              if (savedProject?.id) {
+              // S4: Validate canvas_data before using it
+              if (isValidCanvasData(savedProject)) {
                 useVideoStore.getState().loadProject(savedProject);
               } else {
                 useVideoStore.getState().createProject(design.title);
               }
               setView('video-workspace');
-              bootComplete = true;
               return;
             }
           }
@@ -198,28 +284,33 @@ export default function App() {
           if (rawProject) {
             try {
               const parsed = JSON.parse(rawProject);
-              useVideoStore.getState().resetStore();
-              if (parsed?.id) {
+              // S4: Validate deserialized data
+              if (isValidCanvasData(parsed)) {
+                useVideoStore.getState().resetStore();
                 useVideoStore.getState().loadProject(parsed);
               } else {
+                useVideoStore.getState().resetStore();
                 useVideoStore.getState().createProject('Untitled Video');
               }
               setView('video-workspace');
-              bootComplete = true;
               return;
             } catch { /* fall through */ }
           }
           useVideoStore.getState().resetStore();
           useVideoStore.getState().createProject('Untitled Video');
           setView('video-workspace');
-          bootComplete = true;
           return;
         }
 
         setView('dashboard');
       }
-      bootComplete = true;
     })();
+
+    // S5: Set up boot completion flag and auth listener synchronization
+    let bootComplete = false;
+    if (bootPromise) {
+      bootPromise.then(() => { bootComplete = true; }).catch(() => { bootComplete = true; });
+    }
 
     // Auth listener — ONLY handles real sign-out and brand-new logins.
     // Every other event (INITIAL_SESSION, TOKEN_REFRESHED, SIGNED_IN on session
@@ -242,7 +333,7 @@ export default function App() {
         return;
       }
 
-      // SIGNED_IN fires on: fresh login, page load session restore, tab focus token refresh.
+      // S5: SIGNED_IN fires on: fresh login, page load session restore, tab focus token refresh.
       // Only treat it as a real login when:
       //  1. Boot is complete (initial restore already ran), AND
       //  2. There was no user before this event (genuinely unauthenticated → authenticated)
@@ -305,17 +396,20 @@ export default function App() {
     if (mode === 'video') {
       useVideoStore.getState().resetStore();
       useVideoStore.getState().createProject('Untitled Video');
+      setVideoDirty(false);
+      setLastSyncedAt('');
       persistActiveDesign(null);
       persistView('video-workspace');
     } else {
       store.resetWorkspace();
       store.setProjectMode(mode);
+      markWorkspaceClean();
       persistActiveDesign(null);
       persistView('workspace');
     }
   };
 
-  const handleOpenDesign = (design: SavedDesign) => {
+  const handleOpenDesign = async (design: SavedDesign) => {
     if (design.projectMode === 'video') {
       useVideoStore.getState().resetStore();
       const savedProject = design.pages[0]?.canvas_data as any;
@@ -324,11 +418,14 @@ export default function App() {
       } else {
         useVideoStore.getState().createProject(design.title);
       }
+      setVideoDirty(false);
+      setLastSyncedAt('');
       persistActiveDesign(design);
       persistView('video-workspace');
     } else {
       persistActiveDesign(design);
-      store.loadDesign(design);
+      await store.loadDesign(design);
+      markWorkspaceClean();
       persistView('workspace');
     }
   };
@@ -410,6 +507,14 @@ export default function App() {
     savedDesign.id = actualId;
     setActiveDesign(savedDesign);
     await fetchDesigns(user.id);
+    if (view === 'workspace') {
+      markWorkspaceClean();
+      setLastSyncedAt(new Date().toLocaleString());
+    }
+    if (view === 'video-workspace') {
+      setVideoDirty(false);
+      setLastSyncedAt(new Date().toLocaleString());
+    }
   };
 
   if (view === 'landing') {
@@ -437,6 +542,8 @@ export default function App() {
         onOpen={handleOpenDesign}
         onDownload={handleDownloadDesign}
         onLogout={handleLogout}
+        hasPendingChanges={workspaceDirty || videoDirty}
+        syncStatus={workspaceDirty || videoDirty ? 'You have unsaved changes' : lastSyncedAt ? `Last synced ${lastSyncedAt}` : 'Not synced yet'}
       />
     );
   }
