@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
+import ToastContainer from './components/ToastContainer.tsx';
 import './index.css';
 import { useThemeStore } from './store/themeStore';
 
@@ -36,5 +37,6 @@ if (import.meta.env.DEV && 'serviceWorker' in navigator) {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
+    <ToastContainer />
   </StrictMode>
 );

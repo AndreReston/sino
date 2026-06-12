@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Undo2, Redo2, Download, Monitor, ChevronDown, Smartphone, Square, MonitorPlay, Check, Sun, Moon } from 'lucide-react';
 import { useVideoStore, AspectRatio } from '../../store/videoStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useToastStore } from '../../store/toastStore';
 
 const RATIOS: { id: AspectRatio; label: string; dims: string; icon: React.ReactNode }[] = [
   { id: '16:9', label: 'Landscape', dims: '1920×1080', icon: <MonitorPlay className="w-4 h-4" /> },
@@ -16,6 +17,7 @@ interface Props {
 export default function VideoTopBar({ onBack }: Props) {
   const { project, updateProject, undo, redo, historyIndex, history, startExport, isExporting, exportProgress } = useVideoStore();
   const { mode, toggle } = useThemeStore();
+  const { addToast } = useToastStore();
   const [editingName, setEditingName] = useState(false);
   const [showRatio, setShowRatio] = useState(false);
   const [autoSaveLabel, setAutoSaveLabel] = useState<string>('');
@@ -50,7 +52,7 @@ export default function VideoTopBar({ onBack }: Props) {
 
       {editingName ? (
         <input autoFocus className="bg-panel-light border border-panel-border rounded-md px-2 py-0.5 text-sm text-theme-primary focus:outline-none focus:border-sky-500/50 w-40"
-          value={project.title} onChange={(e) => updateProject({ title: e.target.value })} onBlur={() => setEditingName(false)}
+          value={project.title} maxLength={80} onChange={(e) => updateProject({ title: e.target.value })} onBlur={() => setEditingName(false)}
           onKeyDown={(e) => e.key === 'Enter' && setEditingName(false)} />
       ) : (
         <button onClick={() => setEditingName(true)} className="text-sm text-theme-secondary hover:text-theme-primary px-2 py-1 rounded hover:bg-panel-hover transition-colors truncate max-w-[200px]">
@@ -117,10 +119,19 @@ export default function VideoTopBar({ onBack }: Props) {
           <Check className="w-3 h-3" /> {autoSaveLabel}
         </div>
       )}
-      <button onClick={startExport} disabled={isExporting}
+      <button
+        onClick={async () => {
+          try {
+            await startExport();
+            addToast('Video exported successfully!', 'success');
+          } catch {
+            addToast('Export failed. Please try again.', 'error');
+          }
+        }}
+        disabled={isExporting}
         className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-sky-500 text-white text-xs font-semibold hover:bg-sky-400 hover:shadow-[0_4px_20px_rgba(56,189,248,0.3)] transition-all disabled:opacity-50">
         <Download className="w-3.5 h-3.5" />
-        {isExporting ? `${exportProgress}%` : 'Download'}
+        {isExporting ? `Exporting ${exportProgress}%` : 'Download'}
       </button>
     </div>
   );

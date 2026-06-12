@@ -101,9 +101,9 @@ export const saveUserDesign = async (userId: string, design: SavedDesign): Promi
   const isNew = !isUUID(design.id);
   const designRow: Record<string, any> = {
     user_id: userId,
-    title: design.title,
-    canvas_width: design.canvasWidth,
-    canvas_height: design.canvasHeight,
+    title: (design.title ?? 'Untitled').trim().slice(0, 200) || 'Untitled',
+    canvas_width: Math.max(1, Math.min(design.canvasWidth, 16384)),
+    canvas_height: Math.max(1, Math.min(design.canvasHeight, 16384)),
     canvas_background: design.canvasBackground,
     project_mode: design.projectMode || 'photo',
     updated_at: new Date().toISOString(),

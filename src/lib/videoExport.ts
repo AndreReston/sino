@@ -57,7 +57,7 @@ async function renderFrame(
             const w = width * scaleX;
             const h = height * scaleY;
             
-            ctx.globalAlpha = (clip.volume || 1);
+            ctx.globalAlpha = clip.opacity ?? 1;
             ctx.drawImage(video, x, y, w, h);
           } else {
             // Full-frame mode: scale to fill
@@ -129,23 +129,97 @@ async function renderFrame(
   for (const overlay of project.textOverlays) {
     if (timestamp >= overlay.startTime && timestamp <= overlay.endTime) {
       ctx.save();
-      
+
       const x = (overlay.x / 100) * width;
       const y = (overlay.y / 100) * height;
-      
+      const fontSize = overlay.fontSize ?? 32;
+      const fontFamily = overlay.fontFamily ?? 'Arial';
+      const fontWeight = overlay.fontWeight ?? 'normal';
+      const textAlign = (overlay.textAlign as CanvasTextAlign) ?? 'left';
+      const lineHeight = fontSize * 1.3;
+      const lines = String(overlay.text).split('\n');
+
+      ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+      ctx.textAlign = textAlign;
+      ctx.textBaseline = 'top';
+
+      const maxLineWidth = Math.max(...lines.map((l) => ctx.measureText(l).width));
+      const bgPaddingX = 12;
+      const bgPaddingY = 8;
+      const bgW = maxLineWidth + bgPaddingX * 2;
+      const bgH = lines.length * lineHeight + bgPaddingY * 2;
+      const bgX = textAlign === 'center' ? x - bgW / 2 : textAlign === 'right' ? x - bgW : x - bgPaddingX;
+      const bgY = y - bgPaddingY;
+
       // Draw background
       if (overlay.backgroundOpacity > 0) {
-        ctx.fillStyle = overlay.backgroundColor;
         ctx.globalAlpha = overlay.backgroundOpacity;
-        ctx.fillRect(x - 10, y - 10, 200, 40);
+        ctx.fillStyle = overlay.backgroundColor ?? '#000000';
+        const r = 6;
+        ctx.beginPath();
+        ctx.moveTo(bgX + r, bgY);
+        ctx.lineTo(bgX + bgW - r, bgY);
+        ctx.quadraticCurveTo(bgX + bgW, bgY, bgX + bgW, bgY + r);
+        ctx.lineTo(bgX + bgW, bgY + bgH - r);
+        ctx.quadraticCurveTo(bgX + bgW, bgY + bgH, bgX + bgW - r, bgY + bgH);
+        ctx.lineTo(bgX + r, bgY + bgH);
+        ctx.quadraticCurveTo(bgX, bgY + bgH, bgX, bgY + bgH - r);
+        ctx.lineTo(bgX, bgY + r);
+        ctx.quadraticCurveTo(bgX, bgY, bgX + r, bgY);
+        ctx.closePath();
+        ctx.fill();
       }
-      
-      // Draw text
-      ctx.fillStyle = overlay.color;
-      ctx.globalAlpha = overlay.opacity;
-      ctx.font = `${overlay.fontWeight} ${overlay.fontSize}px ${overlay.fontFamily}`;
-      ctx.fillText(overlay.text, x, y);
-      
+
+      // Draw text lines
+      ctx.globalAlpha = overlay.opacity ?? 1;
+      ctx.fillStyle = overlay.color ?? '#ffffff';
+      lines.forEach((line, i) => {
+        ctx.fillText(line, x, y + i * lineHeight);
+      });
+
+      ctx.restore();
+    }
+  }
+
+  // Render subtitle entries
+  for (const subtitle of (project.subtitles ?? [])) {
+    if (timestamp >= subtitle.startTime && timestamp <= subtitle.endTime) {
+      ctx.save();
+
+      const fontSize = Math.round(height * 0.045);
+      const fontFamily = 'Arial, sans-serif';
+      ctx.font = `bold ${fontSize}px ${fontFamily}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+
+      const posY = subtitle.position === 'top' ? height * 0.1
+        : subtitle.position === 'middle' ? height * 0.5
+        : height * 0.9;
+      const posX = width / 2;
+
+      const lines = String(subtitle.text).split('\n');
+      const lineH = fontSize * 1.25;
+      const maxW = Math.max(...lines.map((l) => ctx.measureText(l).width));
+      const pad = 14;
+      const bgW = maxW + pad * 2;
+      const bgH = lines.length * lineH + pad;
+      const bgX = posX - bgW / 2;
+      const bgY = posY - bgH;
+
+      // Background pill
+      ctx.globalAlpha = 0.75;
+      ctx.fillStyle = '#000000';
+      ctx.beginPath();
+      ctx.roundRect?.(bgX, bgY, bgW, bgH, 8) ?? ctx.fillRect(bgX, bgY, bgW, bgH);
+      ctx.fill();
+
+      // Text
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#ffffff';
+      lines.forEach((line, i) => {
+        ctx.fillText(line, posX, posY - (lines.length - 1 - i) * lineH - pad / 2);
+      });
+
       ctx.restore();
     }
   }

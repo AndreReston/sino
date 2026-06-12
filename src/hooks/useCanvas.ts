@@ -44,34 +44,25 @@ export function useCanvas() {
     });
 
     // Assign unique ids to new objects
-    canvas.on('object:added', (e) => {
+    const onObjectAdded = (e: any) => {
       const obj = e.target as any;
       if (!obj.id) {
         obj.id = `obj_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       }
       pushHistory(serializeCanvas(canvas));
-    });
+    };
+    const onObjectModified = () => { pushHistory(serializeCanvas(canvas)); };
+    const onObjectRemoved = () => { pushHistory(serializeCanvas(canvas)); };
+    const onSelectionCreated = (e: any) => { setActiveObject(e.selected?.[0] || null); };
+    const onSelectionUpdated = (e: any) => { setActiveObject(e.selected?.[0] || null); };
+    const onSelectionCleared = () => { setActiveObject(null); setGuides([]); };
 
-    canvas.on('object:modified', () => {
-      pushHistory(serializeCanvas(canvas));
-    });
-
-    canvas.on('object:removed', () => {
-      pushHistory(serializeCanvas(canvas));
-    });
-
-    canvas.on('selection:created', (e) => {
-      setActiveObject(e.selected?.[0] || null);
-    });
-
-    canvas.on('selection:updated', (e) => {
-      setActiveObject(e.selected?.[0] || null);
-    });
-
-    canvas.on('selection:cleared', () => {
-      setActiveObject(null);
-      setGuides([]);
-    });
+    canvas.on('object:added', onObjectAdded);
+    canvas.on('object:modified', onObjectModified);
+    canvas.on('object:removed', onObjectRemoved);
+    canvas.on('selection:created', onSelectionCreated);
+    canvas.on('selection:updated', onSelectionUpdated);
+    canvas.on('selection:cleared', onSelectionCleared);
 
     const clearGuides = () => setGuides([]);
 
@@ -185,7 +176,12 @@ export function useCanvas() {
     }
 
     return () => {
-      // S9: Remove event listeners before disposing canvas to prevent memory leaks
+      canvas.off('object:added', onObjectAdded);
+      canvas.off('object:modified', onObjectModified);
+      canvas.off('object:removed', onObjectRemoved);
+      canvas.off('selection:created', onSelectionCreated);
+      canvas.off('selection:updated', onSelectionUpdated);
+      canvas.off('selection:cleared', onSelectionCleared);
       canvas.off('object:moving', updateGuides);
       canvas.off('object:scaling', updateGuides);
       canvas.off('mouse:up', clearGuides);

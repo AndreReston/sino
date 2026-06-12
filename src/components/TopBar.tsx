@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Undo2, Redo2, ZoomIn, ZoomOut, Download, Save,
-  ChevronDown, Monitor, Sun, Moon,
+  ChevronDown, Monitor, Sun, Moon, Ruler,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useThemeStore } from '../store/themeStore';
+import { useToastStore } from '../store/toastStore';
 
 const PRESETS = [
   { name: 'Instagram Post', w: 1080, h: 1080 },
@@ -17,6 +18,9 @@ const PRESETS = [
   { name: 'Business Card', w: 1050, h: 600 },
 ];
 
+const MAX_CANVAS_DIM = 8192;
+const MIN_CANVAS_DIM = 50;
+
 interface TopBarProps {
   onSave?: () => void;
   onBack?: () => void;
@@ -24,6 +28,7 @@ interface TopBarProps {
 
 export default function TopBar({ onSave, onBack }: TopBarProps) {
   const { mode, toggle } = useThemeStore();
+  const { addToast } = useToastStore();
   const {
     canvasName, setCanvasName,
     zoom, setZoom,
@@ -38,9 +43,23 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
   const [editingName, setEditingName] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showCustomSize, setShowCustomSize] = useState(false);
+  const [customW, setCustomW] = useState(String(canvasWidth));
+  const [customH, setCustomH] = useState(String(canvasHeight));
+  const [customError, setCustomError] = useState('');
+  const customWRef = useRef<HTMLInputElement>(null);
 
   const zoomPct = Math.round(zoom * 100);
   const selectedCount = selectedPageIds.length;
+
+  useEffect(() => {
+    if (showCustomSize) {
+      setCustomW(String(canvasWidth));
+      setCustomH(String(canvasHeight));
+      setCustomError('');
+      setTimeout(() => customWRef.current?.focus(), 50);
+    }
+  }, [showCustomSize, canvasWidth, canvasHeight]);
 
   const applyPreset = (w: number, h: number) => {
     setCanvasSize(w, h);
@@ -52,6 +71,27 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
     }
   };
 
+  const applyCustomSize = () => {
+    const w = parseInt(customW, 10);
+    const h = parseInt(customH, 10);
+    if (!customW || !customH || isNaN(w) || isNaN(h)) {
+      setCustomError('Please enter valid numbers.');
+      return;
+    }
+    if (w < MIN_CANVAS_DIM || h < MIN_CANVAS_DIM) {
+      setCustomError(`Minimum size is ${MIN_CANVAS_DIM}×${MIN_CANVAS_DIM} px.`);
+      return;
+    }
+    if (w > MAX_CANVAS_DIM || h > MAX_CANVAS_DIM) {
+      setCustomError(`Maximum size is ${MAX_CANVAS_DIM}×${MAX_CANVAS_DIM} px.`);
+      return;
+    }
+    applyPreset(w, h);
+    setShowCustomSize(false);
+    setShowPresets(false);
+    addToast(`Canvas resized to ${w}×${h} px`, 'info');
+  };
+
   const handleExport = async (
     target: 'current' | 'selected' | 'all',
     format: 'png' | 'jpg' | 'svg'
@@ -60,42 +100,46 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
 
     if (target === 'current') {
       if (!fabricCanvas) return;
-      if (format === 'svg') {
-        const svg = fabricCanvas.toSVG();
-        const blob = new Blob([svg], { type: 'image/svg+xml' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${canvasName}.svg`;
-        a.click();
-        URL.revokeObjectURL(url);
-        return;
+      try {
+        if (format === 'svg') {
+          const svg = fabricCanvas.toSVG();
+          const blob = new Blob([svg], { type: 'image/svg+xml' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${canvasName}.svg`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } else {
+          const dataURL = fabricCanvas.toDataURL({
+            format: format === 'jpg' ? 'jpeg' : 'png',
+            quality: 0.95,
+            multiplier: 1,
+          });
+          const a = document.createElement('a');
+          a.href = dataURL;
+          a.download = `${canvasName}.${format}`;
+          a.click();
+        }
+        addToast(`Exported as ${format.toUpperCase()}`, 'success');
+      } catch {
+        addToast('Export failed. Please try again.', 'error');
       }
-      const dataURL = fabricCanvas.toDataURL({
-        format: format === 'jpg' ? 'jpeg' : 'png',
-        quality: 0.95,
-        multiplier: 1,
-      });
-      const a = document.createElement('a');
-      a.href = dataURL;
-      a.download = `${canvasName}.${format}`;
-      a.click();
       return;
     }
 
     if (target === 'selected' && selectedCount === 0) {
-      // S18: Log validation error instead of blocking user with alert()
-      console.warn('Cannot export selected pages: no pages selected');
+      addToast('No pages selected. Please select pages first.', 'warning');
       return;
     }
 
     const zipFormat = format as 'png' | 'jpg';
     try {
       await exportPagesAsZip(target === 'selected' ? selectedPageIds : undefined, zipFormat);
-      // S20: Provide success feedback to user after export completes
-      console.log(`Export completed: ${target} pages as ${zipFormat}`);
-    } catch (error) {
-      console.error('Export failed:', error);
+      const label = target === 'selected' ? `${selectedCount} page${selectedCount > 1 ? 's' : ''}` : 'all pages';
+      addToast(`Exported ${label} as ZIP (${zipFormat.toUpperCase()})`, 'success');
+    } catch {
+      addToast('Export failed. Please try again.', 'error');
     }
   };
 
@@ -118,6 +162,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
             autoFocus
             className="input-field text-sm w-44 h-7 py-0"
             value={canvasName}
+            maxLength={80}
             onChange={(e) => setCanvasName(e.target.value)}
             onBlur={() => setEditingName(false)}
             onKeyDown={(e) => e.key === 'Enter' && setEditingName(false)}
@@ -126,6 +171,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
           <button
             onClick={() => setEditingName(true)}
             className="text-sm text-theme-secondary hover:text-theme-primary px-2 py-1 rounded hover:bg-panel-hover transition-colors"
+            title="Click to rename"
           >
             {canvasName}
           </button>
@@ -143,31 +189,63 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
           <ChevronDown className="w-3 h-3" />
         </button>
         {showPresets && (
-          <div className="absolute top-full left-0 mt-1 w-52 bg-panel border border-panel-border rounded-lg shadow-xl z-50 py-1 animate-slide-in">
+          <div className="absolute top-full left-0 mt-1 w-56 bg-panel border border-panel-border rounded-lg shadow-xl z-50 py-1 animate-slide-in">
             {PRESETS.map((p) => (
               <button
                 key={p.name}
                 onClick={() => applyPreset(p.w, p.h)}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors"
+                className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-panel-hover transition-colors ${canvasWidth === p.w && canvasHeight === p.h ? 'text-orange-400' : 'text-theme-secondary hover:text-theme-primary'}`}
               >
                 <span>{p.name}</span>
                 <span className="text-theme-dim text-xs">{p.w}×{p.h}</span>
               </button>
             ))}
-            {/* U11: Add custom size option */}
             <div className="border-t border-panel-border my-1" />
             <button
-              onClick={() => {
-                const w = window.prompt('Width (px):', String(canvasWidth));
-                const h = window.prompt('Height (px):', String(canvasHeight));
-                if (w && h && /^\d+$/.test(w) && /^\d+$/.test(h)) {
-                  applyPreset(parseInt(w), parseInt(h));
-                }
-              }}
+              onClick={() => { setShowCustomSize(!showCustomSize); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors"
             >
-              <span>📐 Custom Size</span>
+              <Ruler className="w-3.5 h-3.5" />
+              <span>Custom Size…</span>
             </button>
+            {showCustomSize && (
+              <div className="px-3 py-3 border-t border-panel-border space-y-2">
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="block text-[10px] text-theme-dim mb-1">Width (px)</label>
+                    <input
+                      ref={customWRef}
+                      type="number"
+                      value={customW}
+                      min={MIN_CANVAS_DIM}
+                      max={MAX_CANVAS_DIM}
+                      onChange={(e) => { setCustomW(e.target.value); setCustomError(''); }}
+                      onKeyDown={(e) => e.key === 'Enter' && applyCustomSize()}
+                      className="w-full bg-panel-light border border-panel-border rounded px-2 py-1.5 text-xs text-theme-primary focus:outline-none focus:border-orange-500/50"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] text-theme-dim mb-1">Height (px)</label>
+                    <input
+                      type="number"
+                      value={customH}
+                      min={MIN_CANVAS_DIM}
+                      max={MAX_CANVAS_DIM}
+                      onChange={(e) => { setCustomH(e.target.value); setCustomError(''); }}
+                      onKeyDown={(e) => e.key === 'Enter' && applyCustomSize()}
+                      className="w-full bg-panel-light border border-panel-border rounded px-2 py-1.5 text-xs text-theme-primary focus:outline-none focus:border-orange-500/50"
+                    />
+                  </div>
+                </div>
+                {customError && <p className="text-[10px] text-red-400">{customError}</p>}
+                <button
+                  onClick={applyCustomSize}
+                  className="w-full py-1.5 rounded bg-orange-500 hover:bg-orange-400 text-xs font-semibold text-white transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -268,23 +346,28 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
           type="button"
           onClick={onSave}
           disabled={!onSave}
-          title={!onSave ? 'Save not available in this context' : 'Save project'}
+          title={!onSave ? 'Save not available in this context' : 'Save project (Ctrl/Cmd+S)'}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-theme-muted hover:text-theme-primary hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Save className="w-3.5 h-3.5" />
           Save
         </button>
 
-        {/* Quick Download — exports current page as PNG immediately */}
+        {/* Quick Download — exports current page as PNG */}
         <button
           type="button"
           onClick={() => {
             if (!fabricCanvas) return;
-            const dataURL = fabricCanvas.toDataURL({ format: 'png', quality: 0.95, multiplier: 1 });
-            const a = document.createElement('a');
-            a.href = dataURL;
-            a.download = `${canvasName}.png`;
-            a.click();
+            try {
+              const dataURL = fabricCanvas.toDataURL({ format: 'png', quality: 0.95, multiplier: 1 });
+              const a = document.createElement('a');
+              a.href = dataURL;
+              a.download = `${canvasName}.png`;
+              a.click();
+              addToast(`Downloaded "${canvasName}.png"`, 'success');
+            } catch {
+              addToast('Download failed. Please try again.', 'error');
+            }
           }}
           className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-500 text-zinc-950 text-xs font-semibold hover:bg-emerald-400 hover:shadow-[0_4px_20px_rgba(16,185,129,0.3)] transition-all cursor-pointer"
         >
@@ -365,7 +448,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
       {(showPresets || showExport) && (
         <div
           className="fixed inset-0 z-40"
-          onClick={() => { setShowPresets(false); setShowExport(false); }}
+          onClick={() => { setShowPresets(false); setShowExport(false); setShowCustomSize(false); }}
         />
       )}
     </div>
