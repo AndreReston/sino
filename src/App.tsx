@@ -62,7 +62,7 @@ export default function App() {
   useEffect(() => { activeDesignRef.current = activeDesign; }, [activeDesign]);
 
   const markWorkspaceClean = () => {
-    const state = store.getState();
+    const state = useStore.getState();
     savedWorkspaceSnapshotRef.current = {
       historyIndex: state.historyIndex,
       canvasWidth: state.canvasWidth,
