@@ -141,7 +141,7 @@ export default function VideoPreview({ videoRef }: Props) {
   }, []);
 
   // ── Drag text overlay positioning ──────────────────────────────────────
-  const handleTextMouseDown = useCallback((e: React.MouseEvent, overlayId: string) => {
+  const handleTextMouseDown = useCallback((e: React.PointerEvent, overlayId: string) => {
     e.stopPropagation();
     e.preventDefault();
     setActiveTextId(overlayId);
@@ -156,7 +156,7 @@ export default function VideoPreview({ videoRef }: Props) {
 
   useEffect(() => {
     if (!draggingTextId) return;
-    const handleMove = (e: MouseEvent) => {
+    const handleMove = (e: PointerEvent) => {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       const x = Math.max(0, Math.min(100, ((e.clientX - rect.left - dragOffset.x) / rect.width) * 100));
@@ -164,16 +164,18 @@ export default function VideoPreview({ videoRef }: Props) {
       updateTextOverlay(draggingTextId, { x, y });
     };
     const handleUp = () => setDraggingTextId(null);
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+    window.addEventListener('pointercancel', handleUp);
     return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      window.removeEventListener('pointercancel', handleUp);
     };
   }, [draggingTextId, dragOffset, updateTextOverlay]);
 
   // ── Drag sticker overlay positioning ──────────────────────────────────
-  const handleStickerMouseDown = useCallback((e: React.MouseEvent, stickerId: string) => {
+  const handleStickerMouseDown = useCallback((e: React.PointerEvent, stickerId: string) => {
     e.stopPropagation();
     e.preventDefault();
     setActiveStickerOverlayId(stickerId);
@@ -188,7 +190,7 @@ export default function VideoPreview({ videoRef }: Props) {
 
   useEffect(() => {
     if (!draggingStickerData) return;
-    const handleMove = (e: MouseEvent) => {
+    const handleMove = (e: PointerEvent) => {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       const x = Math.max(0, Math.min(100, ((e.clientX - rect.left - draggingStickerData.ox) / rect.width) * 100));
@@ -196,18 +198,20 @@ export default function VideoPreview({ videoRef }: Props) {
       updateStickerOverlay(draggingStickerData.id, { x, y });
     };
     const handleUp = () => setDraggingStickerData(null);
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+    window.addEventListener('pointercancel', handleUp);
     return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      window.removeEventListener('pointercancel', handleUp);
     };
   }, [draggingStickerData, updateStickerOverlay]);
 
   // ── Sticker resize ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!resizingStickerData) return;
-    const handleMove = (e: MouseEvent) => {
+    const handleMove = (e: PointerEvent) => {
       const deltaX = (e.clientX - resizingStickerData.startX) / 300;
       const deltaY = (e.clientY - resizingStickerData.startY) / 300;
       const delta = (deltaX + deltaY) / 2;
@@ -215,11 +219,13 @@ export default function VideoPreview({ videoRef }: Props) {
       updateStickerOverlay(resizingStickerData.id, { scale: newScale });
     };
     const handleUp = () => setResizingStickerData(null);
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+    window.addEventListener('pointercancel', handleUp);
     return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      window.removeEventListener('pointercancel', handleUp);
     };
   }, [resizingStickerData, updateStickerOverlay]);
 
@@ -227,7 +233,7 @@ export default function VideoPreview({ videoRef }: Props) {
   useEffect(() => {
     if (!resizing || !displayClip || !isClipSelected) return;
     const currentDisplayClip = displayClip;
-    const handleMove = (e: MouseEvent) => {
+    const handleMove = (e: PointerEvent) => {
       const deltaX = (e.clientX - resizing.startX) / 300;
       const deltaY = (e.clientY - resizing.startY) / 300;
       const { corner } = resizing;
@@ -263,11 +269,13 @@ export default function VideoPreview({ videoRef }: Props) {
       }
     };
     const handleUp = () => setResizing(null);
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+    window.addEventListener('pointercancel', handleUp);
     return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      window.removeEventListener('pointercancel', handleUp);
     };
   }, [resizing, displayClip, isClipSelected, updateClip]);
 
@@ -471,7 +479,7 @@ export default function VideoPreview({ videoRef }: Props) {
     return (
       <div className="flex-1 flex items-center justify-center bg-surface min-h-0 p-6">
         <div
-          className="flex items-center justify-center bg-gradient-to-br from-panel-light to-panel-dark rounded-lg border border-panel-border"
+          className="flex items-center justify-center bg-gradient-to-br from-panel-light to-surface rounded-lg border border-panel-border"
           style={{ ...getAspectRatioStyle(), maxWidth: '100%', maxHeight: '100%', width: 'auto', height: '100%' }}
         >
           <div className="flex flex-col items-center gap-3 text-center p-8">
@@ -492,7 +500,7 @@ export default function VideoPreview({ videoRef }: Props) {
     <div className="flex-1 flex items-center justify-center bg-surface min-h-0 p-4">
       <div
         ref={containerRef}
-        className="relative bg-panel-dark rounded-lg overflow-hidden border border-panel-border"
+        className="relative bg-surface rounded-lg overflow-hidden border border-panel-border"
         style={{ ...getAspectRatioStyle(), maxWidth: '100%', maxHeight: '100%', width: 'auto', height: '100%' }}
         onClick={() => { if (displayClip) setActiveClipId(displayClip.id); }}
       >
@@ -561,8 +569,8 @@ export default function VideoPreview({ videoRef }: Props) {
         {isClipSelected && displayClip.overlayMode === 'full' && (
           <div
             className="absolute inset-0 cursor-grab active:cursor-grabbing"
-            onMouseDown={(e) => {
-              if (e.button !== 2 && !panning) {
+            onPointerDown={(e) => {
+              if (e.button === 0 && !panning) {
                 setPanning({ startX: e.clientX, startY: e.clientY });
               }
             }}
@@ -574,7 +582,7 @@ export default function VideoPreview({ videoRef }: Props) {
           >
             {panning && (
               <div
-                onMouseMove={(e) => {
+                onPointerMove={(e) => {
                   const deltaX = (e.clientX - panning.startX) / 10;
                   const deltaY = (e.clientY - panning.startY) / 10;
                   updateClip(displayClip.id, {
@@ -583,8 +591,8 @@ export default function VideoPreview({ videoRef }: Props) {
                   });
                   setPanning({ startX: e.clientX, startY: e.clientY });
                 }}
-                onMouseUp={() => setPanning(null)}
-                onMouseLeave={() => setPanning(null)}
+                onPointerUp={() => setPanning(null)}
+                onPointerLeave={() => setPanning(null)}
                 className="absolute inset-0"
               />
             )}
@@ -619,10 +627,11 @@ export default function VideoPreview({ videoRef }: Props) {
                   top: corner.includes('s') ? `${displayClip.clipY + displayClip.scaleY * 25}%` : `${displayClip.clipY - displayClip.scaleY * 25}%`,
                   transform: 'translate(-50%, -50%)',
                 }}
-                onMouseDown={(e) => {
+                onPointerDown={(e) => {
                   e.stopPropagation();
                   setResizing({ corner, startX: e.clientX, startY: e.clientY });
                 }}
+                onClick={(e) => e.stopPropagation()}
               />
             ))}
           </>
@@ -659,7 +668,7 @@ export default function VideoPreview({ videoRef }: Props) {
               lineHeight: 1,
               color: sticker.type !== 'emoji' && sticker.type !== 'photo' ? sticker.color : undefined,
             }}
-            onMouseDown={e => handleStickerMouseDown(e, sticker.id)}
+            onPointerDown={e => handleStickerMouseDown(e, sticker.id)}
             onClick={e => { e.stopPropagation(); setActiveStickerOverlayId(sticker.id); }}
           >
             {sticker.type === 'photo' ? (
@@ -678,13 +687,41 @@ export default function VideoPreview({ videoRef }: Props) {
             
             {/* Resize handle for sticker */}
             {activeStickerOverlayId === sticker.id && sticker.type === 'photo' && (
-              <div
-                className="absolute -bottom-2 -right-2 w-4 h-4 bg-sky-400 rounded-full cursor-nwse-resize z-30"
-                onMouseDown={(e) => {
+              <>
+                <div
+                  className="absolute -bottom-2 -right-2 w-4 h-4 bg-sky-400 rounded-full cursor-nwse-resize z-30"
+                onPointerDown={(e) => {
                   e.stopPropagation();
                   setResizingStickerData({ id: sticker.id, startX: e.clientX, startY: e.clientY, startScale: sticker.scale });
                 }}
-              />
+                onClick={(e) => e.stopPropagation()}
+                />
+                <div
+                  className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-violet-500 rounded-full cursor-grab z-30"
+                  title="Drag to rotate photo"
+                  aria-label="Rotate photo overlay"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    const rect = containerRef.current?.getBoundingClientRect();
+                    const move = (me: PointerEvent) => {
+                      if (!rect) return;
+                      const cx = rect.left + (sticker.x / 100) * rect.width;
+                      const cy = rect.top + (sticker.y / 100) * rect.height;
+                      const angle = (Math.atan2(me.clientY - cy, me.clientX - cx) * 180) / Math.PI;
+                      updateStickerOverlay(sticker.id, { rotation: (angle + 90 + 360) % 360 });
+                    };
+                    const up = () => {
+                      window.removeEventListener('pointermove', move);
+                      window.removeEventListener('pointerup', up);
+                      window.removeEventListener('pointercancel', up);
+                    };
+                    window.addEventListener('pointermove', move);
+                    window.addEventListener('pointerup', up, { once: true });
+                    window.addEventListener('pointercancel', up, { once: true });
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </>
             )}
           </div>
         ))}
@@ -700,7 +737,7 @@ export default function VideoPreview({ videoRef }: Props) {
               transform: 'translate(-50%, -50%)',
               opacity: overlay.opacity,
             }}
-            onMouseDown={(e) => handleTextMouseDown(e, overlay.id)}
+            onPointerDown={(e) => handleTextMouseDown(e, overlay.id)}
             onClick={(e) => { e.stopPropagation(); setActiveTextId(overlay.id); }}
           >
             <div

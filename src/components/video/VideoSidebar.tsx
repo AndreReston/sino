@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, type ReactNode } from 'react';
 import {
   Film, Type, Sliders, Volume2, Wand2, Download, Upload, Plus, Trash2,
   Music, Mic, ArrowLeft, ArrowRight, Sparkles, Layers, Bookmark,
@@ -18,7 +18,7 @@ import {
 
 type Panel = 'clips' | 'photos' | 'text' | 'filters' | 'effects' | 'audio' | 'transitions' | 'subtitles' | 'export' | 'stickers' | 'markers' | 'beats' | 'stats' | 'presets';
 
-const PANELS: { id: Panel; icon: React.ReactNode; label: string }[] = [
+const PANELS: { id: Panel; icon: ReactNode; label: string }[] = [
   { id: 'clips', icon: <Film className="w-4 h-4" />, label: 'Clips' },
   { id: 'photos', icon: <ImageIcon className="w-4 h-4" />, label: 'Photos' },
   { id: 'text', icon: <Type className="w-4 h-4" />, label: 'Text' },
@@ -37,6 +37,21 @@ const PANELS: { id: Panel; icon: React.ReactNode; label: string }[] = [
 
 const TRANSITIONS: TransitionType[] = ['none', 'fade', 'crossfade', 'slide-left', 'slide-right', 'slide-up', 'slide-down', 'wipe-left', 'wipe-right'];
 const CAPTION_STYLES: CaptionStyle[] = ['karaoke', 'pop-up', 'tiktok', 'minimal', 'bold-highlight'];
+const CAPTION_STYLE_LABELS: Record<CaptionStyle, string> = {
+  karaoke: 'Karaoke highlight',
+  'pop-up': 'Pop-up card',
+  tiktok: 'TikTok shadow',
+  minimal: 'Minimal text',
+  'bold-highlight': 'Bold highlight',
+};
+
+const FILTER_PRESETS: Array<{ name: string; filters: Partial<VideoFilters> }> = [
+  { name: 'Natural', filters: {} },
+  { name: 'Cinematic', filters: { contrast: 115, saturation: 85, brightness: 96, blur: 0 } },
+  { name: 'Vintage', filters: { sepia: 35, contrast: 105, saturation: 75, brightness: 95 } },
+  { name: 'Cold', filters: { saturation: 70, hueRotate: 190, brightness: 105 } },
+  { name: 'Warm', filters: { saturation: 115, hueRotate: 10, brightness: 104 } },
+];
 
 const EFFECTS: { id: ClipEffect; label: string; desc: string }[] = [
   { id: 'none', label: 'None', desc: 'No effect applied' },
@@ -50,6 +65,19 @@ const EFFECTS: { id: ClipEffect; label: string; desc: string }[] = [
   { id: 'vhs', label: 'VHS', desc: 'Retro VHS look' },
   { id: 'glitch', label: 'Glitch', desc: 'Digital glitch effect' },
 ];
+
+const EFFECT_PREVIEWS: Record<ClipEffect, string> = {
+  none: '○',
+  shake: '〰',
+  'zoom-in': '⊕',
+  'zoom-out': '⊖',
+  'fade-in': '◐',
+  'fade-out': '◑',
+  'blur-in': '◌',
+  'blur-out': '●',
+  vhs: '▤',
+  glitch: '▥',
+};
 
 const MOTION_PRESETS: { id: MotionPreset; label: string; icon: string }[] = [
   { id: 'fade-in', label: 'Fade In', icon: '▶' },
@@ -97,6 +125,10 @@ function formatDuration(secs: number): string {
   const m = Math.floor(secs / 60);
   const s = Math.floor(secs % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function isFilterChanged(filters: VideoFilters, key: keyof VideoFilters): boolean {
+  return filters[key] !== DEFAULT_FILTERS[key];
 }
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
@@ -164,6 +196,38 @@ function SavePresetButton({ clipId }: { clipId: string }) {
   );
 }
 
+function BulkSubtitleEditor() {
+  const [shiftBy, setShiftBy] = useState(0);
+  const [position, setPosition] = useState<'top' | 'middle' | 'bottom' | ''>('');
+  const updateSubtitle = useVideoStore(s => s.updateSubtitle);
+  const subtitles = useVideoStore(s => s.project?.subtitles ?? []);
+
+  if (subtitles.length === 0) {
+    return (
+      <div className="p-3 rounded-xl bg-panel-light border border-panel-border">
+        <p className="text-[10px] text-theme-muted font-medium">Bulk subtitle editing</p>
+        <p className="text-[9px] text-theme-dim mt-1">Add subtitles first, then shift all timings or set one shared position.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 p-3 rounded-xl bg-panel-light border border-panel-border">
+      <p className="text-[10px] text-theme-muted font-medium">Bulk subtitle editing</p>
+      <div className="flex items-center gap-2">
+        <input type="number" step={0.1} value={shiftBy} onChange={e => setShiftBy(Number(e.target.value))} className="w-20 bg-transparent border border-panel-border rounded px-2 py-1 text-xs text-theme-secondary" aria-label="Shift subtitles by seconds" />
+        <button onClick={() => subtitles.forEach(s => updateSubtitle(s.id, { startTime: Math.max(0, s.startTime + shiftBy), endTime: Math.max(0.1, s.endTime + shiftBy) }))} className="flex-1 px-2 py-1 rounded bg-sky-500/10 text-sky-300 text-[10px]">Shift all</button>
+      </div>
+      <div className="grid grid-cols-3 gap-1">
+        {(['top', 'middle', 'bottom'] as const).map(pos => (
+          <button key={pos} onClick={() => setPosition(pos)} className={`px-2 py-1 rounded text-[10px] ${position === pos ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' : 'bg-panel-hover text-theme-muted border border-panel-border'}`}>{pos}</button>
+        ))}
+      </div>
+      <button disabled={!position} onClick={() => { if (position) subtitles.forEach(s => updateSubtitle(s.id, { position })); setPosition(''); }} className="w-full px-2 py-1 rounded bg-sky-500/10 text-sky-300 text-[10px] disabled:opacity-40">Apply position to all</button>
+    </div>
+  );
+}
+
 function AutoSubtitleDistributor() {
   const [text, setText] = useState('');
   const autoDistributeSubtitles = useVideoStore(s => s.autoDistributeSubtitles);
@@ -175,6 +239,7 @@ function AutoSubtitleDistributor() {
   return (
     <div className="space-y-2 p-3 rounded-xl bg-panel-light border border-panel-border">
       <p className="text-[10px] text-theme-muted font-medium">Auto-distribute subtitles</p>
+      <p className="text-[9px] text-theme-dim">Creates new subtitles across the full project duration. Use the bulk editor below to shift existing subtitles together.</p>
       <textarea
         value={text}
         onChange={e => setText(e.target.value)}
@@ -198,6 +263,7 @@ export default function VideoSidebar() {
   const [activePanel, setActivePanel] = useState<Panel>('clips');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [exportHint, setExportHint] = useState(false);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -210,7 +276,7 @@ export default function VideoSidebar() {
     setClipFilter, resetClipFilters, removeAudioTrack, setBackgroundMusic, updateBackgroundMusic,
     setActiveClipId, setActiveTextId, setActiveStickerOverlayId, setActiveAudioTrackId,
     activeTextId, activeStickerOverlayId, activeAudioTrackId,
-    startExport, isExporting, exportProgress, setClipEffect,
+    isExporting, exportProgress, setClipEffect,
     addStickerOverlay, removeStickerOverlay,
     addSceneMarker, removeSceneMarker, updateSceneMarker, jumpToMarker,
     currentTime, showSafeZones, setShowSafeZones,
@@ -280,6 +346,11 @@ export default function VideoSidebar() {
     analyzeBeatMarkers(url);
   };
 
+  const handleAnalyzeBackgroundMusic = () => {
+    const url = project?.backgroundMusic?.url;
+    if (url) analyzeBeatMarkers(url);
+  };
+
   const handlePhotoUpload = async (file: File) => {
     setUploading(true);
     setUploadError(null);
@@ -307,7 +378,7 @@ export default function VideoSidebar() {
           <Film className="w-4 h-4 text-white" strokeWidth={2.5} />
         </div>
         {PANELS.map(p => (
-          <button key={p.id} title={p.label} onClick={() => setActivePanel(p.id)}
+          <button key={p.id} title={p.label} aria-label={p.label} onClick={() => setActivePanel(p.id)}
             className={`flex flex-col items-center justify-center w-10 h-10 rounded-lg transition-all text-xs gap-0.5 shrink-0
               ${activePanel === p.id ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30' : 'text-theme-muted hover:text-theme-secondary hover:bg-panel-hover'}`}>
             {p.icon}
@@ -357,7 +428,7 @@ export default function VideoSidebar() {
                   <div
                     key={clip.id}
                     className={`w-full rounded-xl border px-3 py-2 mb-1.5 transition-all cursor-pointer ${
-                      activeClipId === clip.id ? 'border-sky-500/40 bg-sky-500/10 text-sky-200' : 'border-panel-border bg-panel-light text-theme-secondary hover:border-panel-border'}`}
+                      activeClipId === clip.id ? 'border-sky-500/40 bg-sky-500/10 text-sky-400' : 'border-panel-border bg-panel-light text-theme-secondary hover:border-panel-border'}`}
                     onClick={() => setActiveClipId(clip.id)}
                   >
                     <div className="flex items-center gap-2">
@@ -369,7 +440,7 @@ export default function VideoSidebar() {
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium truncate">{clip.name}</p>
+                        <p className="text-xs font-medium truncate" title={clip.name}>{clip.name}</p>
                         <p className="text-[9px] text-theme-muted">{((clip.duration - clip.trimStart - clip.trimEnd) / clip.speed).toFixed(1)}s</p>
                       </div>
                       {clip.effect !== 'none' && <span className="text-[8px] px-1 py-0.5 rounded bg-violet-500/20 text-violet-300 font-bold">{clip.effect}</span>}
@@ -505,6 +576,13 @@ export default function VideoSidebar() {
                     <span className="text-xs text-theme-muted font-medium truncate max-w-[140px]">{activeClip.name}</span>
                     <button onClick={() => resetClipFilters(activeClip.id)} className="text-[10px] text-theme-muted hover:text-sky-300 transition-colors">Reset</button>
                   </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {FILTER_PRESETS.map(preset => (
+                      <button key={preset.name} onClick={() => { if (Object.keys(preset.filters).length === 0) resetClipFilters(activeClip.id); else Object.entries(preset.filters).forEach(([key, value]) => setClipFilter(activeClip.id, key as keyof VideoFilters, value as number)); }} className="rounded-lg border border-panel-border bg-panel-light px-2 py-1.5 text-left text-[10px] text-theme-secondary hover:border-sky-500/30 hover:text-sky-300">
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
                   {(Object.keys(DEFAULT_FILTERS) as (keyof VideoFilters)[]).map(key => {
                     const ranges: Record<keyof VideoFilters, [number, number]> = {
                       brightness: [0, 200], contrast: [0, 200], saturation: [0, 200],
@@ -515,8 +593,13 @@ export default function VideoSidebar() {
                     return (
                       <div key={key} className="space-y-1">
                         <div className="flex items-center justify-between text-[11px] text-theme-muted">
-                          <span className="capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
-                          <span className="tabular-nums">{value}{key === 'blur' ? 'px' : key === 'hueRotate' ? 'deg' : '%'}</span>
+                          <span className={`capitalize ${isFilterChanged(activeClip.filters, key) ? 'text-sky-300' : ''}`}>{key.replace(/([A-Z])/g, ' $1')}</span>
+                          <div className="flex items-center gap-1">
+                            <span className="tabular-nums">{value}{key === 'blur' ? 'px' : key === 'hueRotate' ? 'deg' : '%'}</span>
+                            {isFilterChanged(activeClip.filters, key) && (
+                              <button onClick={() => setClipFilter(activeClip.id, key, DEFAULT_FILTERS[key])} className="text-[9px] text-theme-muted hover:text-sky-300" title={`Reset ${key}`}>↺</button>
+                            )}
+                          </div>
                         </div>
                         <input type="range" min={min} max={max} value={value}
                           onChange={e => setClipFilter(activeClip.id, key, Number(e.target.value))}
@@ -555,7 +638,7 @@ export default function VideoSidebar() {
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <Sparkles className={`w-3.5 h-3.5 ${activeClip.effect === eff.id ? 'text-violet-400' : 'text-theme-muted'}`} />
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg ${activeClip.effect === eff.id ? 'bg-violet-500/20 text-violet-300' : 'bg-panel-hover text-theme-muted'}`}>{EFFECT_PREVIEWS[eff.id]}</div>
                           <div>
                             <p className={`text-xs font-medium ${activeClip.effect === eff.id ? 'text-violet-300' : 'text-theme-primary'}`}>{eff.label}</p>
                             <p className="text-[10px] text-theme-muted">{eff.desc}</p>
@@ -565,16 +648,18 @@ export default function VideoSidebar() {
                     ))}
                   </div>
 
-                  {/* Effect stack */}
-                  <div className="space-y-1.5 pt-2 border-t border-panel-border">
-                    <p className="text-[10px] text-theme-muted uppercase tracking-wider">Effect Stack</p>
+                    {/* Effect stack */}
+                    <div className="space-y-1.5 pt-2 border-t border-panel-border">
+                      <p className="text-[10px] text-theme-muted uppercase tracking-wider">Effect Stack</p>
+                      <p className="text-[9px] text-theme-dim">Base effect runs first; stacked effects below are layered in order.</p>
                     {(activeClip.effectStack || []).length === 0 && (
                       <p className="text-[10px] text-theme-dim text-center py-2">No stacked effects</p>
                     )}
                     {(activeClip.effectStack || []).map(layer => (
-                      <div key={layer.id} className="px-2 py-2 rounded-lg bg-panel-light border border-panel-border space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          <button
+                        <div key={layer.id} className="px-2 py-2 rounded-lg bg-panel-light border border-panel-border space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-violet-500/10 text-violet-300 flex items-center justify-center text-xs font-bold">{EFFECT_PREVIEWS[layer.effect]}</div>
+                            <button
                             onClick={() => updateEffectInStack(activeClip.id, layer.id, { enabled: !layer.enabled })}
                             className={`w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold shrink-0 ${layer.enabled ? 'bg-violet-500 text-white' : 'bg-panel-hover text-theme-muted'}`}
                           >
@@ -694,7 +779,11 @@ export default function VideoSidebar() {
               <p className="text-[11px] text-theme-muted mb-2">Clip Transitions</p>
               {project?.clips.map((clip) => (
                 <div key={clip.id} className="space-y-1.5">
-                  <p className="text-[11px] text-theme-muted truncate">{clip.name.slice(0, 25)}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] text-theme-muted truncate" title={clip.name}>{clip.name.slice(0, 25)}</p>
+                    {clip.transitionIn !== 'none' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300">In</span>}
+                    {clip.transitionOut !== 'none' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-300">Out</span>}
+                  </div>
                   <select value={clip.transitionIn}
                     onChange={e => updateClip(clip.id, { transitionIn: e.target.value as TransitionType })}
                     className="w-full bg-panel-light border border-panel-border rounded-lg px-3 py-2 text-xs text-theme-primary focus:outline-none focus:border-sky-500/40">
@@ -726,7 +815,7 @@ export default function VideoSidebar() {
                       className="w-16 bg-panel-hover border border-panel-border rounded px-1.5 py-0.5 text-[10px] text-theme-secondary tabular-nums" placeholder="End" />
                     <select value={sub.style} onChange={e => updateSubtitle(sub.id, { style: e.target.value as CaptionStyle })}
                       className="flex-1 bg-panel-hover border border-panel-border rounded px-1.5 py-0.5 text-[10px] text-theme-secondary">
-                      {CAPTION_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
+                      {CAPTION_STYLES.map(s => <option key={s} value={s}>{CAPTION_STYLE_LABELS[s]}</option>)}
                     </select>
                   </div>
                   <div className="flex gap-1">
@@ -744,8 +833,17 @@ export default function VideoSidebar() {
                       </button>
                     ))}
                   </div>
+                  <div className="grid grid-cols-3 gap-1">
+                    {CAPTION_STYLES.slice(0, 3).map(style => (
+                      <button key={style} onClick={() => updateSubtitle(sub.id, { style })} className={`rounded border px-1 py-1 text-[9px] ${sub.style === style ? 'border-sky-500/40 bg-sky-500/10 text-sky-300' : 'border-panel-border bg-panel-hover text-theme-muted'}`}>{CAPTION_STYLE_LABELS[style]}</button>
+                    ))}
+                    {CAPTION_STYLES.slice(3).map(style => (
+                      <button key={style} onClick={() => updateSubtitle(sub.id, { style })} className={`rounded border px-1 py-1 text-[9px] ${sub.style === style ? 'border-sky-500/40 bg-sky-500/10 text-sky-300' : 'border-panel-border bg-panel-hover text-theme-muted'}`}>{CAPTION_STYLE_LABELS[style]}</button>
+                    ))}
+                  </div>
                 </div>
               ))}
+              <BulkSubtitleEditor />
               <AutoSubtitleDistributor />
             </div>
           )}
@@ -802,9 +900,14 @@ export default function VideoSidebar() {
                   <p className="text-[10px] text-theme-muted uppercase tracking-wider mb-2">Active Stickers</p>
                   {(project?.stickerOverlays || []).map(s => (
                     <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-panel-light border border-panel-border mb-1">
-                      <span className="text-lg leading-none">{s.content}</span>
+                      {s.type === 'photo' ? (
+                        <div className="w-8 h-8 rounded overflow-hidden bg-panel-hover shrink-0"><img src={s.content} alt="" className="w-full h-full object-cover" /></div>
+                      ) : (
+                        <span className="text-lg leading-none">{s.content}</span>
+                      )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-theme-muted">{s.type}</p>
+                        <p className="text-[10px] text-theme-muted capitalize">{s.type === 'speech-bubble' ? 'Speech bubble' : s.type}</p>
+                        <p className="text-[9px] text-theme-dim truncate" title={s.content}>{s.type === 'photo' ? 'Photo overlay' : s.content}</p>
                         <p className="text-[9px] text-theme-dim">{s.startTime.toFixed(1)}s – {s.endTime.toFixed(1)}s</p>
                       </div>
                       <Move className="w-3 h-3 text-theme-dim" />
@@ -875,6 +978,9 @@ export default function VideoSidebar() {
                   <input ref={beatAudioInputRef} type="file" accept="audio/*" className="hidden" disabled={isAnalyzingBeats}
                     onChange={e => { const f = e.target.files?.[0]; if (f) handleBeatAudioUpload(f); e.target.value = ''; }} />
                 </label>
+                <button disabled={!project?.backgroundMusic || isAnalyzingBeats} onClick={handleAnalyzeBackgroundMusic} className="w-full mt-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs disabled:opacity-40">
+                  Analyze current background music
+                </button>
                 {isAnalyzingBeats && (
                   <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
                     <div className="w-3 h-3 rounded-full bg-amber-400 animate-pulse" />
@@ -955,7 +1061,8 @@ export default function VideoSidebar() {
                         <div className="w-8 h-6 rounded overflow-hidden bg-panel-hover shrink-0">
                           {clip.thumbnails[0] && <img src={clip.thumbnails[0]} alt="" className="w-full h-full object-cover" />}
                         </div>
-                        <span className="text-[9px] text-theme-muted truncate flex-1">{clip.name}</span>
+                        <span className="text-[9px] text-theme-muted truncate flex-1" title={clip.name}>{clip.name}</span>
+                        <button onClick={() => setActiveClipId(clip.id)} className="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300">Open</button>
                         <HealthBadge value={clip.resolution} />
                         <HealthBadge value={clip.bitrate} />
                       </div>
@@ -1033,11 +1140,16 @@ export default function VideoSidebar() {
           {/* ── Export Panel ───────────────────────────────── */}
           {activePanel === 'export' && (
             <div className="space-y-4">
-              <button onClick={startExport} disabled={isExporting}
+              <button onClick={() => setExportHint(true)} disabled={isExporting}
                 className="w-full flex items-center justify-center gap-2 px-4 py-4 rounded-xl bg-sky-500 text-white text-sm font-semibold hover:bg-sky-400 transition-all disabled:opacity-50">
                 <Download className="w-5 h-5" />
-                {isExporting ? `Exporting ${exportProgress}%` : 'Export Video'}
+                {isExporting ? `Exporting ${exportProgress}%` : 'Open export settings'}
               </button>
+              {exportHint && (
+                <p className="text-[10px] text-theme-muted bg-panel-light border border-panel-border rounded-lg px-3 py-2">
+                  Export settings are in the top bar Download menu. This panel still shows queue status and presets.
+                </p>
+              )}
               {isExporting && (
                 <div className="w-full h-2 bg-panel-hover rounded-full overflow-hidden">
                   <div className="h-full bg-sky-500 rounded-full transition-all" style={{ width: `${exportProgress}%` }} />

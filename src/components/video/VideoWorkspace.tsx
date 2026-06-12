@@ -11,6 +11,8 @@ import { uploadMediaForPersistence, getVideoDuration, countEphemeralUrls } from 
 
 interface Props {
   onBack?: () => void;
+  onSave: () => void | Promise<void>;
+  hasUnsavedChanges: boolean;
 }
 
 interface AudioSyncTrack {
@@ -51,7 +53,7 @@ function syncAudioElement(
   }
 }
 
-export default function VideoWorkspace({ onBack }: Props) {
+export default function VideoWorkspace({ onBack, onSave, hasUnsavedChanges }: Props) {
   const project = useVideoStore(s => s.project);
   const createProject = useVideoStore(s => s.createProject);
   const addClip = useVideoStore(s => s.addClip);
@@ -67,6 +69,8 @@ export default function VideoWorkspace({ onBack }: Props) {
   const lastAudioSyncRef = useRef<number>(0);
   const isPlaying = useVideoStore(s => s.isPlaying);
   const playbackSpeed = useVideoStore(s => s.playbackSpeed);
+  const loopPlayback = useVideoStore(s => s.loopPlayback);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   // Autosave on changes
   useEffect(() => {
@@ -168,6 +172,13 @@ export default function VideoWorkspace({ onBack }: Props) {
       const next = st.currentTime + delta * playbackSpeed;
 
       if (next >= total) {
+        if (loopPlayback && total > 0) {
+          st.setCurrentTime(0);
+          const sorted = [...(st.project?.clips || [])].sort((a, b) => a.order - b.order);
+          if (sorted.length > 0) st.setActiveClipId(sorted[0].id);
+          rafRef.current = requestAnimationFrame(tick);
+          return;
+        }
         st.setCurrentTime(0);
         st.setIsPlaying(false);
         const sorted = [...(st.project?.clips || [])].sort((a, b) => a.order - b.order);
@@ -203,7 +214,7 @@ export default function VideoWorkspace({ onBack }: Props) {
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [isPlaying, playbackSpeed]);
+  }, [isPlaying, playbackSpeed, loopPlayback]);
 
   // ── Play/pause audio when playback state changes ───────────────────
   useEffect(() => {
@@ -251,6 +262,42 @@ export default function VideoWorkspace({ onBack }: Props) {
         st.setIsPlaying(!st.isPlaying);
       }
 
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        st.setCurrentTime(st.currentTime - (e.shiftKey ? 10 : 1));
+      }
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        st.setCurrentTime(st.currentTime + (e.shiftKey ? 10 : 1));
+      }
+
+      if (e.key === ',') {
+        e.preventDefault();
+        st.setCurrentTime(st.currentTime - (1 / 30));
+      }
+
+      if (e.key === '.') {
+        e.preventDefault();
+        st.setCurrentTime(st.currentTime + (1 / 30));
+      }
+
+      if (e.key === 'k' || e.key === 'K') {
+        e.preventDefault();
+        st.setIsPlaying(false);
+      }
+
+      if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        st.setIsPlaying(true);
+      }
+
+      if (e.key === 'j' || e.key === 'J') {
+        e.preventDefault();
+        st.setIsPlaying(false);
+        st.setCurrentTime(Math.max(0, st.currentTime - 1));
+      }
+
       // S = split (clip or audio track depending on what's selected)
       if ((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey) {
         if (st.activeClipId) {
@@ -280,7 +327,10 @@ export default function VideoWorkspace({ onBack }: Props) {
 
       // Delete/Backspace = remove selected item
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (st.activeClipId) {
+        if (st.selectedClipIds?.length > 1) {
+          e.preventDefault();
+          st.removeSelectedClips();
+        } else if (st.activeClipId) {
           e.preventDefault();
           st.removeClip(st.activeClipId);
         } else if (st.activeAudioTrackId) {
@@ -390,9 +440,43 @@ export default function VideoWorkspace({ onBack }: Props) {
   }
 
   const brokenMediaCount = project ? countEphemeralUrls(project) : 0;
+  const shortcutRows = [
+    ['Space / K / L', 'Play, pause, resume playback'],
+    ['J', 'Pause and step back 1 second'],
+    ['← / →', 'Seek backward / forward 1 second'],
+    ['Shift + ← / →', 'Seek backward / forward 10 seconds'],
+    [', / .', 'Frame step backward / forward'],
+    ['S', 'Split active clip or audio track at playhead'],
+    ['Del / Backspace', 'Remove selected item or selected clips'],
+    ['Ctrl/Cmd + Z', 'Undo last project change'],
+    ['Ctrl/Cmd + Shift + Z', 'Redo last project change'],
+    ['Ctrl/Cmd + click clip', 'Add clip to multi-select'],
+  ];
 
   return (
     <div className="flex h-screen bg-canvas-bg text-theme-primary overflow-hidden select-none">
+      {showShortcuts && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4">
+          <div role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" className="w-full max-w-lg rounded-2xl bg-surface border border-panel-border shadow-2xl">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-panel-border">
+              <h2 className="text-sm font-semibold text-theme-primary">Keyboard shortcuts</h2>
+              <button onClick={() => setShowShortcuts(false)} aria-label="Close shortcuts" className="text-theme-muted hover:text-theme-primary px-2 py-1 rounded">Esc</button>
+            </div>
+            <div className="p-4 space-y-2">
+              {shortcutRows.map(([keys, description]) => (
+                <div key={keys} className="flex items-center justify-between gap-4 text-xs">
+                  <div className="flex gap-1 flex-wrap justify-end">
+                    {keys.split(' / ').map(key => (
+                      <kbd key={key} className="px-1.5 py-1 rounded bg-panel-light border border-panel-border text-theme-secondary font-mono text-[10px]">{key}</kbd>
+                    ))}
+                  </div>
+                  <span className="text-theme-muted flex-1 text-right">{description}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {/* Hidden audio element for background music */}
       <audio ref={bgAudioRef} preload="auto" />
       <VideoSidebar />
@@ -410,7 +494,7 @@ export default function VideoWorkspace({ onBack }: Props) {
             )}
           </div>
         )}
-        <VideoTopBar onBack={onBack} />
+        <VideoTopBar onBack={onBack} onSave={onSave} onOpenShortcuts={() => setShowShortcuts(true)} hasUnsavedChanges={hasUnsavedChanges} />
         <div className="flex flex-1 min-w-0 min-h-0">
           <VideoPreview videoRef={videoRef} />
           <VideoProperties />

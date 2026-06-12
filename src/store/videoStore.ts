@@ -196,6 +196,8 @@ export interface VideoStoreState {
   currentTime: number;
   isPlaying: boolean;
   playbackSpeed: number;
+  loopPlayback: boolean;
+  selectedClipIds: string[];
   rightPanel: 'clips' | 'filters' | 'text' | 'audio' | 'transitions' | 'subtitles' | 'export' | 'templates';
   history: string[];
   historyIndex: number;
@@ -300,6 +302,7 @@ export interface VideoStoreActions {
   setCurrentTime: (time: number) => void;
   setIsPlaying: (playing: boolean) => void;
   setPlaybackSpeed: (speed: number) => void;
+  setLoopPlayback: (loop: boolean) => void;
 
   // UI
   setActiveClipId: (id: string | null) => void;
@@ -307,6 +310,9 @@ export interface VideoStoreActions {
   setActiveSubtitleId: (id: string | null) => void;
   setActiveStickerOverlayId: (id: string | null) => void;
   setActiveAudioTrackId: (id: string | null) => void;
+  toggleClipSelection: (id: string) => void;
+  clearClipSelection: () => void;
+  removeSelectedClips: () => void;
   setRightPanel: (panel: VideoStoreState['rightPanel']) => void;
 
   // History
@@ -315,7 +321,7 @@ export interface VideoStoreActions {
   redo: () => void;
 
   // Export
-  startExport: () => void;
+  startExport: (options?: { fps?: number; width?: number; height?: number; quality?: number }) => void;
 
   // Computed
   getTotalDuration: () => number;
@@ -471,6 +477,8 @@ export const useVideoStore = create<VStore>((set, get) => ({
   currentTime: 0,
   isPlaying: false,
   playbackSpeed: 1,
+  loopPlayback: false,
+  selectedClipIds: [],
   rightPanel: 'clips',
   history: [],
   historyIndex: -1,
@@ -502,7 +510,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    set({ project, history: [JSON.stringify(project)], historyIndex: 0, activeClipId: null, currentTime: 0, isPlaying: false });
+    set({ project, history: [JSON.stringify(project)], historyIndex: 0, activeClipId: null, selectedClipIds: [], currentTime: 0, isPlaying: false });
   },
 
   updateProject: (updates) => {
@@ -548,6 +556,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
       playbackSpeed: 1,
       history: [JSON.stringify(migrated)],
       historyIndex: 0,
+      selectedClipIds: migrated.clips[0]?.id ? [migrated.clips[0].id] : [],
     });
   },
 
@@ -559,7 +568,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
     set({
       project: null, activeClipId: null, activeTextId: null, activeSubtitleId: null,
       activeStickerOverlayId: null,
-      currentTime: 0, isPlaying: false, playbackSpeed: 1, rightPanel: 'clips',
+      currentTime: 0, isPlaying: false, playbackSpeed: 1, loopPlayback: false, selectedClipIds: [], rightPanel: 'clips',
       history: [], historyIndex: -1, isExporting: false, exportProgress: 0,
     });
   },
@@ -692,7 +701,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
       offsetY: 0,
     };
     const clips = [...project.clips, clip];
-    set({ project: { ...project, clips }, activeClipId: clip.id });
+    set({ project: { ...project, clips }, activeClipId: clip.id, selectedClipIds: [clip.id] });
     get().pushHistory();
     get().generateThumbnails(clip.id);
     setTimeout(() => get().analyzeClipHealth(clip.id), 500);
@@ -706,6 +715,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
     set({
       project: { ...project, clips },
       activeClipId: activeClipId === id ? (clips[0]?.id ?? null) : activeClipId,
+      selectedClipIds: (get().selectedClipIds || []).filter(selectedId => selectedId !== id),
     });
     get().pushHistory();
   },
@@ -762,7 +772,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
     if (idx < 0) return;
     clips.splice(idx, 1, left, right);
     clips.forEach((c, i) => { c.order = i; });
-    set({ project: { ...project, clips }, activeClipId: left.id });
+    set({ project: { ...project, clips }, activeClipId: left.id, selectedClipIds: [left.id] });
     get().pushHistory();
     get().generateThumbnails(left.id);
     get().generateThumbnails(right.id);
@@ -1378,19 +1388,44 @@ export const useVideoStore = create<VStore>((set, get) => ({
 
   setShowSafeZones: (show) => set({ showSafeZones: show }),
 
+  toggleClipSelection: (id) => {
+    const { selectedClipIds } = get();
+    const exists = selectedClipIds.includes(id);
+    set({ selectedClipIds: exists ? selectedClipIds.filter(selectedId => selectedId !== id) : [...selectedClipIds, id] });
+  },
+  clearClipSelection: () => set({ selectedClipIds: [] }),
+  removeSelectedClips: () => {
+    const { project, selectedClipIds } = get();
+    if (!project || selectedClipIds.length === 0) return;
+    const selected = new Set(selectedClipIds);
+    const clips = project.clips.filter(c => !selected.has(c.id));
+    clips.forEach((c, i) => { c.order = i; });
+    set({
+      project: { ...project, clips },
+      activeClipId: clips[0]?.id ?? null,
+      selectedClipIds: [],
+    });
+    get().pushHistory();
+  },
+
   // ─── Playback ────────────────────────────────────────────────────
 
-  setCurrentTime: (time) => set({ currentTime: Math.max(0, time) }),
+  setCurrentTime: (time) => {
+    const total = get().getTotalDuration();
+    const next = total > 0 ? Math.max(0, Math.min(total, time)) : Math.max(0, time);
+    set({ currentTime: next });
+  },
   setIsPlaying: (playing) => set({ isPlaying: playing }),
   setPlaybackSpeed: (speed) => set({ playbackSpeed: Math.max(0.25, Math.min(2, speed)) }),
+  setLoopPlayback: (loop) => set({ loopPlayback: loop }),
 
   // ─── UI ──────────────────────────────────────────────────────────
 
   setActiveClipId: (id) => set({ activeClipId: id, activeTextId: null, activeSubtitleId: null, activeStickerOverlayId: null, activeAudioTrackId: null }),
-  setActiveTextId: (id) => set({ activeTextId: id, activeClipId: null, activeSubtitleId: null, activeStickerOverlayId: null, activeAudioTrackId: null }),
-  setActiveSubtitleId: (id) => set({ activeSubtitleId: id, activeClipId: null, activeTextId: null, activeStickerOverlayId: null, activeAudioTrackId: null }),
-  setActiveStickerOverlayId: (id) => set({ activeStickerOverlayId: id, activeClipId: null, activeTextId: null, activeSubtitleId: null, activeAudioTrackId: null }),
-  setActiveAudioTrackId: (id) => set({ activeAudioTrackId: id, activeClipId: null, activeTextId: null, activeSubtitleId: null, activeStickerOverlayId: null }),
+  setActiveTextId: (id) => set({ activeTextId: id, activeClipId: null, activeSubtitleId: null, activeStickerOverlayId: null, activeAudioTrackId: null, selectedClipIds: [] }),
+  setActiveSubtitleId: (id) => set({ activeSubtitleId: id, activeClipId: null, activeTextId: null, activeStickerOverlayId: null, activeAudioTrackId: null, selectedClipIds: [] }),
+  setActiveStickerOverlayId: (id) => set({ activeStickerOverlayId: id, activeClipId: null, activeTextId: null, activeSubtitleId: null, activeAudioTrackId: null, selectedClipIds: [] }),
+  setActiveAudioTrackId: (id) => set({ activeAudioTrackId: id, activeClipId: null, activeTextId: null, activeSubtitleId: null, activeStickerOverlayId: null, selectedClipIds: [] }),
   setRightPanel: (panel) => set({ rightPanel: panel }),
 
   // ─── History ──────────────────────────────────────────────────────
@@ -1424,7 +1459,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
 
   // ─── Export ───────────────────────────────────────────────────────
 
-  startExport: async () => {
+  startExport: async (options = {}) => {
     const { project } = get();
     if (!project) return;
     
@@ -1435,6 +1470,9 @@ export const useVideoStore = create<VStore>((set, get) => ({
       
       const blob = await exportVideo(project, {
         fps: 30,
+        width: options.width,
+        height: options.height,
+        quality: options.quality,
         onProgress: (progress) => {
           set({ exportProgress: Math.round(progress) });
         },

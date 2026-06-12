@@ -17,6 +17,7 @@ export default function VideoTimeline() {
   const activeSubtitleId = useVideoStore(s => s.activeSubtitleId);
   const activeAudioTrackId = useVideoStore(s => s.activeAudioTrackId);
   const activeStickerOverlayId = useVideoStore(s => s.activeStickerOverlayId);
+  const selectedClipIds = useVideoStore(s => s.selectedClipIds || []);
   const setCurrentTime = useVideoStore(s => s.setCurrentTime);
   const setActiveClipId = useVideoStore(s => s.setActiveClipId);
   const setActiveTextId = useVideoStore(s => s.setActiveTextId);
@@ -30,6 +31,9 @@ export default function VideoTimeline() {
   const updateStickerOverlay = useVideoStore(s => s.updateStickerOverlay);
   const setActiveStickerOverlayId = useVideoStore(s => s.setActiveStickerOverlayId);
   const setActiveAudioTrackId = useVideoStore(s => s.setActiveAudioTrackId);
+  const toggleClipSelection = useVideoStore(s => s.toggleClipSelection);
+  const clearClipSelection = useVideoStore(s => s.clearClipSelection);
+  const removeSelectedClips = useVideoStore(s => s.removeSelectedClips);
   const getTotalDuration = useVideoStore(s => s.getTotalDuration);
   const showBeatMarkers = useVideoStore(s => s.showBeatMarkers);
   const jumpToMarker = useVideoStore(s => s.jumpToMarker);
@@ -117,6 +121,17 @@ export default function VideoTimeline() {
     return marks;
   };
 
+  const getWaveformBars = (seed: string, count: number) => {
+    const bars: number[] = [];
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) % 997;
+    for (let i = 0; i < count; i++) {
+      const value = ((hash + i * 37) % 100) / 100;
+      bars.push(0.18 + value * 0.82);
+    }
+    return bars;
+  };
+
   const playheadX = currentTime * pps;
 
   const getClipAtTime = useVideoStore(s => s.getClipAtTime);
@@ -129,10 +144,11 @@ export default function VideoTimeline() {
     const x = e.clientX - rect.left + getScrollOffset();
     const t = Math.max(0, Math.min(totalDuration, x / pps));
     setCurrentTime(t);
+    clearClipSelection();
     // Auto-switch active clip to whichever clip owns this time
     const info = getClipAtTime(t);
     if (info) setActiveClipId(info.clip.id);
-  }, [pps, totalDuration, setCurrentTime, setActiveClipId, getClipAtTime]);
+  }, [pps, totalDuration, setCurrentTime, setActiveClipId, getClipAtTime, clearClipSelection]);
 
   // ── Playhead drag ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -345,6 +361,14 @@ export default function VideoTimeline() {
         <span className="text-[10px] text-theme-muted uppercase tracking-wider font-semibold mr-1">Timeline</span>
         <div className="flex-1" />
         <span className="text-[10px] text-theme-secondary">{sortedClips.length} clip{sortedClips.length !== 1 ? 's' : ''}</span>
+        {selectedClipIds.length > 0 && (
+          <>
+            <div className="w-px h-4 bg-panel-divider mx-1" />
+            <span className="text-[10px] text-sky-400">{selectedClipIds.length} selected</span>
+            <button onClick={() => removeSelectedClips()} className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 text-[10px] hover:bg-red-500/20" title="Delete selected clips">Delete</button>
+            <button onClick={clearClipSelection} className="px-1.5 py-0.5 rounded bg-panel-hover text-theme-muted text-[10px]" title="Clear selection">Clear</button>
+          </>
+        )}
         <div className="w-px h-4 bg-panel-divider mx-1" />
         <button onClick={() => setTimelineZoom(z => Math.max(20, z - 15))} className="w-6 h-6 flex items-center justify-center rounded text-theme-muted hover:text-theme-primary hover:bg-panel-hover transition-colors">
           <ZoomOut className="w-3 h-3" />
@@ -370,6 +394,7 @@ export default function VideoTimeline() {
               const x = e.clientX - rect.left + getScrollOffset();
               const t = Math.max(0, Math.min(totalDuration, x / pps));
               setCurrentTime(t);
+              clearClipSelection();
               const info = getClipAtTime(t);
               if (info) setActiveClipId(info.clip.id);
             }}
@@ -448,6 +473,7 @@ export default function VideoTimeline() {
                   const left = getClipLeft(index);
                   const width = getClipWidth(clip);
                   const isActive = activeClipId === clip.id;
+                  const isSelected = selectedClipIds.includes(clip.id);
                   const isDragging = dragClipId === clip.id;
                   const effDur = (clip.duration - clip.trimStart - clip.trimEnd) / Math.max(0.25, clip.speed);
 
@@ -456,12 +482,14 @@ export default function VideoTimeline() {
                       key={clip.id}
                       data-noseek="1"
                       className={`absolute top-1 bottom-1 rounded-lg overflow-hidden group transition-all ${
-                        isActive ? 'ring-2 ring-sky-400/60 shadow-[0_0_12px_rgba(56,189,248,0.15)] z-10' : 'hover:ring-1 hover:ring-white/20 z-[5]'
+                        isActive ? 'ring-2 ring-sky-400/60 shadow-[0_0_12px_rgba(56,189,248,0.15)] z-10' : isSelected ? 'ring-2 ring-sky-400/50 z-10' : 'hover:ring-1 hover:ring-sky-500/30 z-[5]'
                       } ${isDragging ? 'opacity-40 scale-y-95 z-20' : ''}`}
                       style={{ left, width: Math.max(width, 8) }}
                       onClick={(e) => {
                         if ((e.target as HTMLElement).closest('[data-trim]')) return;
                         e.stopPropagation();
+                        if (e.ctrlKey || e.metaKey) toggleClipSelection(clip.id);
+                        else clearClipSelection();
                         setActiveClipId(clip.id);
                         // Seek to the start of this clip so preview shows correct frame
                         setCurrentTime(getClipLeft(index) / pps);
@@ -480,7 +508,7 @@ export default function VideoTimeline() {
                           <img src={clip.thumbnails[0]} alt="" className="w-full h-full object-cover opacity-40" draggable={false} />
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-r from-sky-900/50 via-sky-800/30 to-sky-900/50" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-sky-950/60 via-sky-900/35 to-sky-950/60" />
 
                       {clip.effect !== 'none' && (
                         <div className="absolute top-1 left-1 px-1 py-0.5 rounded bg-accent-violet-muted text-[8px] text-accent-violet font-bold uppercase leading-none">{clip.effect}</div>
@@ -498,7 +526,7 @@ export default function VideoTimeline() {
                           setDragClipId(clip.id);
                         }}
                       >
-                        <span className="text-[10px] font-medium text-white truncate drop-shadow-md">{clip.name}</span>
+                        <span className="text-[10px] font-medium text-white truncate drop-shadow-md" title={clip.name}>{clip.name}</span>
                       </div>
                       <div className="absolute bottom-0.5 right-1 pointer-events-none">
                         <span className="text-[8px] text-theme-muted-secondary font-mono">{effDur.toFixed(1)}s</span>
@@ -538,13 +566,13 @@ export default function VideoTimeline() {
                       </div>
 
                       <button data-trim="del"
-                        className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 p-0.5 rounded bg-panel-light hover:bg-red-600 transition-all z-10"
+                        className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 p-0.5 rounded bg-red-600 hover:bg-red-700 transition-all z-10"
                         onClick={(e) => { e.stopPropagation(); removeClip(clip.id); }}
                         title="Delete clip">
                         <Trash2 className="w-2.5 h-2.5 text-white" />
                       </button>
                       <button data-trim="overlay"
-                        className="absolute top-0.5 right-7 opacity-0 group-hover:opacity-100 p-0.5 rounded bg-panel-light hover:bg-violet-600 transition-all z-10"
+                        className="absolute top-0.5 right-7 opacity-0 group-hover:opacity-100 p-0.5 rounded bg-violet-600 hover:bg-violet-700 transition-all z-10"
                         onClick={(e) => {
                           e.stopPropagation();
                           useVideoStore.getState().updateClip(clip.id, { overlayMode: 'overlay', clipX: 50, clipY: 50 });
@@ -590,7 +618,7 @@ export default function VideoTimeline() {
                           setDragTextId(overlay.id);
                         }}>
                         <Type className="w-2.5 h-2.5 text-amber-400 shrink-0 mr-1" />
-                        <span className="text-[9px] text-accent-amber-light truncate flex-1">{overlay.text}</span>
+                        <span className="text-[9px] text-accent-amber-light truncate flex-1" title={overlay.text}>{overlay.text}</span>
                         {width > 60 && <span className="text-[8px] text-accent-amber-muted font-mono ml-1 shrink-0">{(overlay.endTime - overlay.startTime).toFixed(1)}s</span>}
                       </div>
                       <div data-trim="right"
@@ -645,7 +673,7 @@ export default function VideoTimeline() {
                       </div>
                       <div className="flex-1 flex items-center px-3 h-full overflow-hidden cursor-grab active:cursor-grabbing">
                         <Smile className="w-2.5 h-2.5 text-pink-400 shrink-0 mr-1" />
-                        <span className="text-[9px] text-accent-pink-light truncate flex-1">{sticker.content}</span>
+                        <span className="text-[9px] text-accent-pink-light truncate flex-1" title={sticker.content}>{sticker.content}</span>
                         {width > 60 && <span className="text-[8px] text-accent-pink-muted font-mono ml-1 shrink-0">{(sticker.endTime - sticker.startTime).toFixed(1)}s</span>}
                       </div>
                       <div data-trim="right"
@@ -740,64 +768,14 @@ export default function VideoTimeline() {
                       style={{ left, width }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setActiveAudioTrackId(track.id);
-                      }}
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                        const startX = e.clientX;
-                        const origStart = track.startTime;
-                        let hasMoved = false;
-                        const move = (me: MouseEvent) => {
-                          if (!hasMoved && Math.abs(me.clientX - startX) > 3) hasMoved = true;
-                          if (hasMoved) {
-                            const delta = (me.clientX - startX) / ppsRef.current;
-                            useVideoStore.getState().updateAudioTrack(track.id, { startTime: Math.max(0, origStart + delta) });
-                          }
-                        };
-                        const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
-                        window.addEventListener('mousemove', move);
-                        window.addEventListener('mouseup', up);
-                      }}
-                    >
-                      <Music className="w-2.5 h-2.5 text-violet-400 shrink-0 mr-1" />
-                      <span className="text-[9px] text-accent-violet-light truncate">{track.name}</span>
-                      {track.duration > 0 && <span className="text-[8px] text-accent-violet-muted font-mono ml-1 shrink-0">{track.duration.toFixed(1)}s</span>}
-                    </div>
-                  );
-                })}
-                {project.backgroundMusic && (() => {
-                  const bgm = project.backgroundMusic;
-                  const left = (bgm.startTime ?? 0) * pps;
-                  const width = bgm.duration > 0 ? bgm.duration * pps : Math.max(8, totalDuration * pps);
-                  const isSelected = activeAudioTrackId === bgm.id;
-                  return (
-                    <div data-noseek="1"
-                      className={`absolute top-0.5 bottom-0.5 rounded flex items-center px-1.5 cursor-pointer select-none ${
-                        isSelected ? 'bg-emerald-500/25 border-2 border-emerald-400/60' : 'bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20'
-                      }`}
-                      style={{ left, width }}
-                      onClick={(e) => {
-                        e.stopPropagation();
                         setActiveAudioTrackId(bgm.id);
                       }}
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                        setActiveAudioTrackId(bgm.id);
-                        const startX = e.clientX;
-                        const origStart = bgm.startTime ?? 0;
-                        let hasMoved = false;
-                        const move = (me: MouseEvent) => {
-                          if (!hasMoved && Math.abs(me.clientX - startX) > 3) hasMoved = true;
-                          if (hasMoved) {
-                            const delta = (me.clientX - startX) / ppsRef.current;
-                            useVideoStore.getState().updateBackgroundMusic({ startTime: Math.max(0, origStart + delta) });
-                          }
-                        };
-                        const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
-                        window.addEventListener('mousemove', move);
-                        window.addEventListener('mouseup', up);
-                      }}
                     >
+                      <div className="absolute inset-x-1 top-1 bottom-1 flex items-end gap-px opacity-40 pointer-events-none">
+                        {getWaveformBars(bgm.name, Math.max(8, Math.floor(width / 4))).map((bar, i) => (
+                          <div key={i} className="flex-1 bg-emerald-300 rounded-t-sm" style={{ height: `${Math.max(12, bar * 100)}%` }} />
+                        ))}
+                      </div>
                       <Volume2 className="w-2.5 h-2.5 text-emerald-400 shrink-0 mr-1" />
                       <span className="text-[9px] text-accent-emerald-light truncate">{bgm.name}</span>
                       {bgm.duration > 0 && <span className="text-[8px] text-accent-emerald-muted font-mono ml-1 shrink-0">{bgm.duration.toFixed(1)}s</span>}
@@ -838,7 +816,7 @@ export default function VideoTimeline() {
                           dragInitRef.current = { startX: e.clientX, origStart: sub.startTime, origEnd: sub.endTime };
                           setDragSubtitleId(sub.id);
                         }}>
-                        <span className="text-[9px] text-accent-rose-light truncate flex-1">{sub.text}</span>
+                        <span className="text-[9px] text-accent-rose-light truncate flex-1" title={sub.text}>{sub.text}</span>
                         {width > 50 && <span className="text-[8px] text-accent-rose-muted font-mono ml-1 shrink-0">{(sub.endTime - sub.startTime).toFixed(1)}s</span>}
                       </div>
                       <div data-trim="right"

@@ -2,12 +2,14 @@ import { VideoProject, VideoClip, AudioTrack } from '../store/videoStore';
 
 export interface ExportOptions {
   fps?: number;
+  width?: number;
+  height?: number;
+  quality?: number;
   bitrate?: string;
   onProgress?: (progress: number) => void;
 }
 
 const DEFAULT_FPS = 30;
-const DEFAULT_BITRATE = '5000k';
 
 /**
  * Render a single frame of the video composition at the given timestamp
@@ -269,7 +271,9 @@ export async function exportVideo(
   const frameCount = Math.ceil(totalDuration * fps);
   
   // Get canvas dimensions from aspect ratio
-  const dims = getCanvasDimensionsFromAspect(project.aspectRatio);
+  const dims = options.width && options.height
+    ? { width: options.width, height: options.height }
+    : getCanvasDimensionsFromAspect(project.aspectRatio);
   const canvas = document.createElement('canvas');
   canvas.width = dims.width;
   canvas.height = dims.height;
@@ -420,9 +424,13 @@ export async function exportVideo(
     }
   }
   
-  mediaRecorder = new MediaRecorder(finalStream, {
+  const recorderOptions: MediaRecorderOptions = {
     mimeType: selectedMimeType,
-  });
+  };
+  if (options.bitrate) recorderOptions.videoBitsPerSecond = Number.parseInt(options.bitrate.replace(/\D/g, ''), 10) * 1000;
+  else if (options.quality) recorderOptions.videoBitsPerSecond = Math.round((options.width || 1920) * (options.height || 1080) * options.quality * 8);
+  
+  mediaRecorder = new MediaRecorder(finalStream, recorderOptions);
 
   const chunks: BlobPart[] = [];
 

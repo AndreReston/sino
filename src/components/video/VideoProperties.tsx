@@ -1,3 +1,4 @@
+import { useEffect, useState, type ReactNode } from 'react';
 import { Trash2, Scissors, RotateCcw, Volume2, VolumeX, Gauge, Sparkles, Diamond, Layers, Activity, Zap, ArrowRightLeft, Move, Maximize2, Music, Film } from 'lucide-react';
 import { useVideoStore, VideoFilters, DEFAULT_FILTERS, ClipEffect, TransitionType, Keyframe, VideoClip, TextOverlay, SubtitleEntry, MotionPreset, AudioTrack, StickerOverlay } from '../../store/videoStore';
 
@@ -31,6 +32,18 @@ const MOTION_PRESETS: { id: MotionPreset; label: string }[] = [
   { id: 'bounce', label: 'Bounce' },
   { id: 'elastic', label: 'Elastic' },
 ];
+
+const FILTER_PRESETS: Array<{ name: string; filters: Partial<VideoFilters> }> = [
+  { name: 'Natural', filters: {} },
+  { name: 'Cinematic', filters: { contrast: 115, saturation: 85, brightness: 96 } },
+  { name: 'Vintage', filters: { sepia: 35, contrast: 105, saturation: 75, brightness: 95 } },
+  { name: 'Cold', filters: { saturation: 70, hueRotate: 190, brightness: 105 } },
+  { name: 'Warm', filters: { saturation: 115, hueRotate: 10, brightness: 104 } },
+];
+
+function isFilterChanged(filters: VideoFilters, key: keyof VideoFilters): boolean {
+  return filters[key] !== DEFAULT_FILTERS[key];
+}
 
 export default function VideoProperties() {
   const project = useVideoStore(s => s.project);
@@ -198,7 +211,10 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
         <h3 className="text-sm font-semibold text-theme-primary">Playback</h3>
         <div className="space-y-3">
           <LabeledSlider label="Speed" icon={<Gauge className="w-3 h-3" />} value={clip.speed} min={0.25} max={2} step={0.25}
-            display={`${clip.speed.toFixed(2)}x`} onChange={handleSpeedChange} />
+            display={`${clip.speed.toFixed(2)}x`} onChange={handleSpeedChange} numberStep={0.25} />
+          <div className="flex justify-between text-[9px] text-theme-dim">
+            <span>0.5x</span><span>1x</span><span>1.5x</span><span>2x</span>
+          </div>
           <LabeledSlider label="Volume" icon={<Volume2 className="w-3 h-3" />} value={clip.volume} min={0} max={1} step={0.01}
             display={`${Math.round(clip.volume * 100)}%`} onChange={handleVolumeChange} />
           <button onClick={handleMuteToggle}
@@ -497,6 +513,13 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
       {/* Filters */}
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-theme-primary">Filters</h3>
+        <div className="grid grid-cols-2 gap-1.5">
+          {FILTER_PRESETS.map(preset => (
+            <button key={preset.name} onClick={() => { if (Object.keys(preset.filters).length === 0) resetClipFilters(clip.id); else Object.entries(preset.filters).forEach(([key, value]) => setClipFilter(clip.id, key as keyof VideoFilters, value as number)); }} className="rounded-lg border border-panel-border bg-panel-light px-2 py-1.5 text-left text-[10px] text-theme-secondary hover:border-sky-500/30 hover:text-sky-300">
+              {preset.name}
+            </button>
+          ))}
+        </div>
         <div className="space-y-3">
           {(Object.keys({ brightness: 0, contrast: 0, saturation: 0, blur: 0, grayscale: 0, sepia: 0, hueRotate: 0 }) as (keyof VideoFilters)[]).map(key => {
             const ranges: Record<keyof VideoFilters, [number, number]> = {
@@ -507,8 +530,11 @@ function ClipProperties({ clip }: ClipPropertiesProps) {
             return (
               <div key={key} className="space-y-1">
                 <div className="flex justify-between items-center">
-                  <label className="text-xs text-theme-muted capitalize">{key.replace(/([A-Z])/g, ' $1')}</label>
-                  <span className="text-xs text-theme-secondary">{clip.filters[key]}{key === 'blur' ? 'px' : key === 'hueRotate' ? 'deg' : '%'}</span>
+                  <label className={`text-xs flex items-center gap-1 ${isFilterChanged(clip.filters, key) ? 'text-sky-300' : 'text-theme-muted'}`}>{key.replace(/([A-Z])/g, ' $1')}</label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-theme-secondary">{clip.filters[key]}{key === 'blur' ? 'px' : key === 'hueRotate' ? 'deg' : '%'}</span>
+                    {isFilterChanged(clip.filters, key) && <button onClick={() => setClipFilter(clip.id, key, DEFAULT_FILTERS[key])} className="text-theme-muted hover:text-sky-300" title={`Reset ${key}`}>↺</button>}
+                  </div>
                 </div>
                 <input type="range" min={min} max={max} step={1} value={clip.filters[key]}
                   onChange={e => handleFilterChange(key, parseFloat(e.target.value))}
@@ -804,6 +830,7 @@ interface StickerPropertiesProps {
 function StickerProperties({ sticker }: StickerPropertiesProps) {
   const updateStickerOverlay = useVideoStore(s => s.updateStickerOverlay);
   const removeStickerOverlay = useVideoStore(s => s.removeStickerOverlay);
+  const [aspectLock, setAspectLock] = useState(true);
 
   const handleUpdate = (updates: Partial<StickerOverlay>) => {
     updateStickerOverlay(sticker.id, updates);
@@ -842,6 +869,10 @@ function StickerProperties({ sticker }: StickerPropertiesProps) {
           display={`${Math.round(sticker.y)}%`} onChange={v => handleUpdate({ y: v })} />
         <LabeledSlider label="Scale" icon={<Maximize2 className="w-3 h-3" />} value={sticker.scale} min={0.1} max={5} step={0.1}
           display={`${(sticker.scale * 100).toFixed(0)}%`} onChange={v => handleUpdate({ scale: v })} />
+        <label className="flex items-center gap-2 text-xs text-theme-muted">
+          <input type="checkbox" checked={aspectLock} onChange={e => setAspectLock(e.target.checked)} />
+          Lock photo aspect ratio
+        </label>
         <LabeledSlider label="Rotation" icon={<RotateCcw className="w-3 h-3" />} value={sticker.rotation} min={0} max={360} step={5}
           display={`${sticker.rotation}°`} onChange={v => handleUpdate({ rotation: v })} />
         <LabeledSlider label="Opacity" icon={<Diamond className="w-3 h-3" />} value={sticker.opacity ?? 1} min={0} max={1} step={0.05}
@@ -1048,10 +1079,22 @@ function SectionDivider() {
   return <div className="border-b border-panel-border" />;
 }
 
-function LabeledSlider({ label, value, min = 0, max, step, display, onChange, icon }: {
+function LabeledSlider({ label, value, min = 0, max, step, display, onChange, icon, numberStep }: {
   label: string; value: number; min?: number; max: number; step: number;
-  display: string; onChange: (v: number) => void; icon?: React.ReactNode;
+  display: string; onChange: (v: number) => void; icon?: ReactNode; numberStep?: number;
 }) {
+  const [localValue, setLocalValue] = useState(String(value));
+
+  useEffect(() => {
+    setLocalValue(String(value));
+  }, [value]);
+
+  const commit = (raw: string) => {
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return;
+    onChange(Math.max(min, Math.min(max, parsed)));
+  };
+
   return (
     <div className="space-y-1">
       <div className="flex justify-between items-center">
@@ -1061,6 +1104,11 @@ function LabeledSlider({ label, value, min = 0, max, step, display, onChange, ic
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={e => onChange(parseFloat(e.target.value))}
         className="w-full h-1 bg-panel-hover rounded-lg appearance-none cursor-pointer accent-sky-500" />
+      <input type="number" min={min} max={max} step={numberStep ?? step} value={localValue}
+        onChange={e => setLocalValue(e.target.value)}
+        onBlur={() => commit(localValue)}
+        onKeyDown={e => { if (e.key === 'Enter') { commit(localValue); e.currentTarget.blur(); } }}
+        className="w-full px-2 py-1 bg-panel-light border border-panel-border rounded text-xs text-theme-secondary focus:outline-none focus:border-sky-500/40" />
     </div>
   );
 }

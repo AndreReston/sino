@@ -552,6 +552,8 @@ export default function App() {
     return (
       <VideoWorkspace
         onBack={openDashboard}
+        onSave={handleSaveDesign}
+        hasUnsavedChanges={videoDirty}
       />
     );
   }
