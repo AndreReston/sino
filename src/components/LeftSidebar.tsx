@@ -635,6 +635,12 @@ function UploadsPanel({
     fetchUploads();
   }, []);
 
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(null), 5000);
+    return () => clearTimeout(t);
+  }, [error]);
+
   /** Extract a thumbnail from a video file */
   const extractVideoThumbnail = (file: File): Promise<{ thumbnailUrl: string; duration: number }> => {
     return new Promise((resolve) => {
@@ -784,7 +790,12 @@ function UploadsPanel({
             }}
           />
         </label>
-        {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+        {error && (
+          <div className="mt-2 flex items-start gap-1.5 bg-red-500/10 border border-red-500/20 rounded px-2 py-1.5">
+            <p className="text-xs text-red-400 flex-1">{error}</p>
+            <button onClick={() => setError(null)} className="text-red-400/60 hover:text-red-400 shrink-0 mt-px" aria-label="Dismiss">✕</button>
+          </div>
+        )}
       </div>
 
       <div>

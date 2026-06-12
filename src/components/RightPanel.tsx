@@ -97,7 +97,7 @@ export default function RightPanel() {
     <div className="w-64 bg-panel border-l border-panel-border flex flex-col shrink-0 overflow-hidden">
       <div className="px-4 py-3 border-b border-panel-border shrink-0">
         <h3 className="text-xs font-semibold text-theme-muted uppercase tracking-wider">
-          {obj ? `Properties · ${obj.type}` : 'Canvas'}
+          {obj ? `Properties · ${({ rect: 'Rectangle', circle: 'Ellipse', textbox: 'Text', text: 'Text', image: 'Image', path: 'Path', line: 'Line', group: 'Group', triangle: 'Triangle', polygon: 'Polygon' } as Record<string, string>)[obj.type] ?? obj.type}` : 'Canvas'}
         </h3>
       </div>
 
