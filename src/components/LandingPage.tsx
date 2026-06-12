@@ -56,7 +56,7 @@ function InstallButton({ className = '' }: { className?: string }) {
 
   if (isDesktopApp || isInstalled) {
     return (
-      <span className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-800 text-zinc-400 text-sm font-medium ${className}`}>
+      <span className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-panel-hover text-theme-dim text-sm font-medium ${className}`}>
         <Monitor className="w-4 h-4" />
         {isDesktopApp ? 'Desktop App' : 'Installed'}
       </span>
@@ -109,7 +109,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
           <InstallButton className="hidden sm:inline-flex" />
           <button
             onClick={onLogin}
-            className="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white transition-colors"
+            className="px-4 py-2 text-sm font-medium text-theme-secondary hover:text-theme-primary transition-colors"
           >
             Log in
           </button>
@@ -127,6 +127,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
         {/* Badge */}
         <div className="flex justify-center mb-8">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-500/10 border border-orange-500/25 text-orange-300 text-xs font-semibold tracking-wide">
+
             <MousePointer2 className="w-3.5 h-3.5" />
             Visual design &amp; video platform for creators
           </div>
@@ -141,10 +142,11 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
               limits.
             </span>
           </h1>
-          <p className="mt-6 text-lg text-zinc-400 leading-relaxed max-w-xl mx-auto">
+          <p className="mt-6 text-lg text-theme-muted leading-relaxed max-w-xl mx-auto">
             A full-featured canvas editor and video studio built for speed. Design graphics, edit videos,
             and export anywhere — all in one seamless workspace.
           </p>
+
         </div>
 
         {/* CTA buttons */}
@@ -158,7 +160,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
           </button>
           <button
             onClick={onLogin}
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-full border border-zinc-700/80 bg-zinc-900/60 text-zinc-200 font-medium text-sm hover:border-zinc-500 hover:bg-zinc-800/80 transition-all backdrop-blur-sm"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-full border border-panel-border bg-panel text-theme-secondary font-medium text-sm hover:border-panel-hover hover:bg-panel-hover transition-all backdrop-blur-sm"
           >
             Sign in to my account
           </button>
@@ -174,17 +176,17 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
             style={{ boxShadow: '0 40px 120px -20px rgba(0,0,0,0.9), 0 0 60px rgba(249,115,22,0.06), 0 0 60px rgba(56,189,248,0.04)' }}
           >
             {/* Simulated top bar */}
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-[#0f0f16]">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-panel-border bg-panel">
               <div className="flex gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-                <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-                <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
+                <div className="w-2.5 h-2.5 rounded-full bg-theme-dim" />
+                <div className="w-2.5 h-2.5 rounded-full bg-theme-dim" />
+                <div className="w-2.5 h-2.5 rounded-full bg-theme-dim" />
               </div>
               <div className="flex-1 flex justify-center">
-                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                <div className="flex items-center gap-2 text-xs text-theme-dim">
                   <img src={LOGO_SRC} alt="" className="w-4 h-4 rounded object-cover" />
-                  <span className="text-zinc-400 font-medium">DesignForge</span>
-                  <span className="text-zinc-700">|</span>
+                  <span className="text-theme-secondary font-medium">DesignForge</span>
+                  <span className="text-theme-dim">|</span>
                   <span>Untitled Design</span>
                 </div>
               </div>
@@ -193,16 +195,16 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
               </div>
             </div>
             {/* Simulated workspace */}
-            <div className="flex min-h-[300px] bg-[#0a0a11]">
+            <div className="flex min-h-[300px] bg-canvas-surface">
               {/* Left tools panel */}
-              <div className="w-14 border-r border-white/[0.05] flex flex-col items-center py-4 gap-2.5 shrink-0 bg-[#0f0f16]">
+              <div className="w-14 border-r border-panel-border flex flex-col items-center py-4 gap-2.5 shrink-0 bg-panel">
                 {[
                   { color: 'bg-orange-500/20 border-orange-500/30 text-orange-400' },
-                  { color: 'bg-zinc-800/60 border-transparent text-zinc-600' },
-                  { color: 'bg-zinc-800/60 border-transparent text-zinc-600' },
-                  { color: 'bg-zinc-800/60 border-transparent text-zinc-600' },
-                  { color: 'bg-zinc-800/60 border-transparent text-zinc-600' },
-                  { color: 'bg-zinc-800/60 border-transparent text-zinc-600' },
+                  { color: 'bg-panel-hover border-transparent text-theme-dim' },
+                  { color: 'bg-panel-hover border-transparent text-theme-dim' },
+                  { color: 'bg-panel-hover border-transparent text-theme-dim' },
+                  { color: 'bg-panel-hover border-transparent text-theme-dim' },
+                  { color: 'bg-panel-hover border-transparent text-theme-dim' },
                 ].map((item, i) => (
                   <div key={i} className={`w-9 h-9 rounded-xl border flex items-center justify-center ${item.color}`}>
                     <div className="w-3 h-3 rounded-sm bg-current opacity-60" />
@@ -228,7 +230,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
                 </div>
               </div>
               {/* Right props panel */}
-              <div className="w-52 border-l border-white/[0.05] flex flex-col py-4 px-3 gap-3 shrink-0 bg-[#0f0f16]">
+              <div className="w-52 border-l border-panel-border flex flex-col py-4 px-3 gap-3 shrink-0 bg-panel">
                 {[
                   { w: '100%', label: 'Width', val: '1080 px' },
                   { w: '100%', label: 'Height', val: '1080 px' },
@@ -236,13 +238,13 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
                   { w: '90%', label: 'Radius', val: '16 px' },
                 ].map((row, i) => (
                   <div key={i} className="flex items-center justify-between">
-                    <span className="text-[10px] text-zinc-600">{row.label}</span>
-                    <div className="h-5 rounded bg-zinc-800/80 border border-white/[0.04] text-[10px] text-zinc-400 flex items-center px-2" style={{ width: row.w === '100%' ? '70px' : '60px' }}>
+                    <span className="text-[10px] text-theme-dim">{row.label}</span>
+                    <div className="h-5 rounded bg-panel-hover border border-panel-border text-[10px] text-theme-muted flex items-center px-2" style={{ width: row.w === '100%' ? '70px' : '60px' }}>
                       {row.val}
                     </div>
                   </div>
                 ))}
-                <div className="mt-1 h-px bg-white/[0.04]" />
+                <div className="mt-1 h-px bg-panel-border" />
                 <div className="flex items-center gap-1.5 mt-1">
                   {['#f97316', '#38bdf8', '#a855f7', '#fbbf24', '#ec4899'].map(c => (
                     <div key={c} className="w-5 h-5 rounded-full border-2 border-white/10" style={{ background: c }} />
@@ -265,7 +267,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
               </div>
               <h3 className="text-xl font-bold text-white">Photo Design</h3>
             </div>
-            <p className="text-sm text-zinc-400 leading-relaxed">
+            <p className="text-sm text-theme-muted leading-relaxed">
               Create graphics, social posts, presentations, and print designs. Full canvas tools — shapes,
               text, images, layers, and multi-page projects with smart alignment guides.
             </p>
@@ -286,7 +288,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
               </div>
               <h3 className="text-xl font-bold text-white">Video Studio</h3>
             </div>
-            <p className="text-sm text-zinc-400 leading-relaxed">
+            <p className="text-sm text-theme-muted leading-relaxed">
               Import video clips, organize them on a timeline, trim and arrange. Includes text overlays,
               sticker overlays, audio tracks, transitions, and a CapCut-style editor.
             </p>
@@ -307,7 +309,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
             Everything you need, nothing you don't
           </h2>
-          <p className="mt-4 text-zinc-400 text-lg max-w-lg mx-auto">
+          <p className="mt-4 text-theme-muted text-lg max-w-lg mx-auto">
             Purpose-built tools that stay out of your way until you need them.
           </p>
         </div>
@@ -323,7 +325,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
                 {f.icon}
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">{f.title}</h3>
-              <p className="text-sm text-zinc-400 leading-relaxed">{f.description}</p>
+              <p className="text-sm text-theme-muted leading-relaxed">{f.description}</p>
             </div>
           ))}
         </div>
@@ -350,7 +352,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
               Ready to create something?
             </h2>
-            <p className="mt-3 text-zinc-400 max-w-md mx-auto">
+            <p className="mt-3 text-theme-muted max-w-md mx-auto">
               Sign up in seconds and start designing. Your work saves automatically to your workspace.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
@@ -374,7 +376,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
             <img src={LOGO_SRC} alt="DesignForge" className="w-7 h-7 rounded-lg object-cover" />
             <span className="text-sm font-semibold bg-gradient-to-r from-orange-400 to-sky-400 bg-clip-text text-transparent">DesignForge</span>
           </div>
-          <p className="text-xs text-zinc-600">Built for creators who move fast.</p>
+          <p className="text-xs text-theme-dim">Built for creators who move fast.</p>
         </div>
       </footer>
     </div>

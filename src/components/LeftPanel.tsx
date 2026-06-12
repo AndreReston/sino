@@ -160,8 +160,8 @@ export default function LeftPanel() {
             onClick={() => { setLeftPanelTab(tab.id); if (tab.id === 'layers') refreshLayers(); }}
             className={`flex flex-col items-center gap-1 px-3 py-2.5 text-xs font-medium shrink-0 border-b-2 transition-all
               ${sidebarTab === tab.id
-                ? 'border-neon-green text-neon-green'
-                : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
+                ? 'border-emerald-400 text-emerald-400'
+                : 'border-transparent text-theme-dim hover:text-theme-secondary'}`}
           >
             {tab.icon}
             <span>{tab.label}</span>
@@ -174,13 +174,13 @@ export default function LeftPanel() {
         {/* Templates */}
         {sidebarTab === 'templates' && (
           <div className="space-y-3 animate-fade-in">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Canvas Themes</p>
+            <p className="text-xs text-theme-dim uppercase tracking-wider font-medium">Canvas Themes</p>
             <div className="grid grid-cols-2 gap-2">
               {TEMPLATE_STYLES.map((t) => (
                 <button
                   key={t.name}
                   onClick={() => applyTemplate(t.bg)}
-                  className="group relative aspect-video rounded-lg overflow-hidden border border-panel-border hover:border-neon-green/50 transition-all hover:scale-105"
+                  className="group relative aspect-video rounded-lg overflow-hidden border border-panel-border hover:border-emerald-400/50 transition-all hover:scale-105"
                   style={{ backgroundColor: t.bg }}
                 >
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50">
@@ -203,7 +203,7 @@ export default function LeftPanel() {
         {sidebarTab === 'shapes' && (
           <div className="space-y-4 animate-fade-in">
             <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-2">Shapes</p>
+              <p className="text-xs text-theme-dim uppercase tracking-wider font-medium mb-2">Shapes</p>
               <div className="grid grid-cols-4 gap-1.5">
                 {[
                   { type: 'rect', label: 'Rect' },
@@ -214,7 +214,7 @@ export default function LeftPanel() {
                   <button
                     key={s.type}
                     onClick={() => addShape(s.type, '#3f3f46')}
-                    className="flex flex-col items-center gap-1 p-2 rounded-lg bg-panel-light hover:bg-panel-hover border border-panel-border hover:border-neon-green/40 transition-all text-zinc-400 hover:text-zinc-100"
+                    className="flex flex-col items-center gap-1 p-2 rounded-lg bg-panel-light hover:bg-panel-hover border border-panel-border hover:border-emerald-400/40 transition-all text-theme-dim hover:text-theme-secondary"
                   >
                     <ShapeIcon type={s.type} />
                     <span className="text-xs">{s.label}</span>
@@ -223,7 +223,7 @@ export default function LeftPanel() {
               </div>
             </div>
             <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-2">Colors</p>
+              <p className="text-xs text-theme-dim uppercase tracking-wider font-medium mb-2">Colors</p>
               <div className="flex flex-wrap gap-2">
                 {SHAPE_COLORS.map((c) => (
                   <button
@@ -242,20 +242,20 @@ export default function LeftPanel() {
         {/* Text */}
         {sidebarTab === 'text' && (
           <div className="space-y-2 animate-fade-in">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-3">Text Styles</p>
+            <p className="text-xs text-theme-dim uppercase tracking-wider font-medium mb-3">Text Styles</p>
             {TEXT_STYLES.map((ts) => (
               <button
                 key={ts.label}
                 onClick={() => addText(ts.size, ts.weight, ts.preview)}
-                className="w-full text-left px-3 py-3 rounded-lg bg-panel-light hover:bg-panel-hover border border-panel-border hover:border-neon-green/40 transition-all group"
+                className="w-full text-left px-3 py-3 rounded-lg bg-panel-light hover:bg-panel-hover border border-panel-border hover:border-emerald-400/40 transition-all group"
               >
                 <div
-                  className="text-zinc-200 group-hover:text-white transition-colors truncate"
+                  className="text-theme-secondary group-hover:text-theme-primary transition-colors truncate"
                   style={{ fontSize: `${Math.min(ts.size * 0.5, 24)}px`, fontWeight: ts.weight }}
                 >
                   {ts.preview}
                 </div>
-                <div className="text-xs text-zinc-500 mt-1">{ts.label} · {ts.size}px</div>
+                <div className="text-xs text-theme-dim mt-1">{ts.label} · {ts.size}px</div>
               </button>
             ))}
           </div>
@@ -264,9 +264,9 @@ export default function LeftPanel() {
         {/* Images / Media */}
         {sidebarTab === 'uploads' && (
           <div className="space-y-3 animate-fade-in">
-            <div className="flex items-center gap-2 p-2 bg-panel-light rounded-lg border border-panel-border border-dashed hover:border-neon-green/50 cursor-pointer transition-colors group">
-              <Upload className="w-4 h-4 text-zinc-500 group-hover:text-neon-green transition-colors" />
-              <span className="text-xs text-zinc-500 group-hover:text-zinc-300 transition-colors">Upload image</span>
+            <div className="flex items-center gap-2 p-2 bg-panel-light rounded-lg border border-panel-border border-dashed hover:border-emerald-400/50 cursor-pointer transition-colors group">
+              <Upload className="w-4 h-4 text-theme-dim group-hover:text-emerald-400 transition-colors" />
+              <span className="text-xs text-theme-dim group-hover:text-theme-secondary transition-colors">Upload image</span>
               <input
                 type="file"
                 accept="image/*"
@@ -289,13 +289,13 @@ export default function LeftPanel() {
                 }}
               />
             </div>
-            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Stock Photos</p>
+            <p className="text-xs text-theme-dim uppercase tracking-wider font-medium">Stock Photos</p>
             <div className="grid grid-cols-2 gap-2">
               {STOCK_IMAGES.map((url, i) => (
                 <button
                   key={i}
                   onClick={() => addImage(url)}
-                  className="aspect-video rounded-lg overflow-hidden bg-panel-light border border-panel-border hover:border-neon-green/50 transition-all hover:scale-105 group"
+                  className="aspect-video rounded-lg overflow-hidden bg-panel-light border border-panel-border hover:border-emerald-400/50 transition-all hover:scale-105 group"
                 >
                   <img
                     src={url}
@@ -312,11 +312,11 @@ export default function LeftPanel() {
         {/* Layers */}
         {sidebarTab === 'layers' && (
           <div className="space-y-1 animate-fade-in">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-2">
+            <p className="text-xs text-theme-dim uppercase tracking-wider font-medium mb-2">
               Layers ({layers.length})
             </p>
             {layers.length === 0 && (
-              <p className="text-xs text-zinc-600 text-center py-8">No objects on canvas</p>
+              <p className="text-xs text-theme-dim text-center py-8">No objects on canvas</p>
             )}
             {layers.map((obj, idx) => {
               const label = (obj as any).name || (obj.type === 'textbox' ? 'Text' : obj.type || 'Object');
@@ -331,25 +331,25 @@ export default function LeftPanel() {
                   }}
                   className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-panel-hover cursor-pointer group transition-colors"
                 >
-                  <span className="text-xs text-zinc-500 w-5 text-right shrink-0">{layers.length - idx}</span>
+                  <span className="text-xs text-theme-dim w-5 text-right shrink-0">{layers.length - idx}</span>
                   <LayerTypeIcon type={obj.type || ''} />
-                  <span className="text-xs text-zinc-300 flex-1 truncate">{label}</span>
+                  <span className="text-xs text-theme-secondary flex-1 truncate">{label}</span>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleLayerVisibility(obj); }}
-                      className="text-zinc-500 hover:text-zinc-100 transition-colors"
+                      className="text-theme-dim hover:text-theme-primary transition-colors"
                     >
                       {isVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleLayerLock(obj); }}
-                      className="text-zinc-500 hover:text-zinc-100 transition-colors"
+                      className="text-theme-dim hover:text-theme-primary transition-colors"
                     >
                       {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); deleteLayer(obj); }}
-                      className="text-zinc-500 hover:text-red-400 transition-colors"
+                      className="text-theme-dim hover:text-red-400 transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -378,10 +378,10 @@ function ShapeIcon({ type }: { type: string }) {
 }
 
 function LayerTypeIcon({ type }: { type: string }) {
-  if (type === 'textbox' || type === 'text') return <Type className="w-3.5 h-3.5 text-neon-blue shrink-0" />;
-  if (type === 'image') return <Image className="w-3.5 h-3.5 text-neon-green shrink-0" />;
-  if (type === 'circle') return <div className="w-3.5 h-3.5 rounded-full bg-zinc-500 shrink-0" />;
-  return <div className="w-3.5 h-3.5 rounded-sm bg-zinc-500 shrink-0" />;
+  if (type === 'textbox' || type === 'text') return <Type className="w-3.5 h-3.5 text-sky-400 shrink-0" />;
+  if (type === 'image') return <Image className="w-3.5 h-3.5 text-emerald-400 shrink-0" />;
+  if (type === 'circle') return <div className="w-3.5 h-3.5 rounded-full bg-theme-dim shrink-0" />;
+  return <div className="w-3.5 h-3.5 rounded-sm bg-theme-dim shrink-0" />;
 }
 
 function createStarPoints(cx: number, cy: number, spikes: number, outerR: number, innerR: number) {

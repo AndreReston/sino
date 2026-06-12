@@ -93,7 +93,7 @@ export default function RightPanel() {
   return (
     <div className="w-64 bg-panel border-l border-panel-border flex flex-col shrink-0 overflow-hidden">
       <div className="px-4 py-3 border-b border-panel-border shrink-0">
-        <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+        <h3 className="text-xs font-semibold text-theme-muted uppercase tracking-wider">
           {obj ? `Properties · ${obj.type}` : 'Canvas'}
         </h3>
       </div>
@@ -178,7 +178,7 @@ export default function RightPanel() {
               <Section title="Fill & Stroke">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <label className="text-xs text-zinc-500 w-16 shrink-0">Fill</label>
+                    <label className="text-xs text-theme-muted w-16 shrink-0">Fill</label>
                     <div className="flex items-center gap-2 flex-1">
                       <input
                         type="color"
@@ -197,7 +197,7 @@ export default function RightPanel() {
                   {!isText && (
                     <>
                       <div className="flex items-center gap-2">
-                        <label className="text-xs text-zinc-500 w-16 shrink-0">Stroke</label>
+                        <label className="text-xs text-theme-muted w-16 shrink-0">Stroke</label>
                         <div className="flex items-center gap-2 flex-1">
                           <input
                             type="color"
@@ -214,16 +214,16 @@ export default function RightPanel() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <label className="text-xs text-zinc-500 w-16 shrink-0">Stroke W</label>
+                        <label className="text-xs text-theme-muted w-16 shrink-0">Stroke W</label>
                         <input
                           type="range"
                           min={0}
                           max={20}
                           value={obj.strokeWidth || 0}
                           onChange={(e) => setProp({ strokeWidth: Number(e.target.value) })}
-                          className="flex-1 accent-neon-green"
+                          className="flex-1 accent-emerald-500"
                         />
-                        <span className="text-xs text-zinc-400 w-5 text-right">{obj.strokeWidth || 0}</span>
+                        <span className="text-xs text-theme-muted w-5 text-right">{obj.strokeWidth || 0}</span>
                       </div>
                     </>
                   )}
@@ -302,7 +302,7 @@ export default function RightPanel() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs text-zinc-500">Line Height</label>
+                    <label className="text-xs text-theme-muted">Line Height</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="range"
@@ -311,9 +311,9 @@ export default function RightPanel() {
                         step={0.1}
                         value={(obj as fabric.Textbox).lineHeight || 1.2}
                         onChange={(e) => setTextProp({ lineHeight: Number(e.target.value) })}
-                        className="flex-1 accent-neon-green"
+                        className="flex-1 accent-emerald-500"
                       />
-                      <span className="text-xs text-zinc-400 w-8 text-right">
+                      <span className="text-xs text-theme-muted w-8 text-right">
                         {((obj as fabric.Textbox).lineHeight || 1.2).toFixed(1)}
                       </span>
                     </div>
@@ -327,7 +327,7 @@ export default function RightPanel() {
               <Section title="Image">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-xs text-zinc-500">Blend Mode</label>
+                    <label className="text-xs text-theme-muted">Blend Mode</label>
                     <select
                       value={(obj as any).globalCompositeOperation || 'source-over'}
                       onChange={(e) => setProp({ globalCompositeOperation: e.target.value })}
@@ -364,7 +364,7 @@ export default function RightPanel() {
                       { label: 'Hue', field: 'hue', min: -180, max: 180 },
                     ] as const).map(({ label, field, min, max }) => (
                       <div key={field} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs text-zinc-400">
+                        <div className="flex items-center justify-between text-xs text-theme-muted">
                           <span>{label}</span>
                           <span>{selectedObjectAdjustments[field]}</span>
                         </div>
@@ -379,7 +379,7 @@ export default function RightPanel() {
                             setObjectAdjustments(next);
                             if (obj) applyAdjustmentsToObject(obj, next);
                           }}
-                          className="w-full accent-neon-green"
+                          className="w-full accent-emerald-500"
                         />
                       </div>
                     ))}
@@ -392,7 +392,7 @@ export default function RightPanel() {
                         setObjectAdjustments(reset);
                         if (obj) applyAdjustmentsToObject(obj, reset);
                       }}
-                      className="flex-1 rounded-xl border border-panel-border px-3 py-2 text-xs text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors"
+                      className="flex-1 rounded-xl border border-panel-border px-3 py-2 text-xs text-theme-secondary hover:text-theme-primary hover:border-panel-hover transition-colors"
                     >
                       Reset
                     </button>
@@ -419,7 +419,7 @@ export default function RightPanel() {
                     onChange={(e) => setProp({ rx: Number(e.target.value), ry: Number(e.target.value) } as any)}
                     className="flex-1 accent-neon-green"
                   />
-                  <span className="text-xs text-zinc-400 w-6 text-right">{(obj as fabric.Rect).rx || 0}</span>
+                  <span className="text-xs text-theme-muted w-6 text-right">{(obj as fabric.Rect).rx || 0}</span>
                 </div>
               </Section>
             )}
@@ -434,9 +434,9 @@ function CanvasProperties({ bg, setBg, w, h }: { bg: string; setBg: (c: string) 
   return (
     <Section title="Canvas Settings">
       <div className="space-y-3">
-        <div className="text-xs text-zinc-500 mb-1">Size: {w} × {h}px</div>
+        <div className="text-xs text-theme-muted mb-1">Size: {w} × {h}px</div>
         <div className="flex items-center gap-2">
-          <label className="text-xs text-zinc-500 w-20 shrink-0">Background</label>
+          <label className="text-xs text-theme-muted w-20 shrink-0">Background</label>
           <input
             type="color"
             value={bg}
@@ -451,7 +451,7 @@ function CanvasProperties({ bg, setBg, w, h }: { bg: string; setBg: (c: string) 
           />
         </div>
         <div className="pt-1">
-          <p className="text-xs text-zinc-600">Click on an object to edit its properties.</p>
+          <p className="text-xs text-theme-dim">Click on an object to edit its properties.</p>
         </div>
       </div>
     </Section>
@@ -461,7 +461,7 @@ function CanvasProperties({ bg, setBg, w, h }: { bg: string; setBg: (c: string) 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="px-4 py-3 border-b border-panel-border">
-      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2.5">{title}</p>
+      <p className="text-xs font-semibold text-theme-muted uppercase tracking-wider mb-2.5">{title}</p>
       {children}
     </div>
   );
@@ -474,7 +474,7 @@ function NumberField({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs text-zinc-500">{label}</label>
+      <label className="text-xs text-theme-muted">{label}</label>
       <input
         type="number"
         value={value}
@@ -499,7 +499,7 @@ function ActionBtn({
       className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs border transition-all
         ${danger
           ? 'border-red-800/50 text-red-400 hover:bg-red-900/20 hover:border-red-600/50'
-          : 'border-panel-border text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover'}`}
+          : 'border-panel-border text-theme-muted hover:text-theme-primary hover:bg-panel-hover'}`}
     >
       {icon}
       <span>{label}</span>

@@ -70,7 +70,7 @@ export default function PageNavigator() {
                   className={`flex flex-col items-center gap-1 rounded-2xl overflow-hidden border-2 transition-all duration-150 ${
                     isActive
                       ? 'border-emerald-400 shadow-[0_0_0_1px_rgba(16,185,129,0.35)] bg-emerald-500/5'
-                      : 'border-panel-border bg-[#111115] hover:border-zinc-500'
+                      : 'border-panel-border bg-canvas-surface hover:border-panel-hover'
                   }`}
                   style={{ width: 84, minHeight: 72 }}
                   title={`Page ${i + 1}`}
@@ -80,13 +80,13 @@ export default function PageNavigator() {
                     {page.thumbnail ? (
                       <img src={page.thumbnail} alt={`Page ${i + 1}`} className="w-full h-full object-cover" draggable={false} />
                     ) : (
-                      <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
-                        <span className="text-zinc-500 text-[11px]">Empty</span>
+                      <div className="w-full h-full bg-panel-hover flex items-center justify-center">
+                        <span className="text-theme-muted text-[11px]">Empty</span>
                       </div>
                     )}
                   </div>
                   <div className="w-full text-center px-2 py-1 text-[11px] font-semibold tracking-wide">
-                    <span className={isActive ? 'text-emerald-300' : 'text-zinc-400'}>Page {i + 1}</span>
+                    <span className={isActive ? 'text-emerald-300' : 'text-theme-muted'}>Page {i + 1}</span>
                   </div>
                 </button>
                 <button
@@ -98,7 +98,7 @@ export default function PageNavigator() {
                   className={`absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full border transition-all ${
                     isSelected
                       ? 'bg-emerald-400 border-emerald-500 text-black'
-                      : 'bg-black/60 border-panel-border text-zinc-300 hover:border-zinc-400'
+                      : 'bg-black/60 border-panel-border text-theme-secondary hover:border-zinc-400'
                   }`}
                   title={isSelected ? 'Deselect page for export' : 'Select page for export'}
                 >
@@ -113,14 +113,14 @@ export default function PageNavigator() {
 
         <div className="flex flex-col gap-2">
           {selectedPageIds.length > 0 && (
-            <div className="flex items-center gap-2 text-[11px] text-zinc-300">
+            <div className="flex items-center gap-2 text-[11px] text-theme-secondary">
               <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-emerald-200">
                 {selectedPageIds.length} selected
               </span>
               <button
                 type="button"
                 onClick={clearPageSelection}
-                className="text-[11px] text-zinc-400 hover:text-zinc-200"
+                className="text-[11px] text-theme-muted hover:text-theme-secondary"
               >
                 Clear
               </button>
@@ -138,7 +138,7 @@ export default function PageNavigator() {
             <button
               onClick={duplicateCurrentPage}
               title="Duplicate this page"
-              className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-2xl bg-panel-hover text-zinc-300 text-xs font-medium border border-panel-border hover:border-zinc-500 transition-colors"
+              className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-2xl bg-panel-hover text-theme-secondary text-xs font-medium border border-panel-border hover:border-zinc-500 transition-colors"
             >
               <Copy className="w-3.5 h-3.5" />
               Dupe
@@ -147,7 +147,7 @@ export default function PageNavigator() {
               onClick={deleteCurrentPage}
               disabled={pages.length <= 1}
               title="Delete this page"
-              className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-2xl bg-panel-hover text-zinc-300 text-xs font-medium border border-panel-border hover:border-red-500/30 hover:text-red-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-2xl bg-panel-hover text-theme-secondary text-xs font-medium border border-panel-border hover:border-red-500/30 hover:text-red-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Del
@@ -158,11 +158,11 @@ export default function PageNavigator() {
         {/* Transition selector */}
         <div className="w-px h-12 bg-panel-border" />
         <div className="flex flex-col gap-2">
-          <label className="text-[11px] text-zinc-400">Transition</label>
+          <label className="text-[11px] text-theme-muted">Transition</label>
           <select
             value={pageTransitionType}
             onChange={(e) => setPageTransitionType(e.target.value as any)}
-            className="px-3 py-2 rounded-lg bg-panel-light border border-panel-border text-zinc-300 text-xs hover:border-zinc-500 transition-colors focus:outline-none focus:border-emerald-500/50"
+            className="px-3 py-2 rounded-lg bg-panel-light border border-panel-border text-theme-secondary text-xs hover:border-zinc-500 transition-colors focus:outline-none focus:border-emerald-500/50"
           >
             <option value="fade">Fade</option>
             <option value="slide-left">Slide Left</option>

@@ -118,14 +118,14 @@ export default function PlaybackControls({ videoRef }: Props) {
   const progressPercentage = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0;
 
   return (
-    <div className="bg-[#111115] border-t border-white/[0.06] h-10 px-3 flex items-center gap-2 select-none">
+    <div className="bg-panel-light border-t border-panel-divider h-10 px-3 flex items-center gap-2 select-none">
       {/* Skip Back Button */}
       <button
         onClick={handleSkipBack}
-        className="p-1 hover:bg-white/[0.1] rounded transition-colors flex-shrink-0"
+        className="p-1 hover:bg-panel-hover rounded transition-colors flex-shrink-0"
         title="Skip back 5 seconds"
       >
-        <SkipBack size={16} className="text-white/70 hover:text-white" />
+        <SkipBack size={16} className="text-theme-muted hover:text-theme-primary" />
       </button>
 
       {/* Play/Pause Button */}
@@ -140,28 +140,28 @@ export default function PlaybackControls({ videoRef }: Props) {
       {/* Skip Forward Button */}
       <button
         onClick={handleSkipForward}
-        className="p-1 hover:bg-white/[0.1] rounded transition-colors flex-shrink-0"
+        className="p-1 hover:bg-panel-hover rounded transition-colors flex-shrink-0"
         title="Skip forward 5 seconds"
       >
-        <SkipForward size={16} className="text-white/70 hover:text-white" />
+        <SkipForward size={16} className="text-theme-muted hover:text-theme-primary" />
       </button>
 
       {/* Stop Button */}
       <button
         onClick={handleStop}
-        className="p-1 hover:bg-white/[0.1] rounded transition-colors flex-shrink-0"
+        className="p-1 hover:bg-panel-hover rounded transition-colors flex-shrink-0"
         title="Stop and reset"
       >
-        <Square size={16} className="text-white/70 hover:text-white" />
+        <Square size={16} className="text-theme-muted hover:text-theme-primary" />
       </button>
 
       {/* Divider */}
-      <div className="w-px h-5 bg-white/[0.1]" />
+      <div className="w-px h-5 bg-panel-divider" />
 
       {/* Seek Bar */}
       <div
         ref={seekBarRef}
-        className="flex-1 group relative h-1 bg-zinc-700 rounded-full cursor-pointer"
+        className="flex-1 group relative h-1 bg-panel-divider rounded-full cursor-pointer"
         onMouseDown={handleSeekStart}
         onMouseMove={handleSeekMove}
         onMouseUp={handleSeekEnd}
@@ -183,12 +183,12 @@ export default function PlaybackControls({ videoRef }: Props) {
       </div>
 
       {/* Divider */}
-      <div className="w-px h-5 bg-white/[0.1]" />
+      <div className="w-px h-5 bg-panel-divider" />
 
       {/* Speed Control */}
       <div className="flex items-center gap-1 flex-shrink-0">
         <button
-          className="text-xs px-1.5 py-0.5 rounded border border-transparent hover:bg-white/[0.1] transition-colors"
+          className="text-xs px-1.5 py-0.5 rounded border border-transparent hover:bg-panel-hover transition-colors"
           onClick={() => {
             const currentIndex = SPEED_OPTIONS.indexOf(playbackSpeed);
             const newIndex = Math.max(0, currentIndex - 1);
@@ -207,7 +207,7 @@ export default function PlaybackControls({ videoRef }: Props) {
               className={`text-xs px-1.5 py-0.5 rounded transition-colors ${
                 playbackSpeed === speed
                   ? 'bg-sky-500/15 text-sky-300'
-                  : 'text-white/50 hover:text-white/70'
+                  : 'text-theme-dim hover:text-theme-muted'
               }`}
               title={`${speed}x speed`}
             >
@@ -217,7 +217,7 @@ export default function PlaybackControls({ videoRef }: Props) {
         </div>
 
         <button
-          className="text-xs px-1.5 py-0.5 rounded border border-transparent hover:bg-white/[0.1] transition-colors"
+          className="text-xs px-1.5 py-0.5 rounded border border-transparent hover:bg-panel-hover transition-colors"
           onClick={() => {
             const currentIndex = SPEED_OPTIONS.indexOf(playbackSpeed);
             const newIndex = Math.min(SPEED_OPTIONS.length - 1, currentIndex + 1);
@@ -232,9 +232,9 @@ export default function PlaybackControls({ videoRef }: Props) {
       {/* Volume Control */}
       <div className="flex items-center gap-1 flex-shrink-0">
         {(activeClip?.volume ?? 1) === 0 ? (
-          <VolumeX size={14} className="text-white/50" />
+          <VolumeX size={14} className="text-theme-muted" />
         ) : (
-          <Volume2 size={14} className="text-white/50" />
+          <Volume2 size={14} className="text-theme-muted" />
         )}
         <input
           type="range"
@@ -246,14 +246,14 @@ export default function PlaybackControls({ videoRef }: Props) {
             if (!activeClip) return;
             updateClip(activeClip.id, { volume: parseFloat(e.target.value) });
           }}
-          className="w-12 h-1 bg-zinc-700 rounded-full appearance-none cursor-pointer accent-sky-500"
+          className="w-12 h-1 bg-panel-divider rounded-full appearance-none cursor-pointer accent-sky-500"
           title={`Volume: ${Math.round((activeClip?.volume ?? 1) * 100)}%`}
           disabled={!activeClip}
         />
       </div>
 
       {/* Time Display */}
-      <div className="text-xs font-mono text-white/70 flex-shrink-0 whitespace-nowrap tabular-nums ml-1">
+      <div className="text-xs font-mono text-theme-muted flex-shrink-0 whitespace-nowrap tabular-nums ml-1">
         {formatTime(currentTime)} / {formatTime(totalDuration)}
       </div>
     </div>

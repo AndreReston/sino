@@ -101,15 +101,15 @@ function formatDuration(secs: number): string {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-[#151519] border border-white/[0.06] rounded-xl p-3 text-center">
+    <div className="bg-panel-light border border-panel-border rounded-xl p-3 text-center">
       <p className="text-lg font-bold text-sky-300 tabular-nums">{value}</p>
-      <p className="text-[10px] text-zinc-500 mt-0.5">{label}</p>
+      <p className="text-[10px] text-theme-dim mt-0.5">{label}</p>
     </div>
   );
 }
 
 function HealthBadge({ value }: { value?: string }) {
-  if (!value) return <span className="text-zinc-600 text-[9px]">—</span>;
+  if (!value) return <span className="text-theme-dim text-[9px]">—</span>;
   const isWarn = value.includes('⚠') || value === 'Low ⚠' || value === 'Low';
   return (
     <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${isWarn ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
@@ -122,7 +122,7 @@ function ExportStatusBadge({ status, progress }: { status: string; progress: num
   if (status === 'completed') return <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold flex items-center gap-0.5"><Check className="w-2.5 h-2.5" /> Done</span>;
   if (status === 'failed') return <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 font-bold">Failed</span>;
   if (status === 'exporting') return <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold">{progress}%</span>;
-  return <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-400">Queued</span>;
+  return <span className="text-[9px] px-1.5 py-0.5 rounded bg-panel-hover text-theme-muted">Queued</span>;
 }
 
 function SavePresetButton({ clipId }: { clipId: string }) {
@@ -140,13 +140,13 @@ function SavePresetButton({ clipId }: { clipId: string }) {
   }
 
   return (
-    <div className="space-y-2 p-2 rounded-xl bg-[#151519] border border-violet-500/20">
+    <div className="space-y-2 p-2 rounded-xl bg-panel-light border border-violet-500/20">
       <input
         autoFocus
         value={name}
         onChange={e => setName(e.target.value)}
         placeholder="Preset name..."
-        className="w-full bg-transparent border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-violet-500/40"
+        className="w-full bg-transparent border border-panel-border rounded-lg px-2 py-1.5 text-xs text-theme-primary focus:outline-none focus:border-violet-500/40"
         onKeyDown={e => {
           if (e.key === 'Enter' && name.trim()) { saveStylePreset(name.trim(), clipId); setName(''); setOpen(false); }
           if (e.key === 'Escape') { setOpen(false); }
@@ -158,7 +158,7 @@ function SavePresetButton({ clipId }: { clipId: string }) {
           disabled={!name.trim()}
           className="flex-1 py-1.5 rounded-lg bg-violet-500 text-white text-[10px] font-semibold disabled:opacity-40 hover:bg-violet-400 transition-colors"
         >Save</button>
-        <button onClick={() => setOpen(false)} className="flex-1 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 text-[10px] hover:bg-zinc-700 transition-colors">Cancel</button>
+        <button onClick={() => setOpen(false)} className="flex-1 py-1.5 rounded-lg bg-panel-hover text-theme-secondary text-[10px] hover:bg-panel-hover transition-colors">Cancel</button>
       </div>
     </div>
   );
@@ -173,17 +173,17 @@ function AutoSubtitleDistributor() {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
 
   return (
-    <div className="space-y-2 p-3 rounded-xl bg-[#151519] border border-white/[0.06]">
-      <p className="text-[10px] text-zinc-400 font-medium">Auto-distribute subtitles</p>
+    <div className="space-y-2 p-3 rounded-xl bg-panel-light border border-panel-border">
+      <p className="text-[10px] text-theme-muted font-medium">Auto-distribute subtitles</p>
       <textarea
         value={text}
         onChange={e => setText(e.target.value)}
         placeholder={"Line 1\nLine 2\nLine 3..."}
         rows={5}
-        className="w-full bg-transparent border border-white/[0.08] rounded-lg px-2 py-2 text-xs text-zinc-300 focus:outline-none focus:border-sky-500/40 resize-none"
+        className="w-full bg-transparent border border-panel-border rounded-lg px-2 py-2 text-xs text-theme-secondary focus:outline-none focus:border-sky-500/40 resize-none"
       />
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-zinc-600">{lines.length} lines · {formatDuration(total)} total</span>
+        <span className="text-[10px] text-theme-dim">{lines.length} lines · {formatDuration(total)} total</span>
         <button
           onClick={() => { if (lines.length > 0) { autoDistributeSubtitles(lines); setText(''); } }}
           disabled={lines.length === 0 || total === 0}
@@ -300,16 +300,16 @@ export default function VideoSidebar() {
   };
 
   return (
-    <aside className="flex h-full bg-[#0f0f12] border-r border-white/[0.06] shrink-0" style={{ width: 280 }}>
+    <aside className="flex h-full bg-canvas-surface border-r border-panel-border shrink-0" style={{ width: 280 }}>
       {/* Icon rail */}
-      <div className="flex flex-col items-center w-14 border-r border-white/[0.06] py-3 gap-1 shrink-0 overflow-y-auto">
+      <div className="flex flex-col items-center w-14 border-r border-panel-border py-3 gap-1 shrink-0 overflow-y-auto">
         <div className="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center mb-3 shrink-0">
           <Film className="w-4 h-4 text-white" strokeWidth={2.5} />
         </div>
         {PANELS.map(p => (
           <button key={p.id} title={p.label} onClick={() => setActivePanel(p.id)}
             className={`flex flex-col items-center justify-center w-10 h-10 rounded-lg transition-all text-xs gap-0.5 shrink-0
-              ${activePanel === p.id ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/5'}`}>
+              ${activePanel === p.id ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30' : 'text-theme-muted hover:text-theme-secondary hover:bg-panel-hover'}`}>
             {p.icon}
           </button>
         ))}
@@ -317,8 +317,8 @@ export default function VideoSidebar() {
 
       {/* Panel content */}
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-        <div className="px-4 py-3 border-b border-white/[0.06] shrink-0">
-          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">{PANELS.find(p => p.id === activePanel)?.label}</p>
+        <div className="px-4 py-3 border-b border-panel-border shrink-0">
+          <p className="text-xs font-semibold text-theme-muted uppercase tracking-widest">{PANELS.find(p => p.id === activePanel)?.label}</p>
         </div>
         {(uploading || uploadError || (project && countEphemeralUrls(project) > 0)) && (
           <div className="px-3 pt-3 shrink-0 space-y-2">
@@ -344,50 +344,50 @@ export default function VideoSidebar() {
           {/* ── Clips Panel ─────────────────────────────────── */}
           {activePanel === 'clips' && (
             <div className="space-y-3">
-              <label className="flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-white/[0.08] hover:border-sky-500/30 bg-[#151519] cursor-pointer transition-all group">
-                <Upload className="w-5 h-5 text-zinc-500 group-hover:text-sky-400 transition-colors" />
-                <span className="text-xs text-zinc-500 group-hover:text-zinc-300">Upload Video</span>
+              <label className="flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-panel-border hover:border-sky-500/30 bg-panel-light cursor-pointer transition-all group">
+                <Upload className="w-5 h-5 text-theme-muted group-hover:text-sky-400 transition-colors" />
+                <span className="text-xs text-theme-muted group-hover:text-theme-secondary">Upload Video</span>
                 <input ref={videoInputRef} type="file" accept="video/*" className="hidden"
                   onChange={e => { const f = e.target.files?.[0]; if (f) handleVideoUpload(f); e.target.value = ''; }} />
               </label>
 
               <div>
-                <p className="text-[11px] text-zinc-500 mb-2">Clips ({project?.clips.length ?? 0})</p>
+                <p className="text-[11px] text-theme-muted mb-2">Clips ({project?.clips.length ?? 0})</p>
                 {sortedClips.map((clip, index) => (
                   <div
                     key={clip.id}
                     className={`w-full rounded-xl border px-3 py-2 mb-1.5 transition-all cursor-pointer ${
-                      activeClipId === clip.id ? 'border-sky-500/40 bg-sky-500/10 text-sky-200' : 'border-white/[0.06] bg-[#151519] text-zinc-300 hover:border-white/[0.12]'}`}
+                      activeClipId === clip.id ? 'border-sky-500/40 bg-sky-500/10 text-sky-200' : 'border-panel-border bg-panel-light text-theme-secondary hover:border-panel-border'}`}
                     onClick={() => setActiveClipId(clip.id)}
                   >
                     <div className="flex items-center gap-2">
-                      <div className="w-12 h-8 rounded-lg overflow-hidden bg-zinc-900 flex items-center justify-center shrink-0">
+                      <div className="w-12 h-8 rounded-lg overflow-hidden bg-panel-hover flex items-center justify-center shrink-0">
                         {clip.thumbnails[0] ? (
                           <img src={clip.thumbnails[0]} alt={clip.name} className="w-full h-full object-cover" />
                         ) : (
-                          <Film className="w-4 h-4 text-zinc-600" />
+                          <Film className="w-4 h-4 text-theme-dim" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium truncate">{clip.name}</p>
-                        <p className="text-[9px] text-zinc-500">{((clip.duration - clip.trimStart - clip.trimEnd) / clip.speed).toFixed(1)}s</p>
+                        <p className="text-[9px] text-theme-muted">{((clip.duration - clip.trimStart - clip.trimEnd) / clip.speed).toFixed(1)}s</p>
                       </div>
                       {clip.effect !== 'none' && <span className="text-[8px] px-1 py-0.5 rounded bg-violet-500/20 text-violet-300 font-bold">{clip.effect}</span>}
-                      <button onClick={(e) => { e.stopPropagation(); removeClip(clip.id); }} className="p-1 rounded hover:bg-red-600 text-zinc-500 hover:text-white transition-colors">
+                      <button onClick={(e) => { e.stopPropagation(); removeClip(clip.id); }} className="p-1 rounded hover:bg-red-600 text-theme-dim hover:text-white transition-colors">
                         <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
                     <div className="flex items-center gap-1 mt-1.5">
-                      <button onClick={(e) => { e.stopPropagation(); reorderClip(clip.id, Math.max(0, index - 1)); }} className="p-1 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-200 transition-colors">
+                      <button onClick={(e) => { e.stopPropagation(); reorderClip(clip.id, Math.max(0, index - 1)); }} className="p-1 rounded hover:bg-panel-hover text-theme-muted hover:text-theme-secondary transition-colors">
                         <ArrowLeft className="w-3 h-3" />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); reorderClip(clip.id, Math.min(sortedClips.length - 1, index + 1)); }} className="p-1 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-200 transition-colors">
+                      <button onClick={(e) => { e.stopPropagation(); reorderClip(clip.id, Math.min(sortedClips.length - 1, index + 1)); }} className="p-1 rounded hover:bg-panel-hover text-theme-muted hover:text-theme-secondary transition-colors">
                         <ArrowRight className="w-3 h-3" />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); updateClip(clip.id, { muted: !clip.muted }); }} className={`text-[9px] px-1.5 py-0.5 rounded ${clip.muted ? 'bg-red-500/20 text-red-300' : 'bg-zinc-800 text-zinc-400'}`}>
+                      <button onClick={(e) => { e.stopPropagation(); updateClip(clip.id, { muted: !clip.muted }); }} className={`text-[9px] px-1.5 py-0.5 rounded ${clip.muted ? 'bg-red-500/20 text-red-300' : 'bg-panel-hover text-theme-muted'}`}>
                         {clip.muted ? 'Muted' : 'Mute'}
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); updateClip(clip.id, { speed: Math.min(2, clip.speed + 0.25) }); }} className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
+                      <button onClick={(e) => { e.stopPropagation(); updateClip(clip.id, { speed: Math.min(2, clip.speed + 0.25) }); }} className="text-[9px] px-1.5 py-0.5 rounded bg-panel-hover text-theme-muted">
                         {clip.speed.toFixed(2)}x
                       </button>
                     </div>
@@ -396,10 +396,10 @@ export default function VideoSidebar() {
               </div>
 
               <div>
-                <p className="text-[11px] text-zinc-500 mb-2">Stock Media</p>
+                <p className="text-[11px] text-theme-muted mb-2">Stock Media</p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {STOCK_VIDEOS.map((v, i) => (
-                    <button key={i} className="aspect-video rounded-lg overflow-hidden border border-white/[0.06] hover:border-sky-500/30 transition-all">
+                    <button key={i} className="aspect-video rounded-lg overflow-hidden border border-panel-border hover:border-sky-500/30 transition-all">
                       <img src={v.url} alt={v.label} className="w-full h-full object-cover" loading="lazy" />
                     </button>
                   ))}
@@ -411,19 +411,19 @@ export default function VideoSidebar() {
           {/* ── Photos & Overlay Panel ─────────────────────── */}
           {activePanel === 'photos' && (
             <div className="space-y-3">
-              <label className="flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-white/[0.08] hover:border-sky-500/30 bg-[#151519] cursor-pointer transition-all group">
-                <Upload className="w-5 h-5 text-zinc-500 group-hover:text-sky-400 transition-colors" />
-                <span className="text-xs text-zinc-500 group-hover:text-zinc-300">Upload Photo</span>
+              <label className="flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-panel-border hover:border-sky-500/30 bg-panel-light cursor-pointer transition-all group">
+                <Upload className="w-5 h-5 text-theme-muted group-hover:text-sky-400 transition-colors" />
+                <span className="text-xs text-theme-muted group-hover:text-theme-secondary">Upload Photo</span>
                 <input ref={photoInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden"
                   onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f); e.target.value = ''; }} />
               </label>
 
               <div>
-                <p className="text-[11px] text-zinc-500 mb-2">Stock Photos</p>
+                <p className="text-[11px] text-theme-muted mb-2">Stock Photos</p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {STOCK_PHOTOS.map((p, i) => (
                     <button key={i} onClick={() => handleStockPhoto(p.url)}
-                      className="aspect-video rounded-lg overflow-hidden border border-white/[0.06] hover:border-sky-500/30 transition-all hover:scale-105 group"
+                      className="aspect-video rounded-lg overflow-hidden border border-panel-border hover:border-sky-500/30 transition-all hover:scale-105 group"
                       title={p.label}
                     >
                       <img src={p.url} alt={p.label} className="w-full h-full object-cover group-hover:opacity-80 transition-opacity" loading="lazy" />
@@ -434,31 +434,31 @@ export default function VideoSidebar() {
 
               {/* Active photo overlays */}
               {(project?.stickerOverlays || []).filter(s => s.type === 'photo').length > 0 && (
-                <div className="pt-2 border-t border-white/[0.06]">
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Photo Overlays</p>
+                <div className="pt-2 border-t border-panel-border">
+                  <p className="text-[10px] text-theme-muted uppercase tracking-wider mb-2">Photo Overlays</p>
                   {(project?.stickerOverlays || []).filter(s => s.type === 'photo').map(s => (
                     <div key={s.id}
                       onClick={() => setActiveStickerOverlayId(s.id)}
                       className={`flex items-center gap-2 px-2 py-1.5 rounded-lg mb-1 cursor-pointer transition-all ${
                         activeStickerOverlayId === s.id
                           ? 'bg-teal-500/10 border border-teal-500/40'
-                          : 'bg-[#151519] border border-white/[0.06] hover:border-white/[0.12]'
+                          : 'bg-panel-light border border-panel-border hover:border-panel-border'
                       }`}>
-                      <div className="w-10 h-7 rounded overflow-hidden bg-zinc-900 shrink-0">
+                      <div className="w-10 h-7 rounded overflow-hidden bg-panel-hover shrink-0">
                         <img src={s.content} alt="" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-zinc-400">Photo overlay</p>
-                        <p className="text-[9px] text-zinc-600">{s.startTime.toFixed(1)}s – {s.endTime.toFixed(1)}s</p>
+                        <p className="text-[10px] text-theme-muted">Photo overlay</p>
+                        <p className="text-[9px] text-theme-dim">{s.startTime.toFixed(1)}s – {s.endTime.toFixed(1)}s</p>
                       </div>
-                      <Move className="w-3 h-3 text-zinc-600" />
-                      <button onClick={(e) => { e.stopPropagation(); removeStickerOverlay(s.id); }} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                      <Move className="w-3 h-3 text-theme-dim" />
+                      <button onClick={(e) => { e.stopPropagation(); removeStickerOverlay(s.id); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                     </div>
                   ))}
                 </div>
               )}
 
-              <p className="text-[10px] text-zinc-600 text-center">Photos are added as overlays. Drag on preview to reposition, adjust timing on timeline.</p>
+              <p className="text-[10px] text-theme-dim text-center">Photos are added as overlays. Drag on preview to reposition, adjust timing on timeline.</p>
             </div>
           )}
 
@@ -472,16 +472,16 @@ export default function VideoSidebar() {
               {project?.textOverlays.map(t => (
                 <div key={t.id} onClick={() => setActiveTextId(t.id)}
                   className={`w-full text-left px-3 py-2 rounded-lg border transition-all cursor-pointer ${
-                    activeTextId === t.id ? 'border-amber-500/40 bg-amber-500/10' : 'border-white/[0.06] bg-[#151519] hover:border-white/[0.12]'
+                    activeTextId === t.id ? 'border-amber-500/40 bg-amber-500/10' : 'border-panel-border bg-panel-light hover:border-panel-border'
                   }`}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-zinc-200 font-medium truncate">{t.text}</span>
-                    <button onClick={(e) => { e.stopPropagation(); removeTextOverlay(t.id); }} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                    <span className="text-xs text-theme-primary font-medium truncate">{t.text}</span>
+                    <button onClick={(e) => { e.stopPropagation(); removeTextOverlay(t.id); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                   </div>
-                  <span className="text-[10px] text-zinc-500">{t.startTime.toFixed(1)}s – {t.endTime.toFixed(1)}s</span>
+                  <span className="text-[10px] text-theme-muted">{t.startTime.toFixed(1)}s – {t.endTime.toFixed(1)}s</span>
                 </div>
               ))}
-              <p className="text-[10px] text-zinc-600 text-center pt-2">Drag text overlays on the timeline or preview to reposition</p>
+              <p className="text-[10px] text-theme-dim text-center pt-2">Drag text overlays on the timeline or preview to reposition</p>
             </div>
           )}
 
@@ -489,12 +489,12 @@ export default function VideoSidebar() {
           {activePanel === 'filters' && (
             <div className="space-y-3">
               {!activeClip ? (
-                <p className="text-xs text-zinc-600 text-center py-8">Select a clip to apply filters</p>
+                <p className="text-xs text-theme-dim text-center py-8">Select a clip to apply filters</p>
               ) : (
                 <>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-zinc-400 font-medium truncate max-w-[140px]">{activeClip.name}</span>
-                    <button onClick={() => resetClipFilters(activeClip.id)} className="text-[10px] text-zinc-500 hover:text-sky-300 transition-colors">Reset</button>
+                    <span className="text-xs text-theme-muted font-medium truncate max-w-[140px]">{activeClip.name}</span>
+                    <button onClick={() => resetClipFilters(activeClip.id)} className="text-[10px] text-theme-muted hover:text-sky-300 transition-colors">Reset</button>
                   </div>
                   {(Object.keys(DEFAULT_FILTERS) as (keyof VideoFilters)[]).map(key => {
                     const ranges: Record<keyof VideoFilters, [number, number]> = {
@@ -505,7 +505,7 @@ export default function VideoSidebar() {
                     const value = activeClip.filters[key];
                     return (
                       <div key={key} className="space-y-1">
-                        <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                        <div className="flex items-center justify-between text-[11px] text-theme-muted">
                           <span className="capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
                           <span className="tabular-nums">{value}{key === 'blur' ? 'px' : key === 'hueRotate' ? 'deg' : '%'}</span>
                         </div>
@@ -524,17 +524,17 @@ export default function VideoSidebar() {
           {activePanel === 'effects' && (
             <div className="space-y-3">
               {!activeClip ? (
-                <p className="text-xs text-zinc-600 text-center py-8">Select a clip to apply effects</p>
+                <p className="text-xs text-theme-dim text-center py-8">Select a clip to apply effects</p>
               ) : (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-zinc-400 font-medium truncate max-w-[140px]">{activeClip.name}</span>
-                    <span className="text-[10px] text-zinc-500">Base: {activeClip.effect}</span>
+                    <span className="text-xs text-theme-muted font-medium truncate max-w-[140px]">{activeClip.name}</span>
+                    <span className="text-[10px] text-theme-muted">Base: {activeClip.effect}</span>
                   </div>
 
                   {/* Base effect selector */}
                   <div className="space-y-1.5">
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Base Effect</p>
+                    <p className="text-[10px] text-theme-muted uppercase tracking-wider">Base Effect</p>
                     {EFFECTS.map(eff => (
                       <button
                         key={eff.id}
@@ -542,14 +542,14 @@ export default function VideoSidebar() {
                         className={`w-full text-left px-3 py-2 rounded-xl border transition-all ${
                           activeClip.effect === eff.id
                             ? 'border-violet-500/40 bg-violet-500/10'
-                            : 'border-white/[0.06] bg-[#151519] hover:border-violet-500/20'
+                            : 'border-panel-border bg-panel-light hover:border-violet-500/20'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <Sparkles className={`w-3.5 h-3.5 ${activeClip.effect === eff.id ? 'text-violet-400' : 'text-zinc-500'}`} />
+                          <Sparkles className={`w-3.5 h-3.5 ${activeClip.effect === eff.id ? 'text-violet-400' : 'text-theme-muted'}`} />
                           <div>
-                            <p className={`text-xs font-medium ${activeClip.effect === eff.id ? 'text-violet-300' : 'text-zinc-200'}`}>{eff.label}</p>
-                            <p className="text-[10px] text-zinc-500">{eff.desc}</p>
+                            <p className={`text-xs font-medium ${activeClip.effect === eff.id ? 'text-violet-300' : 'text-theme-primary'}`}>{eff.label}</p>
+                            <p className="text-[10px] text-theme-muted">{eff.desc}</p>
                           </div>
                         </div>
                       </button>
@@ -557,38 +557,38 @@ export default function VideoSidebar() {
                   </div>
 
                   {/* Effect stack */}
-                  <div className="space-y-1.5 pt-2 border-t border-white/[0.06]">
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Effect Stack</p>
+                  <div className="space-y-1.5 pt-2 border-t border-panel-border">
+                    <p className="text-[10px] text-theme-muted uppercase tracking-wider">Effect Stack</p>
                     {(activeClip.effectStack || []).length === 0 && (
-                      <p className="text-[10px] text-zinc-600 text-center py-2">No stacked effects</p>
+                      <p className="text-[10px] text-theme-dim text-center py-2">No stacked effects</p>
                     )}
                     {(activeClip.effectStack || []).map(layer => (
-                      <div key={layer.id} className="px-2 py-2 rounded-lg bg-[#151519] border border-white/[0.06] space-y-1.5">
+                      <div key={layer.id} className="px-2 py-2 rounded-lg bg-panel-light border border-panel-border space-y-1.5">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => updateEffectInStack(activeClip.id, layer.id, { enabled: !layer.enabled })}
-                            className={`w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold shrink-0 ${layer.enabled ? 'bg-violet-500 text-white' : 'bg-zinc-700 text-zinc-500'}`}
+                            className={`w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold shrink-0 ${layer.enabled ? 'bg-violet-500 text-white' : 'bg-panel-hover text-theme-muted'}`}
                           >
                             {layer.enabled ? '✓' : '○'}
                           </button>
-                          <span className="text-[11px] text-zinc-300 font-medium flex-1 capitalize">{layer.effect.replace('-', ' ')}</span>
-                          <button onClick={() => removeEffectFromStack(activeClip.id, layer.id)} className="text-zinc-600 hover:text-red-400">
+                          <span className="text-[11px] text-theme-secondary font-medium flex-1 capitalize">{layer.effect.replace('-', ' ')}</span>
+                          <button onClick={() => removeEffectFromStack(activeClip.id, layer.id)} className="text-theme-dim hover:text-red-400">
                             <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[9px] text-zinc-500 w-10">Intensity</span>
+                          <span className="text-[9px] text-theme-muted w-10">Intensity</span>
                           <input type="range" min={0} max={100} value={layer.intensity}
                             onChange={e => updateEffectInStack(activeClip.id, layer.id, { intensity: Number(e.target.value) })}
                             className="flex-1 accent-violet-500" />
-                          <span className="text-[9px] text-zinc-400 tabular-nums w-6">{layer.intensity}</span>
+                          <span className="text-[9px] text-theme-muted tabular-nums w-6">{layer.intensity}</span>
                         </div>
                       </div>
                     ))}
                     <select
                       defaultValue=""
                       onChange={e => { if (e.target.value) { addEffectToStack(activeClip.id, e.target.value as ClipEffect); e.target.value = ''; } }}
-                      className="w-full bg-[#151519] border border-white/[0.06] rounded-lg px-2 py-1.5 text-[11px] text-zinc-300 focus:outline-none focus:border-violet-500/30"
+                      className="w-full bg-panel-light border border-panel-border rounded-lg px-2 py-1.5 text-[11px] text-theme-secondary focus:outline-none focus:border-violet-500/30"
                     >
                       <option value="" disabled>+ Add effect to stack</option>
                       {EFFECTS.filter(e => e.id !== 'none').map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
@@ -596,14 +596,14 @@ export default function VideoSidebar() {
                   </div>
 
                   {/* Motion presets */}
-                  <div className="space-y-1.5 pt-2 border-t border-white/[0.06]">
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Motion Presets</p>
+                  <div className="space-y-1.5 pt-2 border-t border-panel-border">
+                    <p className="text-[10px] text-theme-muted uppercase tracking-wider">Motion Presets</p>
                     <div className="grid grid-cols-2 gap-1.5">
                       {MOTION_PRESETS.map(mp => (
                         <button key={mp.id} onClick={() => applyMotionPreset(activeClip.id, mp.id)}
-                          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-[#151519] border border-white/[0.06] hover:border-sky-500/30 hover:bg-sky-500/5 transition-all text-left">
+                          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-panel-light border border-panel-border hover:border-sky-500/30 hover:bg-sky-500/5 transition-all text-left">
                           <span className="text-sm leading-none">{mp.icon}</span>
-                          <span className="text-[10px] text-zinc-300">{mp.label}</span>
+                          <span className="text-[10px] text-theme-secondary">{mp.label}</span>
                         </button>
                       ))}
                     </div>
@@ -617,11 +617,11 @@ export default function VideoSidebar() {
           {activePanel === 'audio' && (
             <div className="space-y-4">
               <div>
-                <p className="text-[11px] text-zinc-500 mb-2">Background Music</p>
+                <p className="text-[11px] text-theme-muted mb-2">Background Music</p>
               <div className="space-y-3">
-                <label className="flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-white/[0.08] hover:border-sky-500/30 bg-[#151519] cursor-pointer transition-all group">
-                  <Music className="w-4 h-4 text-zinc-500 group-hover:text-sky-400" />
-                  <span className="text-[11px] text-zinc-500 group-hover:text-zinc-300">Upload music</span>
+                <label className="flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-panel-border hover:border-sky-500/30 bg-panel-light cursor-pointer transition-all group">
+                  <Music className="w-4 h-4 text-theme-muted group-hover:text-sky-400" />
+                  <span className="text-[11px] text-theme-muted group-hover:text-theme-secondary">Upload music</span>
                   <input ref={audioInputRef} type="file" accept="audio/*" className="hidden"
                     onChange={e => { const f = e.target.files?.[0]; if (f) handleAudioUpload(f); e.target.value = ''; }} />
                 </label>
@@ -631,47 +631,47 @@ export default function VideoSidebar() {
                     className={`space-y-2 p-3 rounded-lg cursor-pointer transition-all ${
                       activeAudioTrackId === project.backgroundMusic.id
                         ? 'bg-emerald-500/10 border border-emerald-500/40'
-                        : 'bg-[#151519] border border-emerald-500/20 hover:border-emerald-500/30'
+                        : 'bg-panel-light border border-emerald-500/20 hover:border-emerald-500/30'
                     }`}>
                     <div className="flex items-center gap-2">
                       <Mic className="w-3 h-3 text-emerald-400 shrink-0" />
-                      <span className="text-xs text-zinc-300 truncate flex-1">{project.backgroundMusic.name}</span>
+                      <span className="text-xs text-theme-secondary truncate flex-1">{project.backgroundMusic.name}</span>
                       {project.backgroundMusic.duration > 0 && (
-                        <span className="text-[9px] text-zinc-500 font-mono shrink-0">{formatDuration(project.backgroundMusic.duration)}</span>
+                        <span className="text-[9px] text-theme-muted font-mono shrink-0">{formatDuration(project.backgroundMusic.duration)}</span>
                       )}
-                      <button onClick={(e) => { e.stopPropagation(); setBackgroundMusic(null); }} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); setBackgroundMusic(null); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                     </div>
                     <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                      <Volume2 className="w-3 h-3 text-zinc-500 shrink-0" />
+                      <Volume2 className="w-3 h-3 text-theme-muted shrink-0" />
                       <input type="range" min={0} max={1} step={0.01}
                         value={project.backgroundMusic.volume ?? 0.8}
                         onChange={e => updateBackgroundMusic({ volume: parseFloat(e.target.value) })}
                         className="flex-1 accent-emerald-500" />
-                      <span className="text-[9px] text-zinc-400 w-8 text-right tabular-nums">
+                      <span className="text-[9px] text-theme-muted w-8 text-right tabular-nums">
                         {Math.round((project.backgroundMusic.volume ?? 0.8) * 100)}%
                       </span>
                     </div>
-                    <p className="text-[9px] text-zinc-600">Click to edit in the properties panel. Drag on timeline to set start offset.</p>
+                    <p className="text-[9px] text-theme-dim">Click to edit in the properties panel. Drag on timeline to set start offset.</p>
                   </div>
                 )}
               </div>
               </div>
               <div>
-                <p className="text-[11px] text-zinc-500 mb-2">Audio Tracks</p>
+                <p className="text-[11px] text-theme-muted mb-2">Audio Tracks</p>
                 {project?.audioTracks.map(track => (
                   <div key={track.id}
                     onClick={() => setActiveAudioTrackId(track.id)}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-1 cursor-pointer transition-all ${
                       activeAudioTrackId === track.id
                         ? 'border-violet-500/40 bg-violet-500/10'
-                        : 'bg-[#151519] border border-white/[0.06] hover:border-white/[0.12]'
+                        : 'bg-panel-light border border-panel-border hover:border-panel-border'
                     }`}>
                     <Volume2 className="w-3 h-3 text-sky-400 shrink-0" />
-                    <span className="text-xs text-zinc-300 truncate flex-1">{track.name}</span>
+                    <span className="text-xs text-theme-secondary truncate flex-1">{track.name}</span>
                     {track.duration > 0 && (
-                      <span className="text-[9px] text-zinc-500 font-mono shrink-0">{formatDuration(track.duration)}</span>
+                      <span className="text-[9px] text-theme-muted font-mono shrink-0">{formatDuration(track.duration)}</span>
                     )}
-                    <button onClick={(e) => { e.stopPropagation(); removeAudioTrack(track.id); }} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); removeAudioTrack(track.id); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                   </div>
                 ))}
               </div>
@@ -681,13 +681,13 @@ export default function VideoSidebar() {
           {/* ── Transitions Panel ───────────────────────────── */}
           {activePanel === 'transitions' && (
             <div className="space-y-3">
-              <p className="text-[11px] text-zinc-500 mb-2">Clip Transitions</p>
+              <p className="text-[11px] text-theme-muted mb-2">Clip Transitions</p>
               {project?.clips.map((clip) => (
                 <div key={clip.id} className="space-y-1.5">
-                  <p className="text-[11px] text-zinc-400 truncate">{clip.name.slice(0, 25)}</p>
+                  <p className="text-[11px] text-theme-muted truncate">{clip.name.slice(0, 25)}</p>
                   <select value={clip.transitionIn}
                     onChange={e => updateClip(clip.id, { transitionIn: e.target.value as TransitionType })}
-                    className="w-full bg-[#151519] border border-white/[0.06] rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-sky-500/40">
+                    className="w-full bg-panel-light border border-panel-border rounded-lg px-3 py-2 text-xs text-theme-primary focus:outline-none focus:border-sky-500/40">
                     {TRANSITIONS.map(t => <option key={t} value={t}>{t.replace('-', ' ')}</option>)}
                   </select>
                 </div>
@@ -703,19 +703,19 @@ export default function VideoSidebar() {
                 <Plus className="w-4 h-4" /> Add Subtitle
               </button>
               {project?.subtitles.map(sub => (
-                <div key={sub.id} className="px-3 py-2 rounded-lg bg-[#151519] border border-white/[0.06] space-y-1.5">
+                <div key={sub.id} className="px-3 py-2 rounded-lg bg-panel-light border border-panel-border space-y-1.5">
                   <div className="flex items-center justify-between">
                     <input value={sub.text} onChange={e => updateSubtitle(sub.id, { text: e.target.value })}
-                      className="bg-transparent text-xs text-zinc-200 flex-1 focus:outline-none" placeholder="Subtitle text" />
-                    <button onClick={() => removeSubtitle(sub.id)} className="text-zinc-600 hover:text-red-400 ml-2"><Trash2 className="w-3 h-3" /></button>
+                      className="bg-transparent text-xs text-theme-primary flex-1 focus:outline-none" placeholder="Subtitle text" />
+                    <button onClick={() => removeSubtitle(sub.id)} className="text-theme-dim hover:text-red-400 ml-2"><Trash2 className="w-3 h-3" /></button>
                   </div>
                   <div className="flex gap-2">
                     <input type="number" value={sub.startTime} step={0.1} onChange={e => updateSubtitle(sub.id, { startTime: Number(e.target.value) })}
-                      className="w-16 bg-[#1a1a1f] border border-white/[0.04] rounded px-1.5 py-0.5 text-[10px] text-zinc-300 tabular-nums" placeholder="Start" />
+                      className="w-16 bg-panel-hover border border-panel-border rounded px-1.5 py-0.5 text-[10px] text-theme-secondary tabular-nums" placeholder="Start" />
                     <input type="number" value={sub.endTime} step={0.1} onChange={e => updateSubtitle(sub.id, { endTime: Number(e.target.value) })}
-                      className="w-16 bg-[#1a1a1f] border border-white/[0.04] rounded px-1.5 py-0.5 text-[10px] text-zinc-300 tabular-nums" placeholder="End" />
+                      className="w-16 bg-panel-hover border border-panel-border rounded px-1.5 py-0.5 text-[10px] text-theme-secondary tabular-nums" placeholder="End" />
                     <select value={sub.style} onChange={e => updateSubtitle(sub.id, { style: e.target.value as CaptionStyle })}
-                      className="flex-1 bg-[#1a1a1f] border border-white/[0.04] rounded px-1.5 py-0.5 text-[10px] text-zinc-300">
+                      className="flex-1 bg-panel-hover border border-panel-border rounded px-1.5 py-0.5 text-[10px] text-theme-secondary">
                       {CAPTION_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
@@ -727,7 +727,7 @@ export default function VideoSidebar() {
                         className={`flex-1 py-0.5 rounded text-[9px] font-medium transition-all ${
                           (sub.position ?? 'bottom') === pos
                             ? 'bg-sky-500/30 text-sky-300 border border-sky-500/40'
-                            : 'bg-[#1a1a1f] text-zinc-500 border border-white/[0.04] hover:text-zinc-300'
+                            : 'bg-panel-hover text-theme-muted border border-panel-border hover:text-theme-secondary'
                         }`}
                       >
                         {pos.charAt(0).toUpperCase() + pos.slice(1)}
@@ -744,61 +744,61 @@ export default function VideoSidebar() {
           {activePanel === 'stickers' && (
             <div className="space-y-4">
               <div>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Emoji</p>
+                <p className="text-[10px] text-theme-muted uppercase tracking-wider mb-2">Emoji</p>
                 <div className="grid grid-cols-5 gap-1">
                   {EMOJI_STICKERS.map(e => (
                     <button key={e} onClick={() => addStickerOverlay('emoji', e)}
-                      className="h-9 flex items-center justify-center rounded-lg bg-[#151519] border border-white/[0.06] text-lg hover:bg-white/10 hover:border-white/20 transition-all">
+                      className="h-9 flex items-center justify-center rounded-lg bg-panel-light border border-panel-border text-lg hover:bg-panel-hover hover:border-panel-border transition-all">
                       {e}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Arrows</p>
+                <p className="text-[10px] text-theme-muted uppercase tracking-wider mb-2">Arrows</p>
                 <div className="grid grid-cols-4 gap-1">
                   {ARROW_STICKERS.map(a => (
                     <button key={a} onClick={() => addStickerOverlay('arrow', a)}
-                      className="h-9 flex items-center justify-center rounded-lg bg-[#151519] border border-white/[0.06] text-lg text-sky-300 hover:bg-sky-500/10 hover:border-sky-500/30 transition-all font-bold">
+                      className="h-9 flex items-center justify-center rounded-lg bg-panel-light border border-panel-border text-lg text-sky-300 hover:bg-sky-500/10 hover:border-sky-500/30 transition-all font-bold">
                       {a}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Shapes</p>
+                <p className="text-[10px] text-theme-muted uppercase tracking-wider mb-2">Shapes</p>
                 <div className="grid grid-cols-4 gap-1">
                   {SHAPE_STICKERS.map(s => (
                     <button key={s} onClick={() => addStickerOverlay('shape', s)}
-                      className="h-9 flex items-center justify-center rounded-lg bg-[#151519] border border-white/[0.06] text-lg text-violet-300 hover:bg-violet-500/10 hover:border-violet-500/30 transition-all">
+                      className="h-9 flex items-center justify-center rounded-lg bg-panel-light border border-panel-border text-lg text-violet-300 hover:bg-violet-500/10 hover:border-violet-500/30 transition-all">
                       {s}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Speech Bubbles</p>
+                <p className="text-[10px] text-theme-muted uppercase tracking-wider mb-2">Speech Bubbles</p>
                 <div className="grid grid-cols-4 gap-1">
                   {BUBBLE_STICKERS.map(b => (
                     <button key={b} onClick={() => addStickerOverlay('speech-bubble', b)}
-                      className="h-9 flex items-center justify-center rounded-lg bg-[#151519] border border-white/[0.06] text-lg text-emerald-300 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all">
+                      className="h-9 flex items-center justify-center rounded-lg bg-panel-light border border-panel-border text-lg text-emerald-300 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all">
                       {b}
                     </button>
                   ))}
                 </div>
               </div>
               {(project?.stickerOverlays || []).length > 0 && (
-                <div className="pt-2 border-t border-white/[0.06]">
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Active Stickers</p>
+                <div className="pt-2 border-t border-panel-border">
+                  <p className="text-[10px] text-theme-muted uppercase tracking-wider mb-2">Active Stickers</p>
                   {(project?.stickerOverlays || []).map(s => (
-                    <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-[#151519] border border-white/[0.06] mb-1">
+                    <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-panel-light border border-panel-border mb-1">
                       <span className="text-lg leading-none">{s.content}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-zinc-400">{s.type}</p>
-                        <p className="text-[9px] text-zinc-600">{s.startTime.toFixed(1)}s – {s.endTime.toFixed(1)}s</p>
+                        <p className="text-[10px] text-theme-muted">{s.type}</p>
+                        <p className="text-[9px] text-theme-dim">{s.startTime.toFixed(1)}s – {s.endTime.toFixed(1)}s</p>
                       </div>
-                      <Move className="w-3 h-3 text-zinc-600" />
-                      <button onClick={() => removeStickerOverlay(s.id)} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                      <Move className="w-3 h-3 text-theme-dim" />
+                      <button onClick={() => removeStickerOverlay(s.id)} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                     </div>
                   ))}
                 </div>
@@ -816,27 +816,27 @@ export default function VideoSidebar() {
               </button>
 
               <div className="flex items-center justify-between px-1">
-                <span className="text-[10px] text-zinc-500">Safe Zones Overlay</span>
+                <span className="text-[10px] text-theme-muted">Safe Zones Overlay</span>
                 <button
                   onClick={() => setShowSafeZones(!showSafeZones)}
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${showSafeZones ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400 border border-transparent'}`}>
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${showSafeZones ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-panel-hover text-theme-muted border border-transparent'}`}>
                   <ShieldCheck className="w-3 h-3" />
                   {showSafeZones ? 'ON' : 'OFF'}
                 </button>
               </div>
 
               {(project?.sceneMarkers || []).length === 0 ? (
-                <p className="text-xs text-zinc-600 text-center py-6">No scene markers yet</p>
+                <p className="text-xs text-theme-dim text-center py-6">No scene markers yet</p>
               ) : (
                 (project?.sceneMarkers || []).map(marker => (
-                  <div key={marker.id} className="flex items-center gap-2 px-2 py-2 rounded-xl bg-[#151519] border border-white/[0.06]">
+                  <div key={marker.id} className="flex items-center gap-2 px-2 py-2 rounded-xl bg-panel-light border border-panel-border">
                     <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: marker.color }} />
                     <input
                       value={marker.label}
                       onChange={e => updateSceneMarker(marker.id, { label: e.target.value })}
-                      className="flex-1 bg-transparent text-xs text-zinc-300 focus:outline-none min-w-0"
+                      className="flex-1 bg-transparent text-xs text-theme-secondary focus:outline-none min-w-0"
                     />
-                    <span className="text-[9px] text-zinc-500 tabular-nums shrink-0">{marker.time.toFixed(1)}s</span>
+                    <span className="text-[9px] text-theme-muted tabular-nums shrink-0">{marker.time.toFixed(1)}s</span>
                     <div className="flex gap-0.5">
                       {MARKER_COLORS.map(c => (
                         <button key={c} onClick={() => updateSceneMarker(marker.id, { color: c })}
@@ -844,8 +844,8 @@ export default function VideoSidebar() {
                           style={{ backgroundColor: c }} />
                       ))}
                     </div>
-                    <button onClick={() => jumpToMarker(marker.id)} className="text-zinc-500 hover:text-sky-400 transition-colors"><Play className="w-3 h-3" /></button>
-                    <button onClick={() => removeSceneMarker(marker.id)} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                    <button onClick={() => jumpToMarker(marker.id)} className="text-theme-dim hover:text-sky-400 transition-colors"><Play className="w-3 h-3" /></button>
+                    <button onClick={() => removeSceneMarker(marker.id)} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                   </div>
                 ))
               )}
@@ -856,10 +856,10 @@ export default function VideoSidebar() {
           {activePanel === 'beats' && (
             <div className="space-y-4">
               <div>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Analyze Audio for Beats</p>
-                <label className="flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-white/[0.08] hover:border-amber-500/30 bg-[#151519] cursor-pointer transition-all group">
-                  <Zap className="w-5 h-5 text-zinc-500 group-hover:text-amber-400" />
-                  <span className="text-xs text-zinc-500 group-hover:text-zinc-300">
+                <p className="text-[10px] text-theme-muted uppercase tracking-wider mb-2">Analyze Audio for Beats</p>
+                <label className="flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-panel-border hover:border-amber-500/30 bg-panel-light cursor-pointer transition-all group">
+                  <Zap className="w-5 h-5 text-theme-muted group-hover:text-amber-400" />
+                  <span className="text-xs text-theme-muted group-hover:text-theme-secondary">
                     {isAnalyzingBeats ? 'Analyzing...' : 'Upload audio to detect beats'}
                   </span>
                   <input ref={beatAudioInputRef} type="file" accept="audio/*" className="hidden" disabled={isAnalyzingBeats}
@@ -874,17 +874,17 @@ export default function VideoSidebar() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-zinc-400">Show Beat Markers</span>
+                <span className="text-[10px] text-theme-muted">Show Beat Markers</span>
                 <button onClick={() => setShowBeatMarkers(!showBeatMarkers)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${showBeatMarkers ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-zinc-800 text-zinc-400'}`}>
+                  className={`px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${showBeatMarkers ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-panel-hover text-theme-muted'}`}>
                   {showBeatMarkers ? 'ON' : 'OFF'}
                 </button>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-zinc-400">Snap Clips to Beats</span>
+                <span className="text-[10px] text-theme-muted">Snap Clips to Beats</span>
                 <button onClick={() => setSnapToBeats(!snapToBeats)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${snapToBeats ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-zinc-800 text-zinc-400'}`}>
+                  className={`px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${snapToBeats ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-panel-hover text-theme-muted'}`}>
                   {snapToBeats ? 'ON' : 'OFF'}
                 </button>
               </div>
@@ -892,12 +892,12 @@ export default function VideoSidebar() {
               {(project?.beatMarkers || []).length > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] text-zinc-500">{project!.beatMarkers.length} beats detected</p>
-                    <button onClick={clearBeatMarkers} className="text-[10px] text-zinc-500 hover:text-red-400 transition-colors flex items-center gap-0.5">
+                    <p className="text-[10px] text-theme-muted">{project!.beatMarkers.length} beats detected</p>
+                    <button onClick={clearBeatMarkers} className="text-[10px] text-theme-muted hover:text-red-400 transition-colors flex items-center gap-0.5">
                       <Trash2 className="w-3 h-3" /> Clear
                     </button>
                   </div>
-                  <div className="flex items-end gap-px h-10 bg-[#151519] rounded-lg px-2 py-1">
+                  <div className="flex items-end gap-px h-10 bg-panel-light rounded-lg px-2 py-1">
                     {project!.beatMarkers.slice(0, 60).map((beat, i) => (
                       <div key={i} className="flex-1 bg-amber-400 rounded-sm opacity-80 min-w-px"
                         style={{ height: `${Math.max(10, beat.intensity * 100)}%` }} />
@@ -918,14 +918,14 @@ export default function VideoSidebar() {
                 <StatCard label="Subtitles" value={stats.subtitleCount} />
               </div>
 
-              <div className="bg-[#151519] border border-white/[0.06] rounded-xl p-3 text-center">
+              <div className="bg-panel-light border border-panel-border rounded-xl p-3 text-center">
                 <p className="text-lg font-bold text-sky-300">{stats.avgClipDuration.toFixed(1)}s</p>
-                <p className="text-[10px] text-zinc-500 mt-0.5">Avg Clip Duration</p>
+                <p className="text-[10px] text-theme-muted mt-0.5">Avg Clip Duration</p>
               </div>
 
               {stats.effectsUsed.length > 0 && (
                 <div>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Effects Used</p>
+                  <p className="text-[10px] text-theme-muted uppercase tracking-wider mb-2">Effects Used</p>
                   <div className="flex flex-wrap gap-1">
                     {stats.effectsUsed.map(e => (
                       <span key={e} className="text-[9px] px-2 py-1 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/20 font-medium capitalize">
@@ -938,14 +938,14 @@ export default function VideoSidebar() {
 
               {sortedClips.some(c => c.resolution) && (
                 <div>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Clip Health</p>
+                  <p className="text-[10px] text-theme-muted uppercase tracking-wider mb-2">Clip Health</p>
                   <div className="space-y-1">
                     {sortedClips.map(clip => (
-                      <div key={clip.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-[#151519] border border-white/[0.06]">
-                        <div className="w-8 h-6 rounded overflow-hidden bg-zinc-900 shrink-0">
+                      <div key={clip.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-panel-light border border-panel-border">
+                        <div className="w-8 h-6 rounded overflow-hidden bg-panel-hover shrink-0">
                           {clip.thumbnails[0] && <img src={clip.thumbnails[0]} alt="" className="w-full h-full object-cover" />}
                         </div>
-                        <span className="text-[9px] text-zinc-400 truncate flex-1">{clip.name}</span>
+                        <span className="text-[9px] text-theme-muted truncate flex-1">{clip.name}</span>
                         <HealthBadge value={clip.resolution} />
                         <HealthBadge value={clip.bitrate} />
                       </div>
@@ -962,48 +962,48 @@ export default function VideoSidebar() {
               {activeClip ? (
                 <SavePresetButton clipId={activeClip.id} />
               ) : (
-                <p className="text-[10px] text-zinc-600 text-center py-2">Select a clip to save its style as a preset</p>
+                <p className="text-[10px] text-theme-dim text-center py-2">Select a clip to save its style as a preset</p>
               )}
 
               {stylePresets.length === 0 ? (
-                <p className="text-xs text-zinc-600 text-center py-4">No saved presets yet</p>
+                <p className="text-xs text-theme-dim text-center py-4">No saved presets yet</p>
               ) : (
                 <div className="space-y-1.5">
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Saved Presets</p>
+                  <p className="text-[10px] text-theme-muted uppercase tracking-wider">Saved Presets</p>
                   {stylePresets.map(preset => (
-                    <div key={preset.id} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#151519] border border-white/[0.06]">
+                    <div key={preset.id} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-panel-light border border-panel-border">
                       <Package className="w-3 h-3 text-violet-400 shrink-0" />
-                      <span className="text-xs text-zinc-200 flex-1 truncate">{preset.name}</span>
+                      <span className="text-xs text-theme-primary flex-1 truncate">{preset.name}</span>
                       {activeClip && (
                         <button onClick={() => applyStylePreset(preset.id, activeClip.id)}
                           className="text-[9px] px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 transition-colors font-medium">
                           Apply
                         </button>
                       )}
-                      <button onClick={() => removeStylePreset(preset.id)} className="text-zinc-600 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                      <button onClick={() => removeStylePreset(preset.id)} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                     </div>
                   ))}
                 </div>
               )}
 
-              <div className="pt-2 border-t border-white/[0.06] space-y-2">
+              <div className="pt-2 border-t border-panel-border space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Version History</p>
+                  <p className="text-[10px] text-theme-muted uppercase tracking-wider">Version History</p>
                   <button onClick={() => saveProjectVersion()}
                     className="text-[9px] px-2 py-1 rounded-lg bg-sky-500/10 text-sky-300 border border-sky-500/20 hover:bg-sky-500/20 transition-colors font-medium">
                     Save Now
                   </button>
                 </div>
                 {projectVersions.length === 0 ? (
-                  <p className="text-[10px] text-zinc-600 text-center py-2">No versions saved</p>
+                  <p className="text-[10px] text-theme-dim text-center py-2">No versions saved</p>
                 ) : (
                   <div className="space-y-1">
                     {[...projectVersions].reverse().map(v => (
-                      <div key={v.id} className="flex items-center gap-2 px-2 py-2 rounded-lg bg-[#151519] border border-white/[0.06]">
-                        <RotateCcw className="w-3 h-3 text-zinc-500 shrink-0" />
+                      <div key={v.id} className="flex items-center gap-2 px-2 py-2 rounded-lg bg-panel-light border border-panel-border">
+                        <RotateCcw className="w-3 h-3 text-theme-muted shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] text-zinc-300 truncate">{v.label}</p>
-                          <p className="text-[9px] text-zinc-600">{new Date(v.createdAt).toLocaleTimeString()}</p>
+                          <p className="text-[10px] text-theme-secondary truncate">{v.label}</p>
+                          <p className="text-[9px] text-theme-dim">{new Date(v.createdAt).toLocaleTimeString()}</p>
                         </div>
                         <button onClick={() => restoreProjectVersion(v.id)}
                           className="text-[9px] px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 transition-colors">
@@ -1011,7 +1011,7 @@ export default function VideoSidebar() {
                         </button>
                       </div>
                     ))}
-                    <button onClick={clearVersionHistory} className="w-full text-[10px] text-zinc-600 hover:text-red-400 transition-colors py-1 text-center">
+                    <button onClick={clearVersionHistory} className="w-full text-[10px] text-theme-dim hover:text-red-400 transition-colors py-1 text-center">
                       Clear History
                     </button>
                   </div>
@@ -1029,17 +1029,17 @@ export default function VideoSidebar() {
                 {isExporting ? `Exporting ${exportProgress}%` : 'Export Video'}
               </button>
               {isExporting && (
-                <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-panel-hover rounded-full overflow-hidden">
                   <div className="h-full bg-sky-500 rounded-full transition-all" style={{ width: `${exportProgress}%` }} />
                 </div>
               )}
 
               <button onClick={() => addToExportQueue('WebM')}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 text-zinc-300 text-xs hover:bg-zinc-700 transition-colors">
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-panel-hover text-theme-secondary text-xs hover:bg-panel-hover transition-colors">
                 <Plus className="w-3.5 h-3.5" /> Add to Export Queue
               </button>
 
-              <div className="space-y-2 text-[11px] text-zinc-500">
+              <div className="space-y-2 text-[11px] text-theme-dim">
                 <p>Format: WebM (MediaRecorder)</p>
                 <p>Resolution: {project?.aspectRatio === '16:9' ? '1920×1080' : project?.aspectRatio === '9:16' ? '1080×1920' : '1080×1080'} ({project?.aspectRatio === '16:9' ? 'Landscape' : project?.aspectRatio === '9:16' ? 'Portrait' : 'Square'})</p>
                 <p>Clips: {project?.clips.length ?? 0}</p>
@@ -1048,19 +1048,19 @@ export default function VideoSidebar() {
               {exportQueue.length > 0 && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Export Queue</p>
-                    <button onClick={clearExportQueue} className="text-[9px] text-zinc-600 hover:text-red-400 transition-colors">Clear</button>
+                    <p className="text-[10px] text-theme-muted uppercase tracking-wider">Export Queue</p>
+                    <button onClick={clearExportQueue} className="text-[9px] text-theme-dim hover:text-red-400 transition-colors">Clear</button>
                   </div>
                   {exportQueue.map(item => (
-                    <div key={item.id} className="px-3 py-2.5 rounded-xl bg-[#151519] border border-white/[0.06] space-y-1.5">
+                    <div key={item.id} className="px-3 py-2.5 rounded-xl bg-panel-light border border-panel-border space-y-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-zinc-300 flex-1 truncate">{item.projectTitle}</span>
+                        <span className="text-[10px] text-theme-secondary flex-1 truncate">{item.projectTitle}</span>
                         <ExportStatusBadge status={item.status} progress={item.progress} />
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[9px] text-zinc-600">{item.format}</span>
+                        <span className="text-[9px] text-theme-dim">{item.format}</span>
                         {(item.status === 'exporting' || item.status === 'completed') && (
-                          <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                          <div className="flex-1 h-1 bg-panel-hover rounded-full overflow-hidden">
                             <div className="h-full bg-sky-500 rounded-full transition-all duration-300" style={{ width: `${item.progress}%` }} />
                           </div>
                         )}

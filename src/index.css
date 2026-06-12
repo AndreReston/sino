@@ -3,6 +3,75 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* ── Dark theme (default) ─────────────────────────────── */
+    --bg-base: #07070a;
+    --bg-surface: #111111;
+    --bg-panel: #18181b;
+    --bg-panel-light: #27272a;
+    --bg-panel-hover: #2d2d30;
+    --bg-input: #1e1e22;
+
+    --border-panel: #3f3f46;
+    --border-subtle: #27272a;
+    --border-hover: #52525b;
+
+    --text-primary: #fafafa;
+    --text-secondary: #d4d4d8;
+    --text-muted: #a1a1aa;
+    --text-dim: #71717a;
+    --text-faint: #52525b;
+
+    --accent-emerald: #22c55e;
+    --accent-emerald-bright: #4ade80;
+    --accent-emerald-glow: #16a34a;
+    --accent-sky: #38bdf8;
+    --accent-sky-bright: #7dd3fc;
+
+    --scrollbar-track: #18181b;
+    --scrollbar-thumb: #3f3f46;
+    --scrollbar-thumb-hover: #52525b;
+
+    --shadow-neon-green: 0 0 12px rgba(34, 197, 94, 0.4);
+    --shadow-neon-blue: 0 0 12px rgba(56, 189, 248, 0.4);
+    --shadow-panel: 4px 0 16px rgba(0, 0, 0, 0.6);
+    --shadow-canvas: 0 8px 48px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+
+  .light {
+    --bg-base: #f4f4f5;
+    --bg-surface: #ffffff;
+    --bg-panel: #ffffff;
+    --bg-panel-light: #f4f4f5;
+    --bg-panel-hover: #e4e4e7;
+    --bg-input: #ffffff;
+
+    --border-panel: #d4d4d8;
+    --border-subtle: #e4e4e7;
+    --border-hover: #a1a1aa;
+
+    --text-primary: #18181b;
+    --text-secondary: #3f3f46;
+    --text-muted: #52525b;
+    --text-dim: #71717a;
+    --text-faint: #a1a1aa;
+
+    --accent-emerald: #16a34a;
+    --accent-emerald-bright: #22c55e;
+    --accent-emerald-glow: #15803d;
+    --accent-sky: #0284c7;
+    --accent-sky-bright: #38bdf8;
+
+    --scrollbar-track: #e4e4e7;
+    --scrollbar-thumb: #a1a1aa;
+    --scrollbar-thumb-hover: #71717a;
+
+    --shadow-neon-green: 0 0 12px rgba(22, 163, 74, 0.25);
+    --shadow-neon-blue: 0 0 12px rgba(2, 132, 199, 0.25);
+    --shadow-panel: 4px 0 16px rgba(0, 0, 0, 0.08);
+    --shadow-canvas: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+
   * {
     box-sizing: border-box;
   }
@@ -15,10 +84,11 @@
   }
 
   body {
-    background-color: #07070a;
-    color: #fafafa;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   ::-webkit-scrollbar {
@@ -27,16 +97,16 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: #18181b;
+    background: var(--scrollbar-track);
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #3f3f46;
+    background: var(--scrollbar-thumb);
     border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #52525b;
+    background: var(--scrollbar-thumb-hover);
   }
 }
 
@@ -47,44 +117,59 @@
 
   .tool-btn {
     @apply flex items-center justify-center w-10 h-10 rounded-lg
-           text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover
+           text-theme-dim hover:text-theme-primary hover:bg-panel-hover
            transition-all duration-150 cursor-pointer;
   }
 
   .tool-btn.active {
-    @apply text-neon-green bg-neon-green/10 border border-neon-green/30;
+    color: var(--accent-emerald);
+    background-color: color-mix(in srgb, var(--accent-emerald) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-emerald) 30%, transparent);
   }
 
   .panel-btn {
     @apply flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium
-           text-zinc-300 hover:text-zinc-100 hover:bg-panel-hover
+           text-theme-secondary hover:text-theme-primary hover:bg-panel-hover
            transition-all duration-150 cursor-pointer border border-transparent;
   }
 
   .panel-btn.active {
-    @apply text-neon-green bg-neon-green/10 border-neon-green/30;
+    color: var(--accent-emerald);
+    background-color: color-mix(in srgb, var(--accent-emerald) 10%, transparent);
+    border-color: color-mix(in srgb, var(--accent-emerald) 30%, transparent);
   }
 
   .input-field {
     @apply bg-panel-light border border-panel-border rounded-md px-3 py-1.5
-           text-sm text-zinc-100 placeholder-zinc-500
-           focus:outline-none focus:border-neon-green/60 focus:ring-1 focus:ring-neon-green/30
-           transition-all duration-150;
+           text-sm text-theme-primary placeholder-theme-dim
+           focus:outline-none transition-all duration-150;
+    &:focus {
+      border-color: color-mix(in srgb, var(--accent-emerald) 60%, transparent);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-emerald) 30%, transparent);
+    }
   }
 
   .neon-btn {
-    @apply bg-neon-green text-zinc-950 font-semibold px-4 py-2 rounded-lg
-           hover:bg-neon-green-bright transition-all duration-150
+    background-color: var(--accent-emerald);
+    color: #fff;
+    font-weight: 600;
+    @apply px-4 py-2 rounded-lg
+           hover:bg-accent-emerald-bright transition-all duration-150
            shadow-neon-green hover:shadow-lg;
   }
 
   .neon-btn-outline {
-    @apply border border-neon-green/50 text-neon-green px-4 py-2 rounded-lg
-           hover:bg-neon-green/10 transition-all duration-150;
+    border: 1px solid color-mix(in srgb, var(--accent-emerald) 50%, transparent);
+    color: var(--accent-emerald);
+    @apply px-4 py-2 rounded-lg
+           transition-all duration-150;
+    &:hover {
+      background-color: color-mix(in srgb, var(--accent-emerald) 10%, transparent);
+    }
   }
 
   .canvas-shadow {
-    box-shadow: 0 8px 48px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255,255,255,0.06);
+    box-shadow: var(--shadow-canvas);
   }
 }
 

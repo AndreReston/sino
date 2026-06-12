@@ -50,6 +50,7 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onDownload,
             DesignForge
           </span>
         </div>
+
         <div className="flex items-center gap-3">
           {isInstallable && !isInstalled && (
             <button
@@ -62,21 +63,21 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onDownload,
             </button>
           )}
           {isInstalled && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-800 text-zinc-400 text-xs font-medium">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-panel-hover text-theme-dim text-xs font-medium">
               <Monitor className="w-3.5 h-3.5" />
               Installed
             </span>
           )}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/80 border border-white/[0.06]">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-panel border border-panel-border">
             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-[10px] font-bold text-white">
               {user.charAt(0).toUpperCase()}
             </div>
-            <span className="text-sm text-zinc-300 font-medium">{user}</span>
+            <span className="text-sm text-theme-secondary font-medium">{user}</span>
           </div>
           <button
             type="button"
             onClick={onLogout}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-800 bg-zinc-900/60 text-sm text-zinc-400 hover:text-white hover:border-zinc-600 transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-panel-border bg-panel text-sm text-theme-muted hover:text-theme-primary hover:border-panel-hover transition-all"
           >
             <LogOut className="w-3.5 h-3.5" />
             Log out
@@ -92,7 +93,7 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onDownload,
             <span className="text-white">Welcome back, </span>
             <span className="bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">{user}</span>
           </h1>
-          <p className="mt-2 text-zinc-500">
+          <p className="mt-2 text-theme-muted">
             Pick up a saved project or start something new.
           </p>
         </div>
@@ -109,10 +110,10 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onDownload,
               <div className="w-12 h-12 rounded-2xl bg-orange-500/15 border border-orange-500/25 flex items-center justify-center shadow-[0_0_20px_rgba(249,115,22,0.2)]">
                 <Image className="w-6 h-6 text-orange-400" />
               </div>
-              <ArrowRight className="w-5 h-5 text-zinc-700 group-hover:text-orange-400 transition-colors group-hover:translate-x-0.5 transition-transform" />
+              <ArrowRight className="w-5 h-5 text-theme-dim group-hover:text-orange-400 transition-colors group-hover:translate-x-0.5 transition-transform" />
             </div>
             <h2 className="text-xl font-bold text-white mb-2">Photo Design</h2>
-            <p className="text-sm text-zinc-400 leading-relaxed">
+            <p className="text-sm text-theme-muted leading-relaxed">
               Create graphics, social posts, presentations, and print designs. Full canvas tools, shapes,
               text, images, and multi-page support.
             </p>
@@ -132,10 +133,10 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onDownload,
               <div className="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/25 flex items-center justify-center shadow-[0_0_20px_rgba(56,189,248,0.2)]">
                 <Film className="w-6 h-6 text-sky-400" />
               </div>
-              <ArrowRight className="w-5 h-5 text-zinc-700 group-hover:text-sky-400 transition-colors group-hover:translate-x-0.5 transition-transform" />
+              <ArrowRight className="w-5 h-5 text-theme-dim group-hover:text-sky-400 transition-colors group-hover:translate-x-0.5 transition-transform" />
             </div>
             <h2 className="text-xl font-bold text-white mb-2">Video Project</h2>
-            <p className="text-sm text-zinc-400 leading-relaxed">
+            <p className="text-sm text-theme-muted leading-relaxed">
               Import video clips, organize them on a timeline, trim and arrange. Includes all photo tools
               plus a CapCut-style video editor.
             </p>
@@ -201,16 +202,16 @@ function DesignSection({
           {icon}
           {title}
         </div>
-        <span className="px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 text-[11px] font-medium">{designs.length}</span>
+        <span className="px-2 py-0.5 rounded-full bg-panel-hover text-theme-dim text-[11px] font-medium">{designs.length}</span>
       </div>
 
       {designs.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/20 p-10 text-center">
+        <div className="rounded-2xl border border-dashed border-panel-border bg-panel-hover p-10 text-center">
           <div className={`w-10 h-10 rounded-xl mx-auto mb-3 flex items-center justify-center ${isOrange ? 'bg-orange-500/10 text-orange-500/40' : 'bg-sky-500/10 text-sky-500/40'}`}>
             {isOrange ? <Image className="w-5 h-5" /> : <Film className="w-5 h-5" />}
           </div>
-          <p className="text-sm text-zinc-600">No {title.toLowerCase()} yet.</p>
-          <p className="text-xs text-zinc-700 mt-1">Create one above to get started.</p>
+          <p className="text-sm text-theme-dim">No {title.toLowerCase()} yet.</p>
+          <p className="text-xs text-theme-dim mt-1">Create one above to get started.</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -223,10 +224,10 @@ function DesignSection({
                 key={design.id}
                 type="button"
                 onClick={() => onOpen(design)}
-                className={`group rounded-2xl border border-zinc-800 bg-zinc-900/40 text-left overflow-hidden transition-all duration-200 hover:bg-zinc-900/70 hover:-translate-y-0.5 hover:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.7)] ${hoverRing}`}
+                className={`group rounded-2xl border border-panel-border bg-panel text-left overflow-hidden transition-all duration-200 hover:bg-panel-hover hover:-translate-y-0.5 hover:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.7)] ${hoverRing}`}
               >
                 {/* Thumbnail */}
-                <div className="h-36 bg-zinc-950 relative overflow-hidden">
+                <div className="h-36 bg-canvas-surface relative overflow-hidden">
                   {hasThumb && firstThumb ? (
                     <img
                       src={firstThumb}
@@ -236,12 +237,12 @@ function DesignSection({
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       {isVideo
-                        ? <Film className="w-8 h-8 text-zinc-800" />
-                        : <Image className="w-8 h-8 text-zinc-800" />
+                        ? <Film className="w-8 h-8 text-theme-dim" />
+                        : <Image className="w-8 h-8 text-theme-dim" />
                       }
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent opacity-70" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-canvas-surface via-transparent to-transparent opacity-70" />
 
                   {/* Mode badge */}
                   <div className={`absolute top-3 left-3 ${badgeCls} px-2 py-0.5 rounded-full text-[10px] font-semibold border`}>
@@ -266,10 +267,10 @@ function DesignSection({
 
                 {/* Card body */}
                 <div className="p-4">
-                  <h3 className="text-sm font-semibold text-white truncate group-hover:text-zinc-100 transition-colors">
+                  <h3 className="text-sm font-semibold text-white truncate group-hover:text-theme-primary transition-colors">
                     {design.title}
                   </h3>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-zinc-600">
+                  <div className="flex items-center gap-3 mt-2 text-xs text-theme-dim">
                     <span className="inline-flex items-center gap-1">
                       <FileStack className="w-3 h-3" />
                       {design.pages.length} page{design.pages.length !== 1 ? 's' : ''}

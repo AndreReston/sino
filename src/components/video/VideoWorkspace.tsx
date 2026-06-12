@@ -340,12 +340,12 @@ export default function VideoWorkspace({ onBack }: Props) {
 
   if (!project) {
     return (
-      <div className="flex h-screen bg-[#07070a] text-white">
+      <div className="flex h-screen bg-canvas-bg text-theme-primary">
         <div className="fixed inset-0 pointer-events-none">
           <div className="absolute top-[-20%] left-[20%] w-[500px] h-[500px] rounded-full bg-sky-500/[0.04] blur-[120px]" />
         </div>
         {onBack && (
-          <button onClick={onBack} className="fixed top-5 left-5 z-20 flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-900/80 text-xs text-zinc-400 hover:text-white hover:border-zinc-600 transition-all">
+          <button onClick={onBack} className="fixed top-5 left-5 z-20 flex items-center gap-2 px-3 py-2 rounded-lg border border-panel-border bg-panel-light text-xs text-theme-secondary hover:text-theme-primary hover:border-panel-border transition-all">
             <ArrowLeft className="w-3.5 h-3.5" /> Back
           </button>
         )}
@@ -355,8 +355,8 @@ export default function VideoWorkspace({ onBack }: Props) {
               <div className="w-14 h-14 rounded-2xl bg-sky-500/15 border border-sky-500/25 flex items-center justify-center mx-auto mb-5">
                 <Film className="w-7 h-7 text-sky-400" />
               </div>
-              <h1 className="text-3xl font-bold tracking-tight text-white mb-3">Video Editor</h1>
-              <p className="text-zinc-400 leading-relaxed">Upload video clips and start editing. Trim, add text, filters, transitions, and export.</p>
+              <h1 className="text-3xl font-bold tracking-tight text-theme-primary mb-3">Video Editor</h1>
+              <p className="text-theme-muted leading-relaxed">Upload video clips and start editing. Trim, add text, filters, transitions, and export.</p>
             </div>
             <div className="space-y-4">
               <button
@@ -367,7 +367,7 @@ export default function VideoWorkspace({ onBack }: Props) {
               </button>
               <button
                 onClick={() => { createProject(); setTimeout(() => fileInputRef.current?.click(), 100); }}
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-900/80 py-3.5 text-sm font-medium text-zinc-200 transition-all hover:border-zinc-500 hover:bg-zinc-800 flex items-center justify-center gap-2"
+                className="w-full rounded-xl border border-panel-border bg-panel py-3.5 text-sm font-medium text-theme-secondary transition-all hover:border-panel-hover hover:bg-panel-hover flex items-center justify-center gap-2"
               >
                 <Upload className="w-4 h-4" /> Import Video to Start
               </button>
@@ -392,13 +392,13 @@ export default function VideoWorkspace({ onBack }: Props) {
   const brokenMediaCount = project ? countEphemeralUrls(project) : 0;
 
   return (
-    <div className="flex h-screen bg-[#07070a] text-white overflow-hidden select-none">
+    <div className="flex h-screen bg-canvas-bg text-theme-primary overflow-hidden select-none">
       {/* Hidden audio element for background music */}
       <audio ref={bgAudioRef} preload="auto" />
       <VideoSidebar />
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
         {(uploadError || brokenMediaCount > 0) && (
-          <div className="shrink-0 px-4 py-2 border-b border-white/[0.06] bg-[#0f0f12] space-y-1">
+          <div className="shrink-0 px-4 py-2 border-b border-panel-divider bg-panel-light space-y-1">
             {uploadError && (
               <p className="text-xs text-red-300">{uploadError}</p>
             )}

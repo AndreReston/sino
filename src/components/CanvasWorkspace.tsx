@@ -241,7 +241,7 @@ export default function CanvasWorkspace() {
       </div>
 
       {/* Canvas metrics badge */}
-      <div className="absolute bottom-4 left-4 flex items-center gap-2 text-xs text-zinc-600 bg-panel/70 backdrop-blur-sm border border-panel-border/60 rounded-full px-3 py-1.5">
+      <div className="absolute bottom-4 left-4 flex items-center gap-2 text-xs text-theme-dim bg-panel/70 backdrop-blur-sm border border-panel-border/60 rounded-full px-3 py-1.5">
         <span>{canvasWidth} × {canvasHeight}</span>
         <button
           type="button"

@@ -92,7 +92,7 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
               ? 'Welcome back, creator'
               : 'Start creating today'}
           </h2>
-          <p className="text-zinc-400 leading-relaxed mb-10 text-base">
+          <p className="text-theme-muted leading-relaxed mb-10 text-base">
             {mode === 'login'
               ? 'Your workspace, designs, and projects are waiting. Log in to pick up right where you left off.'
               : 'Create your free account and unlock the full design and video studio — no credit card required.'}
@@ -102,10 +102,10 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
           <div className="space-y-3.5">
             {PERKS.map((perk, i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.07] flex items-center justify-center text-orange-400 shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-panel-border border border-panel-border flex items-center justify-center text-orange-400 shrink-0">
                   {perk.icon}
                 </div>
-                <span className="text-sm text-zinc-300">{perk.text}</span>
+                <span className="text-sm text-theme-secondary">{perk.text}</span>
               </div>
             ))}
           </div>
@@ -119,7 +119,7 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
       </div>
 
       {/* Vertical divider */}
-      <div className="hidden lg:block w-px bg-gradient-to-b from-transparent via-white/[0.06] to-transparent" />
+      <div className="hidden lg:block w-px bg-gradient-to-b from-transparent via-panel-border to-transparent" />
 
       {/* Right side — form */}
       <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative z-10">
@@ -129,7 +129,7 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors mb-10 group"
+            className="inline-flex items-center gap-2 text-sm text-theme-muted hover:text-theme-primary transition-colors mb-10 group"
           >
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
             Back to home
@@ -152,7 +152,7 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
             <h1 className="text-2xl font-bold text-white tracking-tight">
               {mode === 'login' ? 'Log in to your account' : 'Create your account'}
             </h1>
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 text-sm text-theme-muted">
               {mode === 'login'
                 ? 'Enter your credentials to access your workspace.'
                 : 'Set up your account to start designing and editing.'}
@@ -160,14 +160,14 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
           </div>
 
           {/* Mode toggle */}
-          <div className="flex gap-1 p-1 rounded-xl bg-zinc-900/80 border border-white/[0.07] mb-8">
+          <div className="flex gap-1 p-1 rounded-xl bg-panel border border-panel-border mb-8">
             <button
               type="button"
               onClick={() => { onModeChange('login'); setError(''); }}
               className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                 mode === 'login'
                   ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-[0_2px_12px_rgba(249,115,22,0.3)]'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]'
+                  : 'text-theme-muted hover:text-theme-secondary hover:bg-white/[0.04]'
               }`}
             >
               Log in
@@ -178,7 +178,7 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
               className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                 mode === 'register'
                   ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-[0_2px_12px_rgba(249,115,22,0.3)]'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]'
+                  : 'text-theme-muted hover:text-theme-secondary hover:bg-white/[0.04]'
               }`}
             >
               Register
@@ -189,15 +189,15 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1.5 tracking-wide">
+                <label className="block text-xs font-medium text-theme-muted mb-1.5 tracking-wide">
                   Display name
                 </label>
-                <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                    <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-dim" />
                   <input
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full bg-zinc-900/70 border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500/50 focus:bg-zinc-900 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.1)] transition-all"
+                    className="w-full bg-panel border border-panel-border rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-theme-dim focus:outline-none focus:border-orange-500/50 focus:bg-panel focus:shadow-[0_0_0_3px_rgba(249,115,22,0.1)] transition-all"
                     placeholder="Your name"
                   />
                 </div>
@@ -205,16 +205,16 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
             )}
 
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5 tracking-wide">
+              <label className="block text-xs font-medium text-theme-muted mb-1.5 tracking-wide">
                 Email address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-dim" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-zinc-900/70 border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500/50 focus:bg-zinc-900 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.1)] transition-all"
+                  className="w-full bg-panel border border-panel-border rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-theme-dim focus:outline-none focus:border-orange-500/50 focus:bg-panel focus:shadow-[0_0_0_3px_rgba(249,115,22,0.1)] transition-all"
                   placeholder="you@example.com"
                   required
                 />
@@ -222,16 +222,16 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5 tracking-wide">
+              <label className="block text-xs font-medium text-theme-muted mb-1.5 tracking-wide">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-dim" />
                 <input
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   type="password"
-                  className="w-full bg-zinc-900/70 border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500/50 focus:bg-zinc-900 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.1)] transition-all"
+                  className="w-full bg-panel border border-panel-border rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-theme-dim focus:outline-none focus:border-orange-500/50 focus:bg-panel focus:shadow-[0_0_0_3px_rgba(249,115,22,0.1)] transition-all"
                   placeholder="Min. 6 characters"
                   required
                   minLength={6}
@@ -257,7 +257,7 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
           </form>
 
           {/* Switch mode */}
-          <p className="mt-7 text-center text-xs text-zinc-600">
+          <p className="mt-7 text-center text-xs text-theme-dim">
             {mode === 'login' ? (
               <>
                 Don't have an account?{' '}

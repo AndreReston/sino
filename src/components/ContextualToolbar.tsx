@@ -101,6 +101,7 @@ export default function ContextualToolbar() {
   return (
     <>
     <div className="flex items-center h-12 bg-panel border-b border-panel-border px-3 gap-1.5 z-50 shrink-0 overflow-x-auto">
+
       {/* No selection: canvas-level controls */}
       {!obj && !activeClip && <NoSelectionControls zoom={zoom} setZoom={setZoom} />}
 
@@ -230,12 +231,12 @@ function NoSelectionControls({
 
   return (
     <>
-      <span className="text-xs text-zinc-500 pr-2 whitespace-nowrap">Canvas</span>
+      <span className="text-xs text-theme-muted pr-2 whitespace-nowrap">Canvas</span>
       <Divider />
 
       {/* Background color */}
       <div className="flex items-center gap-2 px-2">
-        <label className="text-xs text-zinc-500 whitespace-nowrap">Background</label>
+        <label className="text-xs text-theme-muted whitespace-nowrap">Background</label>
         <input
           type="color"
           value={canvasBackground}
@@ -254,8 +255,8 @@ function NoSelectionControls({
 
       {/* Canvas size */}
       <div className="flex items-center gap-1.5 px-2">
-        <span className="text-xs text-zinc-500">Size</span>
-        <span className="text-xs text-zinc-300 tabular-nums">{canvasWidth} × {canvasHeight}px</span>
+        <span className="text-xs text-theme-muted">Size</span>
+        <span className="text-xs text-theme-secondary tabular-nums">{canvasWidth} × {canvasHeight}px</span>
       </div>
 
       <div className="flex-1" />
@@ -264,7 +265,7 @@ function NoSelectionControls({
       <div className="flex items-center gap-1.5 px-2 shrink-0 border-l border-panel-border">
         {/* Color picker */}
         <div className="flex items-center gap-1">
-          <label className="text-xs text-zinc-500">Color</label>
+          <label className="text-xs text-theme-muted">Color</label>
           <input
             type="color"
             value={shapeColor}
@@ -302,7 +303,7 @@ function NoSelectionControls({
           className={`px-1.5 py-1 rounded text-xs font-medium transition-all ${
             snapToGrid
               ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-              : 'text-zinc-500 hover:text-zinc-300 border border-panel-border'
+              : 'text-theme-muted hover:text-theme-secondary border border-panel-border'
           }`}
           title={`Snap to ${GRID_SIZE}px grid: ${snapToGrid ? 'ON' : 'OFF'}`}
         >
@@ -410,7 +411,7 @@ function TextControls({
 
       {/* Font size */}
       <div className="flex items-center gap-1 shrink-0">
-        <label className="text-xs text-zinc-500">Size</label>
+        <label className="text-xs text-theme-muted">Size</label>
         <input
           type="number"
           min={6}
@@ -426,7 +427,7 @@ function TextControls({
         <button
           onClick={() => setShowColorPicker((prev) => !prev)}
           title="Text color"
-          className="flex items-center gap-2 px-2 py-1 rounded-md border border-panel-border bg-panel-light text-xs text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors"
+          className="flex items-center gap-2 px-2 py-1 rounded-md border border-panel-border bg-panel-light text-xs text-theme-secondary hover:border-zinc-500 hover:text-theme-primary transition-colors"
         >
           <span className="w-4 h-4 rounded-sm border border-white/10" style={{ backgroundColor: color }} />
           Color
@@ -479,13 +480,13 @@ function TextControls({
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-white">Image Fill</p>
-                <p className="text-[11px] text-zinc-400 mt-0.5">Fill text characters with a photo</p>
+                <p className="text-xs font-semibold text-theme-primary">Image Fill</p>
+                <p className="text-[11px] text-theme-muted mt-0.5">Fill text characters with a photo</p>
               </div>
               <div className="flex items-center gap-1.5">
                 {/* Upload from device */}
                 <label
-                  className="flex items-center gap-1 text-[11px] text-zinc-300 hover:text-white px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors border border-white/10 cursor-pointer"
+                  className="flex items-center gap-1 text-[11px] text-theme-secondary hover:text-theme-primary px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors border border-white/10 cursor-pointer"
                   title="Upload image from device"
                 >
                   <ImageIcon className="w-3 h-3" />
@@ -522,7 +523,7 @@ function TextControls({
                   className={`flex-1 py-1 rounded-md text-[11px] font-medium transition-all ${
                     imageFillTab === tab
                       ? 'bg-violet-500/30 text-violet-200 border border-violet-500/40'
-                      : 'text-zinc-400 hover:text-zinc-200'
+                      : 'text-theme-muted hover:text-theme-secondary'
                   }`}
                 >
                   {tab === 'uploads' ? 'My Uploads' : 'Stock Photos'}
@@ -534,12 +535,12 @@ function TextControls({
             {imageFillTab === 'uploads' && (
               <div>
                 {loadingUploads ? (
-                  <div className="flex items-center justify-center h-20 text-zinc-500 text-xs">
+                  <div className="flex items-center justify-center h-20 text-theme-muted text-xs">
                     Loading uploads…
                   </div>
                 ) : uploadedImages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-20 gap-2">
-                    <p className="text-zinc-500 text-xs">No uploaded images yet</p>
+                    <p className="text-theme-muted text-xs">No uploaded images yet</p>
                     <label className="text-[11px] text-violet-300 hover:text-violet-200 px-3 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 cursor-pointer transition-colors">
                       Upload one now
                       <input
@@ -601,7 +602,7 @@ function TextControls({
               </div>
             )}
 
-            <p className="text-[10px] text-zinc-500 text-center">
+            <p className="text-[10px] text-theme-muted text-center">
               {hasImageFill ? '✓ Fill active — click another image to swap' : 'Click any image to apply as text fill'}
             </p>
           </div>
@@ -670,6 +671,7 @@ function TextControls({
         obj={obj as unknown as fabric.Object}
       />
 
+
       <div className="flex-1" />
       <ZoomControls zoom={zoom} setZoom={setZoom} />
     </>
@@ -707,7 +709,7 @@ function ShapeControls({
 
       {/* Fill color */}
       <div className="flex items-center gap-1.5 shrink-0">
-        <label className="text-xs text-zinc-500">Fill</label>
+        <label className="text-xs text-theme-muted">Fill</label>
         <input
           type="color"
           value={String(obj.fill || '#000000')}
@@ -726,7 +728,7 @@ function ShapeControls({
 
       {/* Stroke */}
       <div className="flex items-center gap-1.5 shrink-0">
-        <label className="text-xs text-zinc-500">Stroke</label>
+        <label className="text-xs text-theme-muted">Stroke</label>
         <input
           type="color"
           value={String(obj.stroke || '#000000')}
@@ -736,14 +738,14 @@ function ShapeControls({
         <div className="flex items-center gap-1">
           <button
             onClick={() => setProp({ strokeWidth: Math.max(0, (obj.strokeWidth || 0) - 1) })}
-            className="w-6 h-6 flex items-center justify-center rounded text-zinc-500 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
+            className="w-6 h-6 flex items-center justify-center rounded text-theme-muted hover:text-theme-primary hover:bg-panel-hover transition-colors"
           >
             <Minus className="w-3 h-3" />
           </button>
-          <span className="text-xs text-zinc-300 w-5 text-center tabular-nums">{obj.strokeWidth || 0}</span>
+          <span className="text-xs text-theme-secondary w-5 text-center tabular-nums">{obj.strokeWidth || 0}</span>
           <button
             onClick={() => setProp({ strokeWidth: (obj.strokeWidth || 0) + 1 })}
-            className="w-6 h-6 flex items-center justify-center rounded text-zinc-500 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
+            className="w-6 h-6 flex items-center justify-center rounded text-theme-muted hover:text-theme-primary hover:bg-panel-hover transition-colors"
           >
             <Plus className="w-3 h-3" />
           </button>
@@ -755,7 +757,7 @@ function ShapeControls({
         <>
           <Divider />
           <div className="flex items-center gap-1.5 shrink-0">
-            <label className="text-xs text-zinc-500">Radius</label>
+            <label className="text-xs text-theme-muted">Radius</label>
             <input
               type="range"
               min={0}
@@ -764,7 +766,7 @@ function ShapeControls({
               onChange={(e) => setProp({ rx: Number(e.target.value), ry: Number(e.target.value) } as any)}
               className="w-20 accent-emerald-500"
             />
-            <span className="text-xs text-zinc-300 w-4 tabular-nums">{(obj as fabric.Rect).rx || 0}</span>
+            <span className="text-xs text-theme-secondary w-4 tabular-nums">{(obj as fabric.Rect).rx || 0}</span>
           </div>
         </>
       )}
@@ -829,7 +831,7 @@ function ImageControls({
 
       {/* Opacity slider */}
       <div className="flex items-center gap-2 shrink-0">
-        <label className="text-xs text-zinc-500">Opacity</label>
+        <label className="text-xs text-theme-muted">Opacity</label>
         <input
           type="range"
           min={0}
@@ -838,7 +840,7 @@ function ImageControls({
           onChange={(e) => setProp({ opacity: Number(e.target.value) / 100 })}
           className="w-24 accent-amber-500"
         />
-        <span className="text-xs text-zinc-300 w-8 tabular-nums">{Math.round((obj.opacity ?? 1) * 100)}%</span>
+        <span className="text-xs text-theme-secondary w-8 tabular-nums">{Math.round((obj.opacity ?? 1) * 100)}%</span>
       </div>
 
       <Divider />
@@ -854,7 +856,7 @@ function ImageControls({
       {/* Position */}
       <div className="flex items-center gap-2 shrink-0">
         <div className="flex flex-col items-center">
-          <label className="text-xs text-zinc-600 leading-none mb-0.5">X</label>
+          <label className="text-xs text-theme-dim leading-none mb-0.5">X</label>
           <input
             type="number"
             value={Math.round(obj.left || 0)}
@@ -863,7 +865,7 @@ function ImageControls({
           />
         </div>
         <div className="flex flex-col items-center">
-          <label className="text-xs text-zinc-600 leading-none mb-0.5">Y</label>
+          <label className="text-xs text-theme-dim leading-none mb-0.5">Y</label>
           <input
             type="number"
             value={Math.round(obj.top || 0)}
@@ -896,7 +898,7 @@ function OpacityControl({
 }) {
   return (
     <div className="flex items-center gap-2 shrink-0">
-      <label className="text-xs text-zinc-500">Opacity</label>
+      <label className="text-xs text-theme-muted">Opacity</label>
       <input
         type="range"
         min={0}
@@ -905,7 +907,7 @@ function OpacityControl({
         onChange={(e) => setProp({ opacity: Number(e.target.value) / 100 })}
         className="w-20 accent-emerald-500"
       />
-      <span className="text-xs text-zinc-300 w-8 tabular-nums">{Math.round((obj.opacity ?? 1) * 100)}%</span>
+      <span className="text-xs text-theme-secondary w-8 tabular-nums">{Math.round((obj.opacity ?? 1) * 100)}%</span>
     </div>
   );
 }
@@ -966,20 +968,20 @@ function ZoomControls({ zoom, setZoom }: { zoom: number; setZoom: (z: number) =>
     <div className="flex items-center gap-1 shrink-0 pl-2 border-l border-panel-border">
       <button
         onClick={() => setZoom(zoom - 0.1)}
-        className="w-7 h-7 flex items-center justify-center rounded text-zinc-500 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
+        className="w-7 h-7 flex items-center justify-center rounded text-theme-dim hover:text-theme-primary hover:bg-panel-hover transition-colors"
       >
         <Minus className="w-3.5 h-3.5" />
       </button>
-      <span className="text-xs text-zinc-400 tabular-nums w-11 text-center">{Math.round(zoom * 100)}%</span>
+      <span className="text-xs text-theme-muted tabular-nums w-11 text-center">{Math.round(zoom * 100)}%</span>
       <button
         onClick={() => setZoom(zoom + 0.1)}
-        className="w-7 h-7 flex items-center justify-center rounded text-zinc-500 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
+        className="w-7 h-7 flex items-center justify-center rounded text-theme-dim hover:text-theme-primary hover:bg-panel-hover transition-colors"
       >
         <Plus className="w-3.5 h-3.5" />
       </button>
       <button
         onClick={() => setZoom(1)}
-        className="text-xs text-zinc-500 hover:text-zinc-300 px-1.5 py-1 rounded hover:bg-panel-hover transition-colors"
+        className="text-xs text-theme-dim hover:text-theme-secondary px-1.5 py-1 rounded hover:bg-panel-hover transition-colors"
       >
         1:1
       </button>
@@ -1006,7 +1008,7 @@ function ToggleBtn({
       className={`w-7 h-7 flex items-center justify-center rounded transition-all
         ${active
           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-          : 'text-zinc-500 hover:text-zinc-100 hover:bg-panel-hover'}`}
+          : 'text-theme-muted hover:text-theme-primary hover:bg-panel-hover'}`}
     >
       {icon}
     </button>
@@ -1028,7 +1030,7 @@ function ToolbarBtn({
       className={`w-7 h-7 flex items-center justify-center rounded transition-all
         ${danger
           ? 'text-zinc-600 hover:text-red-400 hover:bg-red-500/10'
-          : 'text-zinc-500 hover:text-zinc-100 hover:bg-panel-hover'}`}
+          : 'text-theme-muted hover:text-theme-primary hover:bg-panel-hover'}`}
     >
       {icon}
     </button>
@@ -1056,23 +1058,23 @@ function VideoClipToolbar({ clip }: { clip: VideoClip }) {
 
       {/* Clip name */}
       <div className="flex items-center gap-1.5 shrink-0">
-        <label className="text-xs text-zinc-500">Clip</label>
-        <span className="text-xs text-zinc-200 truncate max-w-[160px]">{clip.name}</span>
+        <label className="text-xs text-theme-muted">Clip</label>
+        <span className="text-xs text-theme-secondary truncate max-w-[160px]">{clip.name}</span>
       </div>
 
       <Divider />
 
       {/* Duration info */}
       <div className="flex items-center gap-1.5 shrink-0">
-        <label className="text-xs text-zinc-500">Duration</label>
-        <span className="text-xs text-zinc-300 tabular-nums">{clipDuration.toFixed(1)}s</span>
+        <label className="text-xs text-theme-muted">Duration</label>
+        <span className="text-xs text-theme-secondary tabular-nums">{clipDuration.toFixed(1)}s</span>
       </div>
 
       <Divider />
 
       {/* Trim start */}
       <div className="flex items-center gap-1.5 shrink-0">
-        <label className="text-xs text-zinc-500">Start trim</label>
+        <label className="text-xs text-theme-muted">Start trim</label>
         <input
           type="number"
           min={0}
@@ -1086,7 +1088,7 @@ function VideoClipToolbar({ clip }: { clip: VideoClip }) {
 
       {/* Trim end */}
       <div className="flex items-center gap-1.5 shrink-0">
-        <label className="text-xs text-zinc-500">End trim</label>
+        <label className="text-xs text-theme-muted">End trim</label>
         <input
           type="number"
           min={0}
@@ -1108,7 +1110,7 @@ function VideoClipToolbar({ clip }: { clip: VideoClip }) {
             setIsMuted(!isMuted);
             updateVideoClip(clip.id, { volume: newVolume });
           }}
-          className="w-7 h-7 flex items-center justify-center rounded text-zinc-500 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
+          className="w-7 h-7 flex items-center justify-center rounded text-theme-muted hover:text-theme-primary hover:bg-panel-hover transition-colors"
           title={isMuted ? 'Unmute' : 'Mute'}
         >
           {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
@@ -1121,7 +1123,7 @@ function VideoClipToolbar({ clip }: { clip: VideoClip }) {
           onChange={(e) => updateVideoClip(clip.id, { volume: Number(e.target.value) / 100 })}
           className="w-16 accent-sky-500"
         />
-        <span className="text-xs text-zinc-300 w-8 tabular-nums">{Math.round(clip.volume * 100)}%</span>
+        <span className="text-xs text-theme-secondary w-8 tabular-nums">{Math.round(clip.volume * 100)}%</span>
       </div>
 
       <div className="flex-1" />

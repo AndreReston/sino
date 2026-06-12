@@ -339,23 +339,23 @@ export default function VideoTimeline() {
   const rulerMarks = getRulerMarks();
 
   return (
-    <div className="bg-[#0c0c10] border-t border-zinc-800 flex flex-col select-none" style={{ minHeight: 200 }}>
+    <div className="bg-surface border-t border-panel-border flex flex-col select-none" style={{ minHeight: 200 }}>
       {/* Controls bar */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-zinc-800/60 shrink-0">
-        <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold mr-1">Timeline</span>
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-panel-border shrink-0">
+        <span className="text-[10px] text-theme-muted uppercase tracking-wider font-semibold mr-1">Timeline</span>
         <div className="flex-1" />
-        <span className="text-[10px] text-zinc-600">{sortedClips.length} clip{sortedClips.length !== 1 ? 's' : ''}</span>
-        <div className="w-px h-4 bg-zinc-800 mx-1" />
-        <button onClick={() => setTimelineZoom(z => Math.max(20, z - 15))} className="w-6 h-6 flex items-center justify-center rounded text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors">
+        <span className="text-[10px] text-theme-secondary">{sortedClips.length} clip{sortedClips.length !== 1 ? 's' : ''}</span>
+        <div className="w-px h-4 bg-panel-divider mx-1" />
+        <button onClick={() => setTimelineZoom(z => Math.max(20, z - 15))} className="w-6 h-6 flex items-center justify-center rounded text-theme-muted hover:text-theme-primary hover:bg-panel-hover transition-colors">
           <ZoomOut className="w-3 h-3" />
         </button>
-        <div className="w-20 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+        <div className="w-20 h-1.5 bg-panel-divider rounded-full overflow-hidden">
           <div className="h-full bg-sky-500/40 rounded-full transition-all" style={{ width: `${Math.min(100, ((timelineZoom - 20) / 160) * 100)}%` }} />
         </div>
-        <button onClick={() => setTimelineZoom(z => Math.min(180, z + 15))} className="w-6 h-6 flex items-center justify-center rounded text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors">
+        <button onClick={() => setTimelineZoom(z => Math.min(180, z + 15))} className="w-6 h-6 flex items-center justify-center rounded text-theme-muted hover:text-theme-primary hover:bg-panel-hover transition-colors">
           <ZoomIn className="w-3 h-3" />
         </button>
-        <span className="text-[10px] text-zinc-600 w-10 text-center">{Math.round(timelineZoom)}px/s</span>
+        <span className="text-[10px] text-theme-secondary w-10 text-center">{Math.round(timelineZoom)}px/s</span>
       </div>
 
       {/* Timeline scroll area */}
@@ -364,7 +364,7 @@ export default function VideoTimeline() {
 
           {/* Ruler */}
           <div
-            className="h-6 border-b border-zinc-800/50 relative cursor-pointer shrink-0 sticky top-0 z-20 bg-[#0c0c10]"
+            className="h-6 border-b border-panel-divider relative cursor-pointer shrink-0 sticky top-0 z-20 bg-surface"
             onClick={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
               const x = e.clientX - rect.left + getScrollOffset();
@@ -376,8 +376,8 @@ export default function VideoTimeline() {
           >
             {rulerMarks.map(m => (
               <div key={`r-${m.time}`} className="absolute flex flex-col items-center" style={{ left: m.time * pps }}>
-                <div className="w-px h-2 bg-zinc-600" />
-                <span className="text-[9px] text-zinc-600 mt-px">{m.label}</span>
+                <div className="w-px h-2 bg-theme-secondary" />
+                <span className="text-[9px] text-theme-secondary mt-px">{m.label}</span>
               </div>
             ))}
             {showBeatMarkers && (project.beatMarkers || []).map((beat, i) => (
@@ -408,30 +408,30 @@ export default function VideoTimeline() {
           {/* Track rows */}
           <div className="flex">
             {/* Labels */}
-            <div className="w-20 shrink-0 border-r border-zinc-800/40 flex flex-col sticky left-0 z-10 bg-[#0c0c10]">
-              <div className="h-14 flex items-center gap-1 px-2 border-b border-zinc-800/30">
+            <div className="w-20 shrink-0 border-r border-panel-divider flex flex-col sticky left-0 z-10 bg-surface">
+              <div className="h-14 flex items-center gap-1 px-2 border-b border-panel-divider">
                 <Film className="w-3 h-3 text-sky-400 shrink-0" />
-                <span className="text-[10px] text-zinc-400 font-medium">Video</span>
+                <span className="text-[10px] text-theme-muted font-medium">Video</span>
               </div>
-              <div className="h-10 flex items-center gap-1 px-2 border-b border-zinc-800/30">
+              <div className="h-10 flex items-center gap-1 px-2 border-b border-panel-divider">
                 <Type className="w-3 h-3 text-amber-400 shrink-0" />
-                <span className="text-[10px] text-zinc-400 font-medium">Text</span>
+                <span className="text-[10px] text-theme-muted font-medium">Text</span>
               </div>
-              <div className="h-10 flex items-center gap-1 px-2 border-b border-zinc-800/30">
+              <div className="h-10 flex items-center gap-1 px-2 border-b border-panel-divider">
                 <Smile className="w-3 h-3 text-pink-400 shrink-0" />
-                <span className="text-[10px] text-zinc-400 font-medium">Stickers</span>
+                <span className="text-[10px] text-theme-muted font-medium">Stickers</span>
               </div>
-              <div className="h-10 flex items-center gap-1 px-2 border-b border-zinc-800/30">
+              <div className="h-10 flex items-center gap-1 px-2 border-b border-panel-divider">
                 <ImageIcon className="w-3 h-3 text-teal-400 shrink-0" />
-                <span className="text-[10px] text-zinc-400 font-medium">Photos</span>
+                <span className="text-[10px] text-theme-muted font-medium">Photos</span>
               </div>
-              <div className="h-10 flex items-center gap-1 px-2 border-b border-zinc-800/30">
+              <div className="h-10 flex items-center gap-1 px-2 border-b border-panel-divider">
                 <Music className="w-3 h-3 text-violet-400 shrink-0" />
-                <span className="text-[10px] text-zinc-400 font-medium">Audio</span>
+                <span className="text-[10px] text-theme-muted font-medium">Audio</span>
               </div>
               <div className="h-10 flex items-center gap-1 px-2">
                 <Volume2 className="w-3 h-3 text-emerald-400 shrink-0" />
-                <span className="text-[10px] text-zinc-400 font-medium">Subtitles</span>
+                <span className="text-[10px] text-theme-muted font-medium">Subtitles</span>
               </div>
             </div>
 
@@ -439,7 +439,7 @@ export default function VideoTimeline() {
             <div ref={trackRef} className="flex-1 relative" onMouseDown={handleTrackMouseDown}>
 
               {/* ─── VIDEO TRACK ─────────────────────────────────── */}
-              <div className="h-14 border-b border-zinc-800/30 relative">
+              <div className="h-14 border-b border-panel-divider relative">
                 {dragClipId && dragClipOverIndex !== null && (
                   <div className="absolute top-0 bottom-0 w-0.5 bg-sky-400 z-30 pointer-events-none rounded-full"
                     style={{ left: getClipLeft(dragClipOverIndex) }} />
@@ -483,10 +483,10 @@ export default function VideoTimeline() {
                       <div className="absolute inset-0 bg-gradient-to-r from-sky-900/50 via-sky-800/30 to-sky-900/50" />
 
                       {clip.effect !== 'none' && (
-                        <div className="absolute top-1 left-1 px-1 py-0.5 rounded bg-violet-500/20 text-[8px] text-violet-300 font-bold uppercase leading-none">{clip.effect}</div>
+                        <div className="absolute top-1 left-1 px-1 py-0.5 rounded bg-accent-violet-muted text-[8px] text-accent-violet font-bold uppercase leading-none">{clip.effect}</div>
                       )}
                       {clip.speed !== 1 && (
-                        <div className="absolute top-1 right-6 px-1 py-0.5 rounded bg-amber-500/20 text-[8px] text-amber-300 font-bold leading-none">{clip.speed}x</div>
+                        <div className="absolute top-1 right-6 px-1 py-0.5 rounded bg-accent-amber-muted text-[8px] text-accent-amber font-bold leading-none">{clip.speed}x</div>
                       )}
 
                       {/* Clip body - draggable area for reordering */}
@@ -501,12 +501,12 @@ export default function VideoTimeline() {
                         <span className="text-[10px] font-medium text-white truncate drop-shadow-md">{clip.name}</span>
                       </div>
                       <div className="absolute bottom-0.5 right-1 pointer-events-none">
-                        <span className="text-[8px] text-sky-200/50 font-mono">{effDur.toFixed(1)}s</span>
+                        <span className="text-[8px] text-theme-muted-secondary font-mono">{effDur.toFixed(1)}s</span>
                       </div>
 
                       {/* Effect duration bar — shows configured effect duration as a sub-bar */}
                       {clip.effect !== 'none' && (
-                        <div className="absolute bottom-0 left-0 h-1 bg-violet-500/60 pointer-events-none"
+                        <div className="absolute bottom-0 left-0 h-1 bg-accent-violet pointer-events-none"
                           style={{
                             width: clip.effectDuration > 0
                               ? `${Math.min(100, (clip.effectDuration / effDur) * 100)}%`
@@ -528,23 +528,23 @@ export default function VideoTimeline() {
                       <div data-trim="left"
                         className="absolute top-0 bottom-0 left-0 w-2 cursor-ew-resize hover:bg-sky-400/30 z-20 transition-colors group"
                         onMouseDown={(e) => { e.stopPropagation(); setTrimClipId({ id: clip.id, side: 'left' }); }}>
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white/40 group-hover:bg-white/70 rounded-r transition-colors" />
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-theme-secondary group-hover:bg-theme-primary rounded-r transition-colors" />
                       </div>
                       {/* Right trim handle */}
                       <div data-trim="right"
                         className="absolute top-0 bottom-0 right-0 w-2 cursor-ew-resize hover:bg-sky-400/30 z-20 transition-colors group"
                         onMouseDown={(e) => { e.stopPropagation(); setTrimClipId({ id: clip.id, side: 'right' }); }}>
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white/40 group-hover:bg-white/70 rounded-l transition-colors" />
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-theme-secondary group-hover:bg-theme-primary rounded-l transition-colors" />
                       </div>
 
                       <button data-trim="del"
-                        className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 p-0.5 rounded bg-zinc-800/80 hover:bg-red-600 transition-all z-10"
+                        className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 p-0.5 rounded bg-panel-light hover:bg-red-600 transition-all z-10"
                         onClick={(e) => { e.stopPropagation(); removeClip(clip.id); }}
                         title="Delete clip">
                         <Trash2 className="w-2.5 h-2.5 text-white" />
                       </button>
                       <button data-trim="overlay"
-                        className="absolute top-0.5 right-7 opacity-0 group-hover:opacity-100 p-0.5 rounded bg-zinc-800/80 hover:bg-violet-600 transition-all z-10"
+                        className="absolute top-0.5 right-7 opacity-0 group-hover:opacity-100 p-0.5 rounded bg-panel-light hover:bg-violet-600 transition-all z-10"
                         onClick={(e) => {
                           e.stopPropagation();
                           useVideoStore.getState().updateClip(clip.id, { overlayMode: 'overlay', clipX: 50, clipY: 50 });
@@ -558,7 +558,7 @@ export default function VideoTimeline() {
               </div>
 
               {/* ─── TEXT TRACK ──────────────────────────────────── */}
-              <div className="h-10 border-b border-zinc-800/30 relative">
+              <div className="h-10 border-b border-panel-divider relative">
                 {project.textOverlays.map(overlay => {
                   const left = overlay.startTime * pps;
                   const width = Math.max(8, (overlay.endTime - overlay.startTime) * pps);
@@ -578,7 +578,7 @@ export default function VideoTimeline() {
                           dragInitRef.current = { startX: e.clientX, origStart: overlay.startTime, origEnd: overlay.endTime };
                           setTrimTextId({ id: overlay.id, side: 'left' });
                         }}>
-                        <div className="w-0.5 h-4 bg-amber-400/60 rounded-full" />
+                        <div className="w-0.5 h-4 bg-accent-amber rounded-full" />
                       </div>
                       <div className="flex-1 flex items-center px-3 h-full overflow-hidden cursor-grab active:cursor-grabbing"
                         onMouseDown={(e) => {
@@ -588,8 +588,8 @@ export default function VideoTimeline() {
                           setDragTextId(overlay.id);
                         }}>
                         <Type className="w-2.5 h-2.5 text-amber-400 shrink-0 mr-1" />
-                        <span className="text-[9px] text-amber-200 truncate flex-1">{overlay.text}</span>
-                        {width > 60 && <span className="text-[8px] text-amber-400/50 font-mono ml-1 shrink-0">{(overlay.endTime - overlay.startTime).toFixed(1)}s</span>}
+                        <span className="text-[9px] text-accent-amber-light truncate flex-1">{overlay.text}</span>
+                        {width > 60 && <span className="text-[8px] text-accent-amber-muted font-mono ml-1 shrink-0">{(overlay.endTime - overlay.startTime).toFixed(1)}s</span>}
                       </div>
                       <div data-trim="right"
                         className="absolute top-0 bottom-0 right-0 w-2.5 cursor-col-resize hover:bg-amber-400/20 z-10 flex items-center justify-end pr-0.5 transition-colors"
@@ -598,7 +598,7 @@ export default function VideoTimeline() {
                           dragInitRef.current = { startX: e.clientX, origStart: overlay.startTime, origEnd: overlay.endTime };
                           setTrimTextId({ id: overlay.id, side: 'right' });
                         }}>
-                        <div className="w-0.5 h-4 bg-amber-400/60 rounded-full" />
+                        <div className="w-0.5 h-4 bg-accent-amber rounded-full" />
                       </div>
                     </div>
                   );
@@ -606,10 +606,10 @@ export default function VideoTimeline() {
               </div>
 
               {/* ─── STICKERS TRACK ──────────────────────────────── */}
-              <div className="h-10 border-b border-zinc-800/30 relative">
+              <div className="h-10 border-b border-panel-divider relative">
                 {(project.stickerOverlays || []).filter(s => s.type !== 'photo').length === 0 && (
                   <div className="absolute inset-0 flex items-center px-3 pointer-events-none">
-                    <span className="text-[9px] text-zinc-700">No stickers</span>
+                    <span className="text-[9px] text-theme-muted">No stickers</span>
                   </div>
                 )}
                 {(project.stickerOverlays || []).filter(s => s.type !== 'photo').map(sticker => {
@@ -631,20 +631,20 @@ export default function VideoTimeline() {
                       title={sticker.content}
                     >
                       <Smile className="w-2.5 h-2.5 text-pink-400 shrink-0 mr-1" />
-                      <span className="text-[9px] text-pink-200 truncate">{sticker.content}</span>
+                      <span className="text-[9px] text-accent-pink-light truncate">{sticker.content}</span>
                     </div>
                   );
                 })}
               </div>
 
               {/* ─── PHOTOS TRACK ─────────────────────────────────── */}
-              <div className="h-10 border-b border-zinc-800/30 relative">
+              <div className="h-10 border-b border-panel-divider relative">
                 {(() => {
                   const photoStickers = (project.stickerOverlays || []).filter(s => s.type === 'photo');
                   if (photoStickers.length === 0) {
                     return (
                       <div className="absolute inset-0 flex items-center px-3 pointer-events-none">
-                        <span className="text-[9px] text-zinc-700">No photos</span>
+                        <span className="text-[9px] text-theme-muted">No photos</span>
                       </div>
                     );
                   }
@@ -672,7 +672,7 @@ export default function VideoTimeline() {
                             dragInitRef.current = { startX: e.clientX, origStart: sticker.startTime, origEnd: sticker.endTime };
                             setTrimPhotoId({ id: sticker.id, side: 'left' });
                           }}>
-                          <div className="w-0.5 h-4 bg-teal-400/60 rounded-full" />
+                          <div className="w-0.5 h-4 bg-accent-teal rounded-full" />
                         </div>
                         <div className="flex-1 flex items-center px-3 h-full overflow-hidden cursor-grab active:cursor-grabbing"
                           onMouseDown={(e) => {
@@ -683,8 +683,8 @@ export default function VideoTimeline() {
                             setDragStickerId(sticker.id);
                           }}>
                           <ImageIcon className="w-2.5 h-2.5 text-teal-400 shrink-0 mr-1" />
-                          <span className="text-[9px] text-teal-200 truncate flex-1">Photo</span>
-                          {width > 50 && <span className="text-[8px] text-teal-400/50 font-mono ml-1 shrink-0">{dur.toFixed(1)}s</span>}
+                          <span className="text-[9px] text-accent-teal-light truncate flex-1">Photo</span>
+                          {width > 50 && <span className="text-[8px] text-accent-teal-muted font-mono ml-1 shrink-0">{dur.toFixed(1)}s</span>}
                         </div>
                         <div data-trim="right"
                           className="absolute top-0 bottom-0 right-0 w-2.5 cursor-col-resize hover:bg-teal-400/20 z-10 flex items-center justify-end pr-0.5 transition-colors"
@@ -693,7 +693,7 @@ export default function VideoTimeline() {
                             dragInitRef.current = { startX: e.clientX, origStart: sticker.startTime, origEnd: sticker.endTime };
                             setTrimPhotoId({ id: sticker.id, side: 'right' });
                           }}>
-                          <div className="w-0.5 h-4 bg-teal-400/60 rounded-full" />
+                          <div className="w-0.5 h-4 bg-accent-teal rounded-full" />
                         </div>
                       </div>
                     );
@@ -702,7 +702,7 @@ export default function VideoTimeline() {
               </div>
 
               {/* ─── AUDIO TRACK ─────────────────────────────────── */}
-              <div className="h-10 border-b border-zinc-800/30 relative">
+              <div className="h-10 border-b border-panel-divider relative">
                 {project.audioTracks.map(track => {
                   const left = track.startTime * pps;
                   const width = track.duration > 0 ? track.duration * pps : Math.max(60, totalDuration * pps * 0.3);
@@ -735,8 +735,8 @@ export default function VideoTimeline() {
                       }}
                     >
                       <Music className="w-2.5 h-2.5 text-violet-400 shrink-0 mr-1" />
-                      <span className="text-[9px] text-violet-200 truncate">{track.name}</span>
-                      {track.duration > 0 && <span className="text-[8px] text-violet-400/50 font-mono ml-1 shrink-0">{track.duration.toFixed(1)}s</span>}
+                      <span className="text-[9px] text-accent-violet-light truncate">{track.name}</span>
+                      {track.duration > 0 && <span className="text-[8px] text-accent-violet-muted font-mono ml-1 shrink-0">{track.duration.toFixed(1)}s</span>}
                     </div>
                   );
                 })}
@@ -774,8 +774,8 @@ export default function VideoTimeline() {
                       }}
                     >
                       <Volume2 className="w-2.5 h-2.5 text-emerald-400 shrink-0 mr-1" />
-                      <span className="text-[9px] text-emerald-200 truncate">{bgm.name}</span>
-                      {bgm.duration > 0 && <span className="text-[8px] text-emerald-400/50 font-mono ml-1 shrink-0">{bgm.duration.toFixed(1)}s</span>}
+                      <span className="text-[9px] text-accent-emerald-light truncate">{bgm.name}</span>
+                      {bgm.duration > 0 && <span className="text-[8px] text-accent-emerald-muted font-mono ml-1 shrink-0">{bgm.duration.toFixed(1)}s</span>}
                     </div>
                   );
                 })()}
@@ -802,7 +802,7 @@ export default function VideoTimeline() {
                           dragInitRef.current = { startX: e.clientX, origStart: sub.startTime, origEnd: sub.endTime };
                           setTrimSubtitleId({ id: sub.id, side: 'left' });
                         }}>
-                        <div className="w-0.5 h-4 bg-rose-400/60 rounded-full" />
+                        <div className="w-0.5 h-4 bg-accent-rose rounded-full" />
                       </div>
                       <div className="flex-1 flex items-center px-3 h-full overflow-hidden cursor-grab active:cursor-grabbing"
                         onMouseDown={(e) => {
@@ -811,8 +811,8 @@ export default function VideoTimeline() {
                           dragInitRef.current = { startX: e.clientX, origStart: sub.startTime, origEnd: sub.endTime };
                           setDragSubtitleId(sub.id);
                         }}>
-                        <span className="text-[9px] text-rose-200 truncate flex-1">{sub.text}</span>
-                        {width > 50 && <span className="text-[8px] text-rose-400/50 font-mono ml-1 shrink-0">{(sub.endTime - sub.startTime).toFixed(1)}s</span>}
+                        <span className="text-[9px] text-accent-rose-light truncate flex-1">{sub.text}</span>
+                        {width > 50 && <span className="text-[8px] text-accent-rose-muted font-mono ml-1 shrink-0">{(sub.endTime - sub.startTime).toFixed(1)}s</span>}
                       </div>
                       <div data-trim="right"
                         className="absolute top-0 bottom-0 right-0 w-2.5 cursor-col-resize hover:bg-rose-400/20 z-10 flex items-center justify-end pr-0.5 transition-colors"
@@ -821,7 +821,7 @@ export default function VideoTimeline() {
                           dragInitRef.current = { startX: e.clientX, origStart: sub.startTime, origEnd: sub.endTime };
                           setTrimSubtitleId({ id: sub.id, side: 'right' });
                         }}>
-                        <div className="w-0.5 h-4 bg-rose-400/60 rounded-full" />
+                        <div className="w-0.5 h-4 bg-accent-rose rounded-full" />
                       </div>
                     </div>
                   );
@@ -838,18 +838,18 @@ export default function VideoTimeline() {
 
           {sortedClips.length === 0 && project.textOverlays.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <span className="text-xs text-zinc-600">Drop video clips here or use the sidebar to start editing</span>
+              <span className="text-xs text-theme-dim">Drop video clips here or use the sidebar to start editing</span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-3 px-3 py-1 border-t border-zinc-800/40 shrink-0">
-        <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">Space</kbd> Play/Pause</span>
-        <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">S</kbd> Split at playhead</span>
-        <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">Del</kbd> Remove selected</span>
-        <span className="text-[9px] text-zinc-600"><kbd className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[8px]">Ctrl+Z</kbd> Undo</span>
-        <span className="text-[9px] text-zinc-600 opacity-50">Drag clips to reorder • Double-click to split • Drag edges to trim</span>
+      <div className="flex items-center gap-3 px-3 py-1 border-t border-panel-divider shrink-0">
+        <span className="text-[9px] text-theme-secondary"><kbd className="px-1 py-0.5 rounded bg-panel-light text-theme-secondary text-[8px]">Space</kbd> Play/Pause</span>
+        <span className="text-[9px] text-theme-secondary"><kbd className="px-1 py-0.5 rounded bg-panel-light text-theme-secondary text-[8px]">S</kbd> Split at playhead</span>
+        <span className="text-[9px] text-theme-secondary"><kbd className="px-1 py-0.5 rounded bg-panel-light text-theme-secondary text-[8px]">Del</kbd> Remove selected</span>
+        <span className="text-[9px] text-theme-secondary"><kbd className="px-1 py-0.5 rounded bg-panel-light text-theme-secondary text-[8px]">Ctrl+Z</kbd> Undo</span>
+        <span className="text-[9px] text-theme-secondary opacity-50">Drag clips to reorder • Double-click to split • Drag edges to trim</span>
       </div>
     </div>
   );

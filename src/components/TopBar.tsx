@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import {
   Undo2, Redo2, ZoomIn, ZoomOut, Download, Save,
-  ChevronDown, Monitor,
+  ChevronDown, Monitor, Sun, Moon,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { useThemeStore } from '../store/themeStore';
 
 const PRESETS = [
   { name: 'Instagram Post', w: 1080, h: 1080 },
@@ -22,6 +23,7 @@ interface TopBarProps {
 }
 
 export default function TopBar({ onSave, onBack }: TopBarProps) {
+  const { mode, toggle } = useThemeStore();
   const {
     canvasName, setCanvasName,
     zoom, setZoom,
@@ -116,7 +118,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
         ) : (
           <button
             onClick={() => setEditingName(true)}
-            className="text-sm text-zinc-300 hover:text-zinc-100 px-2 py-1 rounded hover:bg-panel-hover transition-colors"
+            className="text-sm text-theme-secondary hover:text-theme-primary px-2 py-1 rounded hover:bg-panel-hover transition-colors"
           >
             {canvasName}
           </button>
@@ -127,7 +129,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
       <div className="relative">
         <button
           onClick={() => setShowPresets(!showPresets)}
-          className="flex items-center gap-1 px-2 py-1 rounded text-xs text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
+          className="flex items-center gap-1 px-2 py-1 rounded text-xs text-theme-muted hover:text-theme-primary hover:bg-panel-hover transition-colors"
         >
           <Monitor className="w-3.5 h-3.5" />
           <span>{canvasWidth}×{canvasHeight}</span>
@@ -139,10 +141,10 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
               <button
                 key={p.name}
                 onClick={() => applyPreset(p.w, p.h)}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm text-zinc-300 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 text-sm text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors"
               >
                 <span>{p.name}</span>
-                <span className="text-zinc-500 text-xs">{p.w}×{p.h}</span>
+                <span className="text-theme-dim text-xs">{p.w}×{p.h}</span>
               </button>
             ))}
           </div>
@@ -182,7 +184,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
         >
           <ZoomOut className="w-3.5 h-3.5" />
         </button>
-        <span className="text-xs text-zinc-400 w-10 text-center tabular-nums">{zoomPct}%</span>
+        <span className="text-xs text-theme-muted w-10 text-center tabular-nums">{zoomPct}%</span>
         <button
           onClick={() => setZoom(zoom + 0.1)}
           className="tool-btn w-7 h-7"
@@ -192,7 +194,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
         </button>
         <button
           onClick={() => setZoom(1)}
-          className="text-xs text-zinc-500 hover:text-zinc-300 px-1.5 py-1 rounded hover:bg-panel-hover transition-colors"
+          className="text-xs text-theme-dim hover:text-theme-secondary px-1.5 py-1 rounded hover:bg-panel-hover transition-colors"
         >
           1:1
         </button>
@@ -200,12 +202,21 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
 
       <div className="flex-1" />
 
+      {/* Theme toggle */}
+      <button
+        onClick={toggle}
+        className="w-8 h-8 flex items-center justify-center rounded-lg text-theme-dim hover:text-theme-primary hover:bg-panel-hover transition-colors"
+        title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      >
+        {mode === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+      </button>
+
       {/* Right Actions */}
       <div className="flex items-center gap-2">
         {(() => {
           const { isInstallable, isInstalled, installApp } = usePWAInstall();
           if (isInstalled) return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] text-zinc-500 bg-panel-light border border-panel-border">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] text-theme-dim bg-panel-light border border-panel-border">
               <Monitor className="w-3 h-3" /> App
             </span>
           );
@@ -225,7 +236,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
           <button
             type="button"
             onClick={onBack}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-theme-muted hover:text-theme-primary hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer"
           >
             Back to home
           </button>
@@ -233,7 +244,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
         <button
           type="button"
           onClick={onSave}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-theme-muted hover:text-theme-primary hover:bg-panel-hover transition-colors border border-panel-border cursor-pointer"
         >
           <Save className="w-3.5 h-3.5" />
           Save
@@ -260,7 +271,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
         <div className="relative">
           <button
             onClick={() => setShowExport(!showExport)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-300 hover:text-zinc-100 hover:bg-panel-hover border border-panel-border transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-theme-secondary hover:text-theme-primary hover:bg-panel-hover border border-panel-border transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             More formats
@@ -268,12 +279,12 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
           </button>
           {showExport && (
             <div className="absolute top-full right-0 mt-1 w-72 bg-panel border border-panel-border rounded-lg shadow-xl z-50 py-1 animate-slide-in">
-              <div className="px-3 py-2 text-[11px] uppercase tracking-[0.25em] text-zinc-500">Current page</div>
+              <div className="px-3 py-2 text-[11px] uppercase tracking-[0.25em] text-theme-dim">Current page</div>
               {(['png', 'jpg', 'svg'] as const).map((fmt) => (
                 <button
                   key={`current-${fmt}`}
                   onClick={() => handleExport('current', fmt)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Export current as {fmt.toUpperCase()}
@@ -281,11 +292,11 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
               ))}
 
               <div className="border-t border-panel-border my-1" />
-              <div className="px-3 py-2 text-[11px] uppercase tracking-[0.25em] text-zinc-500">Selected pages</div>
+              <div className="px-3 py-2 text-[11px] uppercase tracking-[0.25em] text-theme-dim">Selected pages</div>
               <button
                 onClick={() => handleExport('selected', 'png')}
                 disabled={selectedCount === 0}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:text-zinc-100 hover:bg-panel-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Download className="w-3.5 h-3.5" />
                 Export selected as ZIP (PNG)
@@ -293,29 +304,29 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
               <button
                 onClick={() => handleExport('selected', 'jpg')}
                 disabled={selectedCount === 0}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:text-zinc-100 hover:bg-panel-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Download className="w-3.5 h-3.5" />
                 Export selected as ZIP (JPG)
               </button>
               {selectedCount > 0 && (
-                <div className="px-3 py-2 text-[11px] text-zinc-400">
+                <div className="px-3 py-2 text-[11px] text-theme-muted">
                   {selectedCount} page{selectedCount > 1 ? 's' : ''} selected
                 </div>
               )}
 
               <div className="border-t border-panel-border my-1" />
-              <div className="px-3 py-2 text-[11px] uppercase tracking-[0.25em] text-zinc-500">All pages</div>
+              <div className="px-3 py-2 text-[11px] uppercase tracking-[0.25em] text-theme-dim">All pages</div>
               <button
                 onClick={() => handleExport('all', 'png')}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
                 Export all as ZIP (PNG)
               </button>
               <button
                 onClick={() => handleExport('all', 'jpg')}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
                 Export all as ZIP (JPG)

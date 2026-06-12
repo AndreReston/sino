@@ -255,7 +255,7 @@ export default function LeftSidebar() {
             className={`flex flex-col items-center justify-center w-10 h-10 rounded-lg transition-all text-xs gap-0.5
               ${sidebarTab === t.id
                 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                : 'text-zinc-500 hover:text-zinc-200 hover:bg-panel-hover'}`}
+                : 'text-theme-dim hover:text-theme-secondary hover:bg-panel-hover'}`}
           >
             {t.icon}
           </button>
@@ -276,7 +276,7 @@ export default function LeftSidebar() {
             className={`flex items-center justify-center w-10 h-10 rounded-lg transition-all
               ${toolMode === t.id
                 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                : 'text-zinc-500 hover:text-zinc-200 hover:bg-panel-hover'}`}
+                : 'text-theme-dim hover:text-theme-secondary hover:bg-panel-hover'}`}
           >
             {t.icon}
           </button>
@@ -288,7 +288,7 @@ export default function LeftSidebar() {
           onClick={undo}
           disabled={historyIndex <= 0}
           title="Undo"
-          className="flex items-center justify-center w-10 h-10 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-panel-hover transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex items-center justify-center w-10 h-10 rounded-lg text-theme-dim hover:text-theme-secondary hover:bg-panel-hover transition-all disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Undo2 className="w-4 h-4" />
         </button>
@@ -296,7 +296,7 @@ export default function LeftSidebar() {
           onClick={redo}
           disabled={historyIndex >= history.length - 1}
           title="Redo"
-          className="flex items-center justify-center w-10 h-10 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-panel-hover transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex items-center justify-center w-10 h-10 rounded-lg text-theme-dim hover:text-theme-secondary hover:bg-panel-hover transition-all disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Redo2 className="w-4 h-4" />
         </button>
@@ -327,7 +327,7 @@ export default function LeftSidebar() {
             ) : (
               <button
                 onClick={() => setEditingName(true)}
-                className="text-sm font-semibold text-zinc-200 hover:text-white truncate transition-colors"
+                className="text-sm font-semibold text-theme-secondary hover:text-theme-primary truncate transition-colors"
               >
                 {canvasName}
               </button>
@@ -347,21 +347,21 @@ export default function LeftSidebar() {
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowExport(false)} />
                 <div className="absolute top-full left-0 mt-1 w-60 bg-panel border border-panel-border rounded-xl shadow-2xl z-50 py-2 animate-slide-in overflow-hidden">
-                  <div className="px-3 pb-1 text-[10px] uppercase tracking-widest text-zinc-600">Current</div>
+                  <div className="px-3 pb-1 text-[10px] uppercase tracking-widest text-theme-dim">Current</div>
                   {(['png', 'jpg', 'svg'] as const).map((fmt) => (
                     <button key={`current-${fmt}`} onClick={() => handleExport('current', fmt)}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 hover:text-white hover:bg-panel-hover transition-colors">
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors">
                       <Download className="w-3 h-3 shrink-0" />
                       <span className="truncate">Export {fmt.toUpperCase()}</span>
                     </button>
                   ))}
 
                   <div className="border-t border-panel-border my-1 mx-2" />
-                  <div className="px-3 py-1 text-[10px] uppercase tracking-widest text-zinc-600">Selected</div>
+                  <div className="px-3 py-1 text-[10px] uppercase tracking-widest text-theme-dim">Selected</div>
                   <button
                     onClick={() => handleExport('selected', 'png')}
                     disabled={selectedPageIds.length === 0}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 hover:text-white hover:bg-panel-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Download className="w-3 h-3 shrink-0" />
                     <span className="truncate">ZIP (PNG)</span>
@@ -369,29 +369,29 @@ export default function LeftSidebar() {
                   <button
                     onClick={() => handleExport('selected', 'jpg')}
                     disabled={selectedPageIds.length === 0}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 hover:text-white hover:bg-panel-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Download className="w-3 h-3 shrink-0" />
                     <span className="truncate">ZIP (JPG)</span>
                   </button>
                   {selectedPageIds.length > 0 && (
-                    <div className="px-3 py-1 text-[10px] text-zinc-500">
+                    <div className="px-3 py-1 text-[10px] text-theme-muted">
                       {selectedPageIds.length} selected
                     </div>
                   )}
 
                   <div className="border-t border-panel-border my-1 mx-2" />
-                  <div className="px-3 py-1 text-[10px] uppercase tracking-widest text-zinc-600">All pages</div>
+                  <div className="px-3 py-1 text-[10px] uppercase tracking-widest text-theme-dim">All pages</div>
                   <button
                     onClick={() => handleExport('all', 'png')}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 hover:text-white hover:bg-panel-hover transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors"
                   >
                     <Download className="w-3 h-3 shrink-0" />
                     <span className="truncate">ZIP (PNG)</span>
                   </button>
                   <button
                     onClick={() => handleExport('all', 'jpg')}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 hover:text-white hover:bg-panel-hover transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors"
                   >
                     <Download className="w-3 h-3 shrink-0" />
                     <span className="truncate">ZIP (JPG)</span>
@@ -407,11 +407,11 @@ export default function LeftSidebar() {
           <div className="relative">
             <button
               onClick={() => setShowPresets(!showPresets)}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-panel-light border border-panel-border hover:border-zinc-500 transition-colors text-xs text-zinc-400"
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-panel-light border border-panel-border hover:border-panel-hover transition-colors text-xs text-theme-muted"
             >
               <div className="flex items-center gap-2">
                 <Monitor className="w-3.5 h-3.5" />
-                <span className="text-zinc-300">{canvasWidth} × {canvasHeight}px</span>
+                <span className="text-theme-secondary">{canvasWidth} × {canvasHeight}px</span>
               </div>
               <ChevronDown className="w-3.5 h-3.5" />
             </button>
@@ -421,9 +421,9 @@ export default function LeftSidebar() {
                 <div className="absolute top-full left-0 right-0 mt-1 bg-panel border border-panel-border rounded-xl shadow-2xl z-50 py-1 animate-slide-in">
                   {PRESETS.map((p) => (
                     <button key={p.name} onClick={() => applyPreset(p.w, p.h)}
-                      className="w-full flex items-center justify-between px-3 py-2 text-xs text-zinc-300 hover:text-white hover:bg-panel-hover transition-colors">
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors">
                       <span>{p.name}</span>
-                      <span className="text-zinc-500">{p.w}×{p.h}</span>
+                      <span className="text-theme-muted">{p.w}×{p.h}</span>
                     </button>
                   ))}
                 </div>
@@ -434,7 +434,7 @@ export default function LeftSidebar() {
 
         {/* Tab label */}
         <div className="px-4 pt-3 pb-2 shrink-0">
-          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">
+          <p className="text-xs font-semibold text-theme-muted uppercase tracking-widest">
             {TABS.find((t) => t.id === sidebarTab)?.label}
           </p>
         </div>
@@ -477,13 +477,13 @@ function ShapesPanel({ addShape }: { addShape: (type: string, color?: string) =>
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs text-zinc-500 mb-2">Basic Shapes</p>
+        <p className="text-xs text-theme-muted mb-2">Basic Shapes</p>
         <div className="grid grid-cols-3 gap-2">
           {shapes.map((s) => (
             <button
               key={s.type}
               onClick={() => addShape(s.type, '#e4e4e7')}
-              className="flex flex-col items-center gap-2 p-3 rounded-xl bg-panel-light border border-panel-border hover:border-zinc-500 hover:bg-panel-hover transition-all text-zinc-400 hover:text-zinc-100 group"
+              className="flex flex-col items-center gap-2 p-3 rounded-xl bg-panel-light border border-panel-border hover:border-panel-hover hover:bg-panel-hover transition-all text-theme-muted hover:text-theme-primary group"
             >
               <span className="group-hover:scale-110 transition-transform">{s.icon}</span>
               <span className="text-xs">{s.label}</span>
@@ -493,7 +493,7 @@ function ShapesPanel({ addShape }: { addShape: (type: string, color?: string) =>
       </div>
 
       <div>
-        <p className="text-xs text-zinc-500 mb-2">Quick Colors</p>
+        <p className="text-xs text-theme-muted mb-2">Quick Colors</p>
         <div className="grid grid-cols-4 gap-2">
           {SHAPE_COLORS.map((c) => (
             <button
@@ -508,7 +508,7 @@ function ShapesPanel({ addShape }: { addShape: (type: string, color?: string) =>
       </div>
 
       <div>
-        <p className="text-xs text-zinc-500 mb-2">Drawing Mode</p>
+        <p className="text-xs text-theme-muted mb-2">Drawing Mode</p>
         <DrawingModeButton />
       </div>
     </div>
@@ -535,7 +535,7 @@ function DrawingModeButton() {
       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-sm font-medium
         ${isDrawing
           ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
-          : 'bg-panel-light border-panel-border text-zinc-400 hover:text-zinc-100 hover:border-zinc-500'}`}
+          : 'bg-panel-light border-panel-border text-theme-muted hover:text-theme-primary hover:border-zinc-500'}`}
     >
       <PenLine className="w-4 h-4" />
       {isDrawing ? 'Drawing Mode Active — Click to Exit' : 'Enable Freehand Drawing'}
@@ -558,19 +558,19 @@ function TextPanel({
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs text-zinc-500 mb-2">Rich Text</p>
-          <p className="text-[11px] text-zinc-500">Create an editable text box on canvas.</p>
+          <p className="text-xs text-theme-muted mb-2">Rich Text</p>
+          <p className="text-[11px] text-theme-muted">Create an editable text box on canvas.</p>
         </div>
         <button
           onClick={addTextBox}
-          className="rounded-xl border border-panel-border bg-panel-light px-3 py-2 text-xs font-semibold text-zinc-200 hover:border-zinc-500 hover:text-white transition-colors"
+          className="rounded-xl border border-panel-border bg-panel-light px-3 py-2 text-xs font-semibold text-theme-secondary hover:border-zinc-500 hover:text-theme-primary transition-colors"
         >
           + Add Text Box
         </button>
       </div>
 
       <div>
-        <p className="text-xs text-zinc-500 mb-2">Font Family</p>
+        <p className="text-xs text-theme-muted mb-2">Font Family</p>
         <select
           value={selectedFont}
           onChange={(e) => setSelectedFont(e.target.value)}
@@ -583,16 +583,16 @@ function TextPanel({
       </div>
 
       <div>
-        <p className="text-xs text-zinc-500 mb-2">Text Styles</p>
+        <p className="text-xs text-theme-muted mb-2">Text Styles</p>
         <div className="space-y-2">
           {TEXT_PRESETS.map((tp) => (
             <button
               key={tp.label}
               onClick={() => addText(tp.size, tp.weight, tp.sample)}
-              className="w-full text-left px-4 py-3 rounded-xl bg-panel-light border border-panel-border hover:border-zinc-500 hover:bg-panel-hover transition-all group"
+              className="w-full text-left px-4 py-3 rounded-xl bg-panel-light border border-panel-border hover:border-panel-hover hover:bg-panel-hover transition-all group"
             >
               <div
-                className="text-zinc-100 group-hover:text-white transition-colors truncate leading-tight"
+                className="text-theme-primary group-hover:text-theme-primary transition-colors truncate leading-tight"
                 style={{
                   fontSize: `${Math.min(tp.size * 0.38, 26)}px`,
                   fontWeight: tp.weight,
@@ -601,7 +601,7 @@ function TextPanel({
               >
                 {tp.sample}
               </div>
-              <div className="text-xs text-zinc-500 mt-1">{tp.label} · {tp.size}px · {tp.weight}</div>
+              <div className="text-xs text-theme-muted mt-1">{tp.label} · {tp.size}px · {tp.weight}</div>
             </button>
           ))}
         </div>
@@ -755,17 +755,17 @@ function UploadsPanel({
       <div>
         <div className="flex items-center justify-between mb-2 gap-3">
           <div>
-            <p className="text-xs text-zinc-500">Upload Media</p>
-            <p className="text-[11px] text-zinc-500">
+            <p className="text-xs text-theme-muted">Upload Media</p>
+            <p className="text-[11px] text-theme-muted">
               {isVideoMode ? 'Images and video files are accepted.' : 'PNG, JPG, SVG, WEBP files.'}
             </p>
           </div>
-          <span className="text-xs text-zinc-400">{uploading ? 'Uploading...' : 'Ready'}</span>
+          <span className="text-xs text-theme-muted">{uploading ? 'Uploading...' : 'Ready'}</span>
         </div>
-        <label className="relative flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-dashed border-panel-border hover:border-zinc-500 bg-panel-light cursor-pointer transition-all group">
-          <Upload className="w-6 h-6 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
-          <span className="text-sm text-zinc-500 group-hover:text-zinc-300 transition-colors">Click to upload</span>
-          <span className="text-xs text-zinc-600">
+        <label className="relative flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-dashed border-panel-border hover:border-panel-hover bg-panel-light cursor-pointer transition-all group">
+          <Upload className="w-6 h-6 text-theme-muted group-hover:text-theme-secondary transition-colors" />
+          <span className="text-sm text-theme-muted group-hover:text-theme-secondary transition-colors">Click to upload</span>
+          <span className="text-xs text-theme-dim">
             {isVideoMode ? 'PNG, JPG, SVG, WEBP, MP4, MOV, WEBM' : 'PNG, JPG, SVG, WEBP'}
           </span>
           <input
@@ -784,10 +784,10 @@ function UploadsPanel({
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-xs text-zinc-500">My Uploads</p>
+          <p className="text-xs text-theme-muted">My Uploads</p>
           <button
             onClick={fetchUploads}
-            className="text-xs text-zinc-400 hover:text-zinc-200"
+            className="text-xs text-theme-muted hover:text-theme-secondary"
           >Refresh</button>
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -826,10 +826,10 @@ function UploadsPanel({
                     thumbnailUrl: asset.thumbnailUrl,
                     duration: asset.duration,
                   })}
-                  className="group relative aspect-video rounded-xl overflow-hidden border border-panel-border hover:border-zinc-500 transition-all"
+                  className="group relative aspect-video rounded-xl overflow-hidden border border-panel-border hover:border-panel-hover transition-all"
                 >
                   {isVideoAsset ? (
-                    <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
+                    <div className="w-full h-full bg-panel-hover flex items-center justify-center">
                       {asset.thumbnailUrl ? (
                         <img
                           src={asset.thumbnailUrl}
@@ -837,13 +837,13 @@ function UploadsPanel({
                           className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
                         />
                       ) : (
-                        <Film className="w-6 h-6 text-zinc-600" />
+                        <Film className="w-6 h-6 text-theme-dim" />
                       )}
                       <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-sky-500/80 text-[9px] text-white font-semibold">
                         MP4
                       </div>
                       {asset.duration != null && (
-                        <div className="absolute bottom-1 right-1.5 px-1 py-0.5 rounded bg-black/60 text-[9px] text-zinc-300 font-mono">
+                        <div className="absolute bottom-1 right-1.5 px-1 py-0.5 rounded bg-black/60 text-[9px] text-theme-secondary font-mono">
                           {asset.duration.toFixed(1)}s
                         </div>
                       )}
@@ -871,13 +871,13 @@ function UploadsPanel({
 
       {/* Stock images */}
       <div>
-        <p className="text-xs text-zinc-500 mb-2">Stock Photos</p>
+        <p className="text-xs text-theme-muted mb-2">Stock Photos</p>
         <div className="grid grid-cols-2 gap-2">
           {STOCK_IMAGES.map((img, i) => (
             <button
               key={i}
               onClick={() => addImage(img.url)}
-              className="group relative aspect-video rounded-xl overflow-hidden border border-panel-border hover:border-zinc-500 transition-all"
+              className="group relative aspect-video rounded-xl overflow-hidden border border-panel-border hover:border-panel-hover transition-all"
             >
               <img
                 src={img.url}
@@ -886,7 +886,7 @@ function UploadsPanel({
                 loading="lazy"
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-end justify-start p-1.5 opacity-0 group-hover:opacity-100">
-                <span className="text-xs text-white font-medium">{img.label}</span>
+                <span className="text-xs text-theme-primary font-medium">{img.label}</span>
               </div>
             </button>
           ))}
@@ -966,12 +966,12 @@ function LayersPanel() {
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs text-zinc-500 mb-2">Layers</p>
-        <p className="text-[11px] text-zinc-500">Reorder, hide, lock, and manage every object in your design.</p>
+        <p className="text-xs text-theme-muted mb-2">Layers</p>
+        <p className="text-[11px] text-theme-muted">Reorder, hide, lock, and manage every object in your design.</p>
       </div>
       <div className="space-y-2">
         {layers.length === 0 ? (
-          <div className="rounded-xl border border-panel-border bg-panel-light p-4 text-xs text-zinc-500 text-center">
+          <div className="rounded-xl border border-panel-border bg-panel-light p-4 text-xs text-theme-muted text-center">
             Add objects to the canvas to build your layer stack.
           </div>
         ) : layers.map((obj, index) => {
@@ -982,7 +982,7 @@ function LayersPanel() {
           return (
             <div
               key={(obj as any).id || index}
-              className={`rounded-2xl border px-3 py-2 transition-colors ${isSelected ? 'border-emerald-400/50 bg-emerald-500/10' : 'border-panel-border bg-panel-light hover:border-zinc-500 hover:bg-panel-hover'}`}
+              className={`rounded-2xl border px-3 py-2 transition-colors ${isSelected ? 'border-emerald-400/50 bg-emerald-500/10' : 'border-panel-border bg-panel-light hover:border-panel-hover hover:bg-panel-hover'}`}
             >
               <button
                 onClick={() => {
@@ -992,10 +992,10 @@ function LayersPanel() {
                 }}
                 className="w-full flex items-center gap-3 text-left"
               >
-                <div className="text-xs text-zinc-400 w-5 text-right">{layers.length - index}</div>
-                <div className="flex-1 text-sm text-zinc-200 truncate">{label}</div>
+                <div className="text-xs text-theme-muted w-5 text-right">{layers.length - index}</div>
+                <div className="flex-1 text-sm text-theme-secondary truncate">{label}</div>
               </button>
-              <div className="mt-3 flex items-center justify-between gap-2 text-zinc-300">
+              <div className="mt-3 flex items-center justify-between gap-2 text-theme-secondary">
                 <div className="flex items-center gap-1">
                   <button onClick={() => toggleLayerVisibility(obj)} className="tool-btn w-8 h-8" title={visible ? 'Hide layer' : 'Show layer'}>
                     {visible ? '👁' : '🚫'}
@@ -1025,40 +1025,40 @@ function MagicToolsPanel() {
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs text-zinc-500 mb-2">Magic Studio</p>
-        <p className="text-[11px] text-zinc-500">Select an image and apply intelligent edits with one click.</p>
+        <p className="text-xs text-theme-muted mb-2">Magic Studio</p>
+        <p className="text-[11px] text-theme-muted">Select an image and apply intelligent edits with one click.</p>
       </div>
       <div className="grid gap-3">
         <button
           onClick={() => setToolMode('magicGrab')}
-          className={`w-full rounded-2xl px-4 py-3 text-left transition ${toolMode === 'magicGrab' ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-200' : 'bg-panel-light border border-panel-border text-zinc-300 hover:border-zinc-500 hover:text-white'}`}
+          className={`w-full rounded-2xl px-4 py-3 text-left transition ${toolMode === 'magicGrab' ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-200' : 'bg-panel-light border border-panel-border text-theme-secondary hover:border-zinc-500 hover:text-theme-primary'}`}
         >
           <div className="flex items-center justify-between">
             <span>Magic Grab</span>
             <Sparkles className="w-4 h-4" />
           </div>
-          <p className="text-[11px] text-zinc-500 mt-1">Click an image to isolate it from the background.</p>
+          <p className="text-[11px] text-theme-muted mt-1">Click an image to isolate it from the background.</p>
         </button>
         <button
           onClick={() => setToolMode('magicErase')}
-          className={`w-full rounded-2xl px-4 py-3 text-left transition ${toolMode === 'magicErase' ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-200' : 'bg-panel-light border border-panel-border text-zinc-300 hover:border-zinc-500 hover:text-white'}`}
+          className={`w-full rounded-2xl px-4 py-3 text-left transition ${toolMode === 'magicErase' ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-200' : 'bg-panel-light border border-panel-border text-theme-secondary hover:border-zinc-500 hover:text-theme-primary'}`}
         >
           <div className="flex items-center justify-between">
             <span>Magic Erase</span>
             <Eraser className="w-4 h-4" />
           </div>
-          <p className="text-[11px] text-zinc-500 mt-1">Brush over unwanted objects and blend the texture automatically.</p>
+          <p className="text-[11px] text-theme-muted mt-1">Brush over unwanted objects and blend the texture automatically.</p>
         </button>
         <button
           onClick={() => removeBackground()}
           disabled={!isImage}
-          className="w-full rounded-2xl px-4 py-3 bg-panel-light border border-panel-border text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full rounded-2xl px-4 py-3 bg-panel-light border border-panel-border text-theme-secondary hover:border-zinc-500 hover:text-theme-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <div className="flex items-center justify-between">
             <span>Background Remover</span>
             <Eraser className="w-4 h-4" />
           </div>
-          <p className="text-[11px] text-zinc-500 mt-1">Remove the background from the selected image instantly.</p>
+          <p className="text-[11px] text-theme-muted mt-1">Remove the background from the selected image instantly.</p>
         </button>
       </div>
     </div>
@@ -1087,18 +1087,18 @@ function AdjustmentsPanel() {
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs text-zinc-500 mb-2">Photo Adjustments</p>
-        <p className="text-[11px] text-zinc-500">Tune brightness, contrast, saturation and hue for the selected image.</p>
+        <p className="text-xs text-theme-muted mb-2">Photo Adjustments</p>
+        <p className="text-[11px] text-theme-muted">Tune brightness, contrast, saturation and hue for the selected image.</p>
       </div>
       {!isImage ? (
-        <div className="rounded-2xl border border-panel-border bg-panel-light p-4 text-xs text-zinc-500">
+        <div className="rounded-2xl border border-panel-border bg-panel-light p-4 text-xs text-theme-muted">
           Select an image to apply photo adjustments.
         </div>
       ) : (
         <div className="space-y-4">
           {(['brightness', 'contrast', 'saturation', 'hue'] as const).map((field) => (
             <div key={field} className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-zinc-400">
+              <div className="flex items-center justify-between text-xs text-theme-muted">
                 <span>{field.charAt(0).toUpperCase() + field.slice(1)}</span>
                 <span>{selectedObjectAdjustments[field]}</span>
               </div>
@@ -1114,7 +1114,7 @@ function AdjustmentsPanel() {
           ))}
           <button
             onClick={resetAdjustments}
-            className="w-full rounded-2xl border border-panel-border px-4 py-3 text-xs text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors"
+            className="w-full rounded-2xl border border-panel-border px-4 py-3 text-xs text-theme-secondary hover:text-theme-primary hover:border-zinc-500 transition-colors"
           >
             Reset Adjustments
           </button>
@@ -1122,7 +1122,7 @@ function AdjustmentsPanel() {
       )}
       {/* Filter presets */}
       <div className="mt-4">
-        <p className="text-xs text-zinc-500 mb-2">Filter Presets</p>
+        <p className="text-xs text-theme-muted mb-2">Filter Presets</p>
         <div className="grid grid-cols-3 gap-2">
           {([
             { id: 'vintage', label: 'Vintage', adj: { brightness: -10, contrast: 5, saturation: -20, hue: -10 } },
@@ -1138,7 +1138,7 @@ function AdjustmentsPanel() {
                 setObjectAdjustments(next);
                 if (isImage && activeObject) applyAdjustmentsToObject(activeObject, next);
               }}
-              className="px-3 py-2 rounded-xl bg-panel-light border border-panel-border text-xs text-zinc-200 hover:text-white hover:bg-panel-hover transition-colors"
+              className="px-3 py-2 rounded-xl bg-panel-light border border-panel-border text-xs text-theme-secondary hover:text-theme-primary hover:bg-panel-hover transition-colors"
             >
               {p.label}
             </button>
@@ -1148,7 +1148,7 @@ function AdjustmentsPanel() {
 
       {/* Page transition control */}
       <div className="mt-4">
-        <p className="text-xs text-zinc-500 mb-2">Page Transition</p>
+        <p className="text-xs text-theme-muted mb-2">Page Transition</p>
         <PageTransitionSelector />
       </div>
     </div>
@@ -1169,7 +1169,7 @@ function PageTransitionSelector() {
           <option key={t} value={t}>{t.replace(/-/g, ' ')}</option>
         ))}
       </select>
-      <p className="text-[11px] text-zinc-500">Sets the default page transition between pages when navigating or exporting.</p>
+      <p className="text-[11px] text-theme-muted">Sets the default page transition between pages when navigating or exporting.</p>
     </div>
   );
 }
@@ -1255,8 +1255,8 @@ function TemplatesPanel() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs text-zinc-500 mb-2">Saved Templates</p>
-          <p className="text-[11px] text-zinc-500">Save and restore entire canvas states.</p>
+          <p className="text-xs text-theme-muted mb-2">Saved Templates</p>
+          <p className="text-[11px] text-theme-muted">Save and restore entire canvas states.</p>
         </div>
         <button
           onClick={saveTemplate}
@@ -1271,20 +1271,20 @@ function TemplatesPanel() {
 
       <div className="grid grid-cols-1 gap-3">
         {loading && templates.length === 0 ? (
-          <div className="rounded-xl border border-panel-border bg-panel-light p-4 text-xs text-zinc-500">Loading templates…</div>
+          <div className="rounded-xl border border-panel-border bg-panel-light p-4 text-xs text-theme-muted">Loading templates…</div>
         ) : templates.length === 0 ? (
-          <div className="rounded-xl border border-panel-border bg-panel-light p-4 text-xs text-zinc-500">No templates saved yet.</div>
+          <div className="rounded-xl border border-panel-border bg-panel-light p-4 text-xs text-theme-muted">No templates saved yet.</div>
         ) : (
           templates.map((template) => (
             <button
               key={template.id}
               onClick={() => loadTemplate(template.id)}
-              className="group rounded-2xl border border-panel-border bg-panel-light p-4 text-left hover:border-zinc-500 hover:bg-panel-hover transition-all"
+              className="group rounded-2xl border border-panel-border bg-panel-light p-4 text-left hover:border-panel-hover hover:bg-panel-hover transition-all"
             >
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-sm font-semibold text-zinc-100 truncate">{template.title}</div>
-                  <div className="text-[11px] text-zinc-500 mt-1">{new Date(template.created_at).toLocaleString()}</div>
+                  <div className="text-sm font-semibold text-theme-primary truncate">{template.title}</div>
+                  <div className="text-[11px] text-theme-muted mt-1">{new Date(template.created_at).toLocaleString()}</div>
                 </div>
                 <div className="text-xs text-emerald-400">Load</div>
               </div>

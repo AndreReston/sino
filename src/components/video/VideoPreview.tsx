@@ -450,18 +450,18 @@ export default function VideoPreview({ videoRef }: Props) {
   // No clip placeholder — only when there are no video clips at all
   if (!displayClip || !project) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#0a0a0e] min-h-0 p-6">
+      <div className="flex-1 flex items-center justify-center bg-surface min-h-0 p-6">
         <div
-          className="flex items-center justify-center bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-lg border border-zinc-800"
+          className="flex items-center justify-center bg-gradient-to-br from-panel-light to-panel-dark rounded-lg border border-panel-border"
           style={{ ...getAspectRatioStyle(), maxWidth: '100%', maxHeight: '100%', width: 'auto', height: '100%' }}
         >
           <div className="flex flex-col items-center gap-3 text-center p-8">
-            <div className="p-3 rounded-full bg-zinc-800">
+            <div className="p-3 rounded-full bg-panel-light">
               <Play className="w-8 h-8 text-sky-400" fill="currentColor" />
             </div>
             <div>
-              <p className="text-zinc-300 font-medium">No video selected</p>
-              <p className="text-zinc-500 text-sm">Add or select a clip to begin</p>
+              <p className="text-theme-primary font-medium">No video selected</p>
+              <p className="text-theme-muted text-sm">Add or select a clip to begin</p>
             </div>
           </div>
         </div>
@@ -470,10 +470,10 @@ export default function VideoPreview({ videoRef }: Props) {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center bg-[#0a0a0e] min-h-0 p-4">
+    <div className="flex-1 flex items-center justify-center bg-surface min-h-0 p-4">
       <div
         ref={containerRef}
-        className="relative bg-zinc-950 rounded-lg overflow-hidden border border-zinc-800"
+        className="relative bg-panel-dark rounded-lg overflow-hidden border border-panel-border"
         style={{ ...getAspectRatioStyle(), maxWidth: '100%', maxHeight: '100%', width: 'auto', height: '100%' }}
         onClick={() => { if (displayClip) setActiveClipId(displayClip.id); }}
       >
