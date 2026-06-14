@@ -756,6 +756,32 @@ export default function VideoTimeline() {
 
               {/* ─── AUDIO TRACK ─────────────────────────────────── */}
               <div className="h-10 border-b border-panel-divider relative">
+                {/* Background music */}
+                {project.backgroundMusic && (() => {
+                  const bgm = project.backgroundMusic!;
+                  const left = bgm.startTime * pps;
+                  const width = bgm.duration > 0 ? bgm.duration * pps : Math.max(60, totalDuration * pps * 0.3);
+                  const isSelected = activeAudioTrackId === bgm.id;
+                  return (
+                    <div key={bgm.id} data-noseek="1"
+                      className={`absolute top-0.5 bottom-0.5 rounded flex items-center px-1.5 cursor-pointer select-none ${
+                        isSelected ? 'bg-emerald-500/25 border-2 border-emerald-400/60' : 'bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25'
+                      }`}
+                      style={{ left, width }}
+                      onClick={(e) => { e.stopPropagation(); setActiveAudioTrackId(bgm.id); }}
+                    >
+                      <div className="absolute inset-x-1 top-1 bottom-1 flex items-end gap-px opacity-40 pointer-events-none">
+                        {getWaveformBars(bgm.name, Math.max(8, Math.floor(width / 4))).map((bar, i) => (
+                          <div key={i} className="flex-1 bg-emerald-300 rounded-t-sm" style={{ height: `${Math.max(12, bar * 100)}%` }} />
+                        ))}
+                      </div>
+                      <Music className="w-2.5 h-2.5 text-emerald-400 shrink-0 mr-1" />
+                      <span className="text-[9px] text-accent-emerald-light truncate">{bgm.name}</span>
+                      {bgm.duration > 0 && <span className="text-[8px] text-accent-emerald-muted font-mono ml-1 shrink-0">{bgm.duration.toFixed(1)}s</span>}
+                    </div>
+                  );
+                })()}
+                {/* Additional audio tracks */}
                 {(project.audioTracks || []).map(track => {
                   const left = track.startTime * pps;
                   const width = track.duration > 0 ? track.duration * pps : Math.max(60, totalDuration * pps * 0.3);
@@ -766,10 +792,7 @@ export default function VideoTimeline() {
                         isSelected ? 'bg-violet-500/25 border-2 border-violet-400/60' : 'bg-violet-500/15 border border-violet-500/30 hover:bg-violet-500/25'
                       }`}
                       style={{ left, width }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveAudioTrackId(track.id);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); setActiveAudioTrackId(track.id); }}
                     >
                       <div className="absolute inset-x-1 top-1 bottom-1 flex items-end gap-px opacity-40 pointer-events-none">
                         {getWaveformBars(track.name, Math.max(8, Math.floor(width / 4))).map((bar, i) => (
@@ -782,6 +805,11 @@ export default function VideoTimeline() {
                     </div>
                   );
                 })}
+                {!project.backgroundMusic && (project.audioTracks || []).length === 0 && (
+                  <div className="absolute inset-0 flex items-center px-3 pointer-events-none">
+                    <span className="text-[9px] text-theme-muted">No audio</span>
+                  </div>
+                )}
               </div>
 
               {/* ─── SUBTITLES TRACK ─────────────────────────────── */}
