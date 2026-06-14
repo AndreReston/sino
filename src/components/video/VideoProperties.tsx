@@ -837,7 +837,9 @@ function StickerProperties({ sticker }: StickerPropertiesProps) {
   };
 
   const handleDelete = () => {
-    removeStickerOverlay(sticker.id);
+    if (window.confirm('Delete this sticker?')) {
+      removeStickerOverlay(sticker.id);
+    }
   };
 
   return (
@@ -998,6 +1000,7 @@ function AudioTrackProperties({ track, isBackgroundMusic = false }: AudioTrackPr
   };
 
   const handleDelete = () => {
+    if (!window.confirm(isBackgroundMusic ? 'Remove background music?' : 'Delete this audio track?')) return;
     if (isBackgroundMusic) setBackgroundMusic(null);
     else removeAudioTrack(track.id);
   };

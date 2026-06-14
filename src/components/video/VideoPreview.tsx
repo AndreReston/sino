@@ -390,8 +390,8 @@ export default function VideoPreview({ videoRef }: Props) {
 
   const getSubtitleStyleClasses = (style: string): string => {
     switch (style) {
-      case 'karaoke': return 'font-bold text-lg bg-black/70 px-3 py-2 rounded';
-      case 'pop-up': return 'text-xl font-bold bg-white text-black px-4 py-3 rounded-lg shadow-lg';
+      case 'karaoke': return 'font-bold text-lg bg-canvas-surface/70 px-3 py-2 rounded';
+      case 'pop-up': return 'text-xl font-bold bg-surface text-theme-primary px-4 py-3 rounded-lg shadow-lg';
       case 'tiktok': return 'text-xl font-black drop-shadow-lg max-w-xs';
       case 'minimal': return 'text-sm font-medium opacity-90';
       case 'bold-highlight': return 'text-lg font-black bg-sky-400 text-black px-3 py-2';
@@ -506,7 +506,7 @@ export default function VideoPreview({ videoRef }: Props) {
       >
         {/* U4: Show error message if video fails to load */}
         {videoError ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-center p-4">
+          <div className="absolute inset-0 flex items-center justify-center bg-canvas-surface/40 text-center p-4">
             <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-sm text-red-300">
               <p className="font-semibold mb-1">Unable to load video</p>
               <p className="text-xs text-red-200">{videoError}</p>
@@ -601,7 +601,7 @@ export default function VideoPreview({ videoRef }: Props) {
 
         {/* Scale indicator for full frame mode */}
         {isClipSelected && displayClip.overlayMode === 'full' && displayClip.scaleX !== 1 && (
-            <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-[10px] text-sky-300 px-2 py-1 rounded pointer-events-none z-20 font-mono">
+            <div className="absolute top-2 left-2 bg-canvas-surface/70 backdrop-blur-sm text-[10px] text-sky-300 px-2 py-1 rounded pointer-events-none z-20 font-mono">
               {Math.round(displayClip.scaleX * 100)}%
             </div>
         )}
@@ -646,7 +646,7 @@ export default function VideoPreview({ videoRef }: Props) {
                 border: `1px dashed ${guide.color}`,
               }}>
                 <span className="absolute -top-4 left-0 text-[8px] font-bold px-1 py-0.5 rounded"
-                  style={{ color: guide.color, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+                  style={{ color: guide.color, backgroundColor: 'color-mix(in srgb, var(--canvas-surface) 60%, transparent)' }}>
                   {guide.label}
                 </span>
               </div>

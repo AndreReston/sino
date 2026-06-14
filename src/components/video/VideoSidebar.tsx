@@ -532,7 +532,7 @@ export default function VideoSidebar() {
                         <p className="text-[9px] text-theme-dim">{s.startTime.toFixed(1)}s – {s.endTime.toFixed(1)}s</p>
                       </div>
                       <Move className="w-3 h-3 text-theme-dim" />
-                      <button onClick={(e) => { e.stopPropagation(); removeStickerOverlay(s.id); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this photo overlay?')) removeStickerOverlay(s.id); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                     </div>
                   ))}
                 </div>
@@ -556,7 +556,7 @@ export default function VideoSidebar() {
                   }`}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-theme-primary font-medium truncate">{t.text}</span>
-                    <button onClick={(e) => { e.stopPropagation(); removeTextOverlay(t.id); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this text overlay?')) removeTextOverlay(t.id); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                   </div>
                   <span className="text-[10px] text-theme-muted">{t.startTime.toFixed(1)}s – {t.endTime.toFixed(1)}s</span>
                 </div>
@@ -734,7 +734,7 @@ export default function VideoSidebar() {
                       {project.backgroundMusic.duration > 0 && (
                         <span className="text-[9px] text-theme-muted font-mono shrink-0">{formatDuration(project.backgroundMusic.duration)}</span>
                       )}
-                      <button onClick={(e) => { e.stopPropagation(); setBackgroundMusic(null); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); if (window.confirm('Remove background music?')) setBackgroundMusic(null); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                     </div>
                     <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                       <Volume2 className="w-3 h-3 text-theme-muted shrink-0" />
@@ -766,7 +766,7 @@ export default function VideoSidebar() {
                     {track.duration > 0 && (
                       <span className="text-[9px] text-theme-muted font-mono shrink-0">{formatDuration(track.duration)}</span>
                     )}
-                    <button onClick={(e) => { e.stopPropagation(); removeAudioTrack(track.id); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this audio track?')) removeAudioTrack(track.id); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                   </div>
                 ))}
               </div>
@@ -806,7 +806,7 @@ export default function VideoSidebar() {
                   <div className="flex items-center justify-between">
                     <input value={sub.text} onChange={e => updateSubtitle(sub.id, { text: e.target.value })}
                       className="bg-transparent text-xs text-theme-primary flex-1 focus:outline-none" placeholder="Subtitle text" />
-                    <button onClick={() => removeSubtitle(sub.id)} className="text-theme-dim hover:text-red-400 ml-2"><Trash2 className="w-3 h-3" /></button>
+                    <button onClick={() => { if (window.confirm('Delete this subtitle?')) removeSubtitle(sub.id); }} className="text-theme-dim hover:text-red-400 ml-2"><Trash2 className="w-3 h-3" /></button>
                   </div>
                   <div className="flex gap-2">
                     <input type="number" value={sub.startTime} step={0.1} onChange={e => updateSubtitle(sub.id, { startTime: Number(e.target.value) })}
@@ -911,7 +911,7 @@ export default function VideoSidebar() {
                         <p className="text-[9px] text-theme-dim">{s.startTime.toFixed(1)}s – {s.endTime.toFixed(1)}s</p>
                       </div>
                       <Move className="w-3 h-3 text-theme-dim" />
-                      <button onClick={() => removeStickerOverlay(s.id)} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                      <button onClick={() => { if (window.confirm('Delete this sticker?')) removeStickerOverlay(s.id); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                     </div>
                   ))}
                 </div>
@@ -958,7 +958,7 @@ export default function VideoSidebar() {
                       ))}
                     </div>
                     <button onClick={() => jumpToMarker(marker.id)} className="text-theme-dim hover:text-sky-400 transition-colors"><Play className="w-3 h-3" /></button>
-                    <button onClick={() => removeSceneMarker(marker.id)} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                    <button onClick={() => { if (window.confirm('Delete this marker?')) removeSceneMarker(marker.id); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                   </div>
                 ))
               )}
@@ -1097,7 +1097,7 @@ export default function VideoSidebar() {
                           Apply
                         </button>
                       )}
-                      <button onClick={() => removeStylePreset(preset.id)} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                      <button onClick={() => { if (window.confirm('Delete this preset?')) removeStylePreset(preset.id); }} className="text-theme-dim hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                     </div>
                   ))}
                 </div>
@@ -1128,7 +1128,7 @@ export default function VideoSidebar() {
                         </button>
                       </div>
                     ))}
-                    <button onClick={clearVersionHistory} className="w-full text-[10px] text-theme-dim hover:text-red-400 transition-colors py-1 text-center">
+                    <button onClick={() => { if (window.confirm('Clear all version history? This cannot be undone.')) clearVersionHistory(); }} className="w-full text-[10px] text-theme-dim hover:text-red-400 transition-colors py-1 text-center">
                       Clear History
                     </button>
                   </div>

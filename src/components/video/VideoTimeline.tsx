@@ -417,7 +417,7 @@ export default function VideoTimeline() {
               >
                 <div className="w-0 h-0" style={{ borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderTop: `8px solid ${marker.color}` }} />
                 <div className="w-px flex-1" style={{ backgroundColor: marker.color }} />
-                <div className="absolute top-8 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap px-1.5 py-0.5 rounded text-[8px] font-medium text-white"
+                <div className="absolute top-8 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap px-1.5 py-0.5 rounded text-[8px] font-medium text-theme-primary"
                   style={{ backgroundColor: marker.color }}>
                   {marker.label}
                 </div>
@@ -508,7 +508,7 @@ export default function VideoTimeline() {
                           <img src={clip.thumbnails[0]} alt="" className="w-full h-full object-cover opacity-40" draggable={false} />
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-r from-sky-950/60 via-sky-900/35 to-sky-950/60" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-canvas-surface/60 via-sky-500/20 to-canvas-surface/60" />
 
                       {clip.effect !== 'none' && (
                         <div className="absolute top-1 left-1 px-1 py-0.5 rounded bg-accent-violet-muted text-[8px] text-accent-violet font-bold uppercase leading-none">{clip.effect}</div>
@@ -526,7 +526,7 @@ export default function VideoTimeline() {
                           setDragClipId(clip.id);
                         }}
                       >
-                        <span className="text-[10px] font-medium text-white truncate drop-shadow-md" title={clip.name}>{clip.name}</span>
+                        <span className="text-[10px] font-medium text-sky-100 truncate drop-shadow-md" title={clip.name}>{clip.name}</span>
                       </div>
                       <div className="absolute bottom-0.5 right-1 pointer-events-none">
                         <span className="text-[8px] text-theme-muted-secondary font-mono">{effDur.toFixed(1)}s</span>
@@ -567,7 +567,7 @@ export default function VideoTimeline() {
 
                       <button data-trim="del"
                         className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 p-0.5 rounded bg-red-600 hover:bg-red-700 transition-all z-10"
-                        onClick={(e) => { e.stopPropagation(); removeClip(clip.id); }}
+                        onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this clip?')) removeClip(clip.id); }}
                         title="Delete clip">
                         <Trash2 className="w-2.5 h-2.5 text-white" />
                       </button>

@@ -305,6 +305,7 @@ export default function PlaybackControls({ videoRef }: Props) {
           title={!activeClip ? 'Select a clip to adjust volume' : `Volume: ${Math.round((activeClip.volume ?? 1) * 100)}%`}
           disabled={!activeClip}
         />
+        {!activeClip && <span className="text-[8px] text-theme-dim ml-0.5 whitespace-nowrap hidden sm:inline">Select clip</span>}
       </div>
 
       <div className="text-xs font-mono text-theme-muted flex-shrink-0 whitespace-nowrap tabular-nums ml-1">

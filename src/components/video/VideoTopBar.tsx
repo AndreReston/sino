@@ -246,7 +246,7 @@ export default function VideoTopBar({ onBack, onSave, onOpenShortcuts, hasUnsave
       </button>
 
       {showExportModal && (
-        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-canvas-surface/40 p-4">
           <div role="dialog" aria-modal="true" aria-label="Export settings" className="w-full max-w-md rounded-2xl bg-surface border border-panel-border shadow-2xl">
             <div className="flex items-center justify-between px-4 py-3 border-b border-panel-border">
               <h2 className="text-sm font-semibold text-theme-primary">Export settings</h2>

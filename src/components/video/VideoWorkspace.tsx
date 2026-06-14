@@ -456,7 +456,7 @@ export default function VideoWorkspace({ onBack, onSave, hasUnsavedChanges }: Pr
   return (
     <div className="flex h-screen bg-canvas-bg text-theme-primary overflow-hidden select-none">
       {showShortcuts && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-canvas-surface/40 p-4">
           <div role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" className="w-full max-w-lg rounded-2xl bg-surface border border-panel-border shadow-2xl">
             <div className="flex items-center justify-between px-4 py-3 border-b border-panel-border">
               <h2 className="text-sm font-semibold text-theme-primary">Keyboard shortcuts</h2>
