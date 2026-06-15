@@ -121,7 +121,19 @@ export default function VideoTimeline() {
     return marks;
   };
 
-  const getWaveformBars = (seed: string, count: number) => {
+  const getWaveformBars = (seed: string, count: number, waveform?: number[] | undefined) => {
+    // If a precomputed waveform is provided, resample it to `count` bars
+    if (waveform && waveform.length > 0) {
+      if (waveform.length === count) return waveform;
+      const bars: number[] = [];
+      for (let i = 0; i < count; i++) {
+        const idx = Math.floor((i / count) * waveform.length);
+        bars.push(Math.max(0.001, Math.min(1, waveform[idx] ?? 0)));
+      }
+      return bars;
+    }
+
+    // Fallback seeded generator for consistent visuals when no waveform exists
     const bars: number[] = [];
     let hash = 0;
     for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) % 997;
@@ -771,7 +783,7 @@ export default function VideoTimeline() {
                       onClick={(e) => { e.stopPropagation(); setActiveAudioTrackId(bgm.id); }}
                     >
                       <div className="absolute inset-x-1 top-1 bottom-1 flex items-end gap-px opacity-40 pointer-events-none">
-                        {getWaveformBars(bgm.name, Math.max(8, Math.floor(width / 4))).map((bar, i) => (
+                        {getWaveformBars(bgm.name, Math.max(8, Math.floor(width / 4)), (bgm as any).waveform).map((bar, i) => (
                           <div key={i} className="flex-1 bg-emerald-300 rounded-t-sm" style={{ height: `${Math.max(12, bar * 100)}%` }} />
                         ))}
                       </div>
@@ -795,7 +807,7 @@ export default function VideoTimeline() {
                       onClick={(e) => { e.stopPropagation(); setActiveAudioTrackId(track.id); }}
                     >
                       <div className="absolute inset-x-1 top-1 bottom-1 flex items-end gap-px opacity-40 pointer-events-none">
-                        {getWaveformBars(track.name, Math.max(8, Math.floor(width / 4))).map((bar, i) => (
+                        {getWaveformBars(track.name, Math.max(8, Math.floor(width / 4)), (track as any).waveform).map((bar, i) => (
                           <div key={i} className="flex-1 bg-emerald-300 rounded-t-sm" style={{ height: `${Math.max(12, bar * 100)}%` }} />
                         ))}
                       </div>

@@ -214,6 +214,20 @@ export function useCanvas() {
       }
       fabricCanvas.freeDrawingBrush.width = 3;
       fabricCanvas.freeDrawingBrush.color = '#22c55e';
+    } else if (toolMode === 'magicErase') {
+      fabricCanvas.isDrawingMode = true;
+      if (!fabricCanvas.freeDrawingBrush) {
+        fabricCanvas.freeDrawingBrush = new fabric.PencilBrush(fabricCanvas);
+      }
+      fabricCanvas.freeDrawingBrush.width = 40;
+      // Try to set composite operation to destination-out to emulate eraser
+      try {
+        // @ts-expect-error: fabric brush may support globalCompositeOperation
+        fabricCanvas.freeDrawingBrush.globalCompositeOperation = 'destination-out';
+      } catch (e) {
+        // ignore if not supported
+      }
+      fabricCanvas.defaultCursor = 'crosshair';
     } else {
       fabricCanvas.isDrawingMode = false;
       fabricCanvas.selection = false;
@@ -223,9 +237,68 @@ export function useCanvas() {
     const handleMouseDown = (opt: any) => {
       if (toolMode === 'select' || toolMode === 'pen') return;
 
+      // Magic Grab: pick the topmost object under pointer and activate it
+      if (toolMode === 'magicGrab') {
+        const pointer = fabricCanvas.getPointer(opt.e);
+        const objects = fabricCanvas.getObjects().slice().reverse();
+        let picked: fabric.Object | null = null;
+        for (const o of objects) {
+          try {
+            if ((o as any).containsPoint) {
+              if ((o as any).containsPoint(new fabric.Point(pointer.x, pointer.y))) {
+                picked = o;
+                break;
+              }
+            } else {
+              const r = o.getBoundingRect(true);
+              if (pointer.x >= r.left && pointer.x <= r.left + r.width && pointer.y >= r.top && pointer.y <= r.top + r.height) {
+                picked = o;
+                break;
+              }
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+        if (picked) {
+          fabricCanvas.setActiveObject(picked as any);
+          setActiveObject(picked as any);
+          pushHistory(serializeCanvas(fabricCanvas));
+        }
+        // switch back to select after grabbing
+        useStore.getState().setToolMode('select');
+        return;
+      }
+
       const pointer = fabricCanvas.getPointer(opt.e);
       const x = pointer.x;
       const y = pointer.y;
+
+      // Magic Erase: start raster erasing if clicking on an image
+      if (toolMode === 'magicErase') {
+        const objs = fabricCanvas.getObjects().slice().reverse();
+        const target = objs.find(o => {
+          if (!o.visible) return false;
+          const r = o.getBoundingRect(true);
+          return x >= r.left && x <= r.left + r.width && y >= r.top && y <= r.top + r.height;
+        });
+        if (target && (target as any).type === 'image') {
+          const imgObj = target as fabric.Image;
+          const el = imgObj.getElement();
+          if (el instanceof HTMLImageElement) {
+            const off = document.createElement('canvas');
+            off.width = el.naturalWidth || el.width || 1;
+            off.height = el.naturalHeight || el.height || 1;
+            const ctx = off.getContext('2d');
+            if (!ctx) return;
+            ctx.clearRect(0, 0, off.width, off.height);
+            ctx.drawImage(el, 0, 0, off.width, off.height);
+
+            (fabricCanvas as any).__eraseSession = { image: imgObj, canvas: off, ctx };
+          }
+        }
+        return;
+      }
 
       let obj: fabric.Object | null = null;
 
@@ -287,9 +360,61 @@ export function useCanvas() {
       }
     };
 
+      const handleMouseMove = (opt: any) => {
+        if (toolMode !== 'magicErase') return;
+        const session = (fabricCanvas as any).__eraseSession;
+        if (!session) return;
+        const imgObj: fabric.Image = session.image;
+        const { ctx, canvas: off } = session;
+        const pointer = fabricCanvas.getPointer(opt.e);
+        const ix = Math.round(((pointer.x - (imgObj.left || 0)) / ((imgObj.width || 1) * (imgObj.scaleX || 1))) * off.width);
+        const iy = Math.round(((pointer.y - (imgObj.top || 0)) / ((imgObj.height || 1) * (imgObj.scaleY || 1))) * off.height);
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(ix, iy, Math.max(8, 16), 0, Math.PI * 2);
+        ctx.fill();
+        // preview by updating element src
+        try {
+          const url = off.toDataURL();
+          (imgObj.getElement() as HTMLImageElement).src = url;
+          imgObj.setSrc(url, () => { fabricCanvas.requestRenderAll(); });
+        } catch (e) { /* ignore */ }
+      };
+
+      const handleMouseUp = (opt: any) => {
+        if (toolMode !== 'magicErase') return;
+        const session = (fabricCanvas as any).__eraseSession;
+        if (!session) return;
+        const imgObj: fabric.Image = session.image;
+        const off: HTMLCanvasElement = session.canvas;
+        const dataUrl = off.toDataURL();
+        fabric.Image.fromURL(dataUrl, (newImg) => {
+          newImg.set({ left: imgObj.left, top: imgObj.top, scaleX: imgObj.scaleX, scaleY: imgObj.scaleY, width: imgObj.width, height: imgObj.height, angle: imgObj.angle });
+          fabricCanvas.remove(imgObj);
+          fabricCanvas.add(newImg);
+          fabricCanvas.setActiveObject(newImg);
+          fabricCanvas.renderAll();
+          pushHistory(serializeCanvas(fabricCanvas));
+        });
+        delete (fabricCanvas as any).__eraseSession;
+      };
+
+    const onToolMouseUp = (opt: any) => {
+      if (toolMode === 'magicErase') {
+        // push history after erasing strokes
+        pushHistory(serializeCanvas(fabricCanvas));
+      }
+    };
+
     fabricCanvas.on('mouse:down', handleMouseDown);
+    fabricCanvas.on('mouse:move', handleMouseMove);
+    fabricCanvas.on('mouse:up', handleMouseUp);
+    fabricCanvas.on('mouse:up', onToolMouseUp);
     return () => {
       fabricCanvas.off('mouse:down', handleMouseDown);
+      fabricCanvas.off('mouse:move', handleMouseMove);
+      fabricCanvas.off('mouse:up', handleMouseUp);
+      fabricCanvas.off('mouse:up', onToolMouseUp);
     };
   }, [toolMode, fabricCanvas]);
 

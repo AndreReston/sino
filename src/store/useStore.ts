@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { fabric } from 'fabric';
+import { removeBackgroundFromImageSource } from '../lib/backgroundRemoval';
+import { useToastStore } from './toastStore';
 
 export type ToolMode = 'select' | 'text' | 'rectangle' | 'circle' | 'triangle' | 'line' | 'pen' | 'image' | 'magicGrab' | 'magicErase' | 'bgRemover' | 'adjustments';
 export type SidebarTab = 'shapes' | 'text' | 'uploads' | 'templates' | 'layers' | 'magicTools' | 'adjustments';
@@ -471,9 +473,20 @@ export const useStore = create<Store>((set, get) => ({
     });
   },
   pushHistory: (json) => {
-    const { history, historyIndex } = get();
+    const { history, historyIndex, fabricCanvas, activeObjectId } = get();
+    // If caller provided a canvas JSON string, wrap it with activeObjectId so
+    // we can restore selection when undo/redo happens.
+    let entry: string;
+    if (json) {
+      entry = JSON.stringify({ canvasJson: json, activeObjectId });
+    } else if (fabricCanvas) {
+      entry = JSON.stringify({ canvasJson: JSON.stringify(fabricCanvas.toJSON(CUSTOM_PROPS)), activeObjectId });
+    } else {
+      return;
+    }
+
     const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(json);
+    newHistory.push(entry);
     // S7: Cap history at 50 entries to prevent unbounded memory growth
     const cappedHistory = newHistory.length > 50 ? newHistory.slice(-50) : newHistory;
     const newIndex = cappedHistory.length - 1;
@@ -483,12 +496,38 @@ export const useStore = create<Store>((set, get) => ({
     const { history, historyIndex, fabricCanvas } = get();
     if (historyIndex <= 0) return;
     const newIndex = historyIndex - 1;
-    const json = history[newIndex];
-    if (fabricCanvas && json) {
-      fabricCanvas.loadFromJSON(JSON.parse(json), () => {
-        fabricCanvas.renderAll();
-        void _restoreImageFills(fabricCanvas);
-      });
+    const entry = history[newIndex];
+    if (fabricCanvas && entry) {
+      try {
+        const parsed = JSON.parse(entry);
+        const canvasJsonStr = parsed?.canvasJson ?? entry;
+        const canvasObj = typeof canvasJsonStr === 'string' ? JSON.parse(canvasJsonStr) : canvasJsonStr;
+        fabricCanvas.loadFromJSON(canvasObj, () => {
+          fabricCanvas.renderAll();
+          void _restoreImageFills(fabricCanvas);
+          // restore selection if we have an activeObjectId stored
+          if (parsed?.activeObjectId) {
+            const found = fabricCanvas.getObjects().find((o: any) => o.id === parsed.activeObjectId);
+            if (found) {
+              fabricCanvas.setActiveObject(found as any);
+              set({ activeObject: found as any, activeObjectId: parsed.activeObjectId });
+            } else {
+              set({ activeObject: null, activeObjectId: null });
+            }
+          } else {
+            set({ activeObject: null, activeObjectId: null });
+          }
+        });
+      } catch (err) {
+        // fallback: try to load raw JSON
+        try {
+          fabricCanvas.loadFromJSON(JSON.parse(entry), () => {
+            fabricCanvas.renderAll();
+            void _restoreImageFills(fabricCanvas);
+            set({ activeObject: null, activeObjectId: null });
+          });
+        } catch (e) { /* ignore */ }
+      }
     }
     set({ historyIndex: newIndex });
   },
@@ -496,12 +535,36 @@ export const useStore = create<Store>((set, get) => ({
     const { history, historyIndex, fabricCanvas } = get();
     if (historyIndex >= history.length - 1) return;
     const newIndex = historyIndex + 1;
-    const json = history[newIndex];
-    if (fabricCanvas && json) {
-      fabricCanvas.loadFromJSON(JSON.parse(json), () => {
-        fabricCanvas.renderAll();
-        void _restoreImageFills(fabricCanvas);
-      });
+    const entry = history[newIndex];
+    if (fabricCanvas && entry) {
+      try {
+        const parsed = JSON.parse(entry);
+        const canvasJsonStr = parsed?.canvasJson ?? entry;
+        const canvasObj = typeof canvasJsonStr === 'string' ? JSON.parse(canvasJsonStr) : canvasJsonStr;
+        fabricCanvas.loadFromJSON(canvasObj, () => {
+          fabricCanvas.renderAll();
+          void _restoreImageFills(fabricCanvas);
+          if (parsed?.activeObjectId) {
+            const found = fabricCanvas.getObjects().find((o: any) => o.id === parsed.activeObjectId);
+            if (found) {
+              fabricCanvas.setActiveObject(found as any);
+              set({ activeObject: found as any, activeObjectId: parsed.activeObjectId });
+            } else {
+              set({ activeObject: null, activeObjectId: null });
+            }
+          } else {
+            set({ activeObject: null, activeObjectId: null });
+          }
+        });
+      } catch (err) {
+        try {
+          fabricCanvas.loadFromJSON(JSON.parse(entry), () => {
+            fabricCanvas.renderAll();
+            void _restoreImageFills(fabricCanvas);
+            set({ activeObject: null, activeObjectId: null });
+          });
+        } catch (e) { /* ignore */ }
+      }
     }
     set({ historyIndex: newIndex });
   },
@@ -865,6 +928,34 @@ export const useStore = create<Store>((set, get) => ({
       filters.push(new ImageFilters.HueRotation({ rotation: (adjustments.hue * Math.PI) / 180 }));
     }
 
+    // Clarity: sharpen (positive) or blur (negative)
+    if (adjustments.clarity !== 0) {
+      if (adjustments.clarity > 0) {
+        // simple sharpen kernel
+        try {
+          filters.push(new ImageFilters.Convolute({ matrix: [0, -1, 0, -1, 5, -1, 0, -1, 0] }));
+        } catch (e) {
+          // fallback to slight contrast boost
+          filters.push(new ImageFilters.Contrast({ contrast: 1 + Math.min(0.25, adjustments.clarity / 400) }));
+        }
+      } else {
+        // blur for negative clarity
+        try {
+          filters.push(new ImageFilters.Blur({ blur: Math.min(1, Math.abs(adjustments.clarity) / 120) }));
+        } catch (e) {
+          filters.push(new ImageFilters.Contrast({ contrast: 1 - Math.min(0.2, Math.abs(adjustments.clarity) / 400) }));
+        }
+      }
+    }
+
+    // Highlights & Shadows: approximate with subtle brightness adjustments
+    if (adjustments.highlights !== 0) {
+      filters.push(new ImageFilters.Brightness({ brightness: (adjustments.highlights / 100) * 0.35 }));
+    }
+    if (adjustments.shadows !== 0) {
+      filters.push(new ImageFilters.Brightness({ brightness: (adjustments.shadows / 100) * 0.25 }));
+    }
+
     obj.filters = filters;
     obj.applyFilters();
 
@@ -881,43 +972,53 @@ export const useStore = create<Store>((set, get) => ({
 
   removeBackground: async () => {
     const { activeObject, fabricCanvas } = get();
-    if (!(activeObject instanceof fabric.Image) || !fabricCanvas) return;
+    if (!(activeObject instanceof fabric.Image) || !fabricCanvas) {
+      useToastStore.getState().addToast('Select an image first to remove its background.', 'warning');
+      return;
+    }
 
-    // For now, create a simple alpha channel removal
-    // In production, this would use an ML model like rembg or similar API
     const img = activeObject as fabric.Image;
-    const imgElement = img.getElement();
-    if (!(imgElement instanceof HTMLImageElement)) return;
+    const imageSource = typeof img.getSrc === 'function' ? img.getSrc() : null;
+    if (!imageSource) {
+      useToastStore.getState().addToast('Unable to read the selected image source.', 'error');
+      return;
+    }
 
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    useToastStore.getState().addToast('Removing background...', 'info');
 
-    // Use image's natural dimensions for accuracy
-    canvas.width = imgElement.naturalWidth;
-    canvas.height = imgElement.naturalHeight;
-    ctx.fillStyle = 'rgba(0,0,0,0)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    try {
+      const newImageUrl = await removeBackgroundFromImageSource(imageSource);
+      fabric.Image.fromURL(newImageUrl, (newImg) => {
+        newImg.set({
+          left: img.left,
+          top: img.top,
+          scaleX: img.scaleX,
+          scaleY: img.scaleY,
+          width: img.width,
+          height: img.height,
+          angle: img.angle,
+          flipX: img.flipX,
+          flipY: img.flipY,
+          opacity: img.opacity,
+          originX: img.originX,
+          originY: img.originY,
+          id: (img as any).id,
+          name: img.name,
+        });
 
-    // Draw the image with transparency at full natural size
-    ctx.drawImage(imgElement, 0, 0);
-    const newImageUrl = canvas.toDataURL();
-    fabric.Image.fromURL(newImageUrl, (newImg) => {
-      newImg.set({
-        left: img.left,
-        top: img.top,
-        scaleX: img.scaleX,
-        scaleY: img.scaleY,
-        width: img.width,
-        height: img.height,
-      });
         fabricCanvas.remove(img);
         fabricCanvas.add(newImg);
         fabricCanvas.setActiveObject(newImg);
         fabricCanvas.renderAll();
         get().updateLayersFromCanvas();
         get().pushHistory(JSON.stringify(fabricCanvas.toJSON(CUSTOM_PROPS)));
-      });
+        useToastStore.getState().addToast('Background removed successfully.', 'success');
+      }, { crossOrigin: 'anonymous' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Background removal failed.';
+      useToastStore.getState().addToast(message, 'error');
+      console.error('removeBackground failed:', error);
+    }
   },
 
   // ── Text + Image Combination ─────────────────────────────────────────────

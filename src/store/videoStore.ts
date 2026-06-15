@@ -130,6 +130,7 @@ export interface AudioTrack {
   muted: boolean;
   startTime: number;
   duration: number;  // actual audio file duration in seconds
+  waveform?: number[]; // optional precomputed waveform bars (normalized 0-1)
 }
 
 export interface SceneMarker {
@@ -342,6 +343,7 @@ type VStore = VideoStoreState & VideoStoreActions;
 const STORAGE_KEY = 'designforge_video_project';
 const PRESETS_KEY = 'designforge_video_presets';
 const VERSIONS_KEY = 'designforge_video_versions';
+const EXPORT_QUEUE_KEY = 'designforge_export_queue';
 
 function uid(): string {
   // S11: Use crypto.randomUUID for collision-resistant IDs
@@ -370,51 +372,138 @@ function saveVersionsToStorage(versions: ProjectVersion[]) {
   try { localStorage.setItem(VERSIONS_KEY, JSON.stringify(versions.slice(0, 20))); } catch { /* quota */ }
 }
 
-// Beat detection simulation — real implementation would use Web Audio API
+// Improved beat detection using decoded audio buffer, short-time energy, and peak picking.
+// Returns an array of BeatMarker objects. Falls back to deterministic dummy beats when
+// audio decoding is unavailable or fails.
 async function detectBeats(audioUrl: string): Promise<BeatMarker[]> {
-  return new Promise((resolve) => {
+  try {
+    const resp = await fetch(audioUrl);
+    const ab = await resp.arrayBuffer();
     const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) {
-      // Fallback: generate dummy beats every ~0.5s
-      resolve(Array.from({ length: 40 }, (_, i) => ({ time: i * 0.5, intensity: Math.random() * 0.5 + 0.5 })));
-      return;
-    }
+    if (!AudioContext) throw new Error('AudioContext not available');
 
     const ctx = new AudioContext();
-    const request = new XMLHttpRequest();
-    request.open('GET', audioUrl, true);
-    request.responseType = 'arraybuffer';
-    request.onload = () => {
-      ctx.decodeAudioData(request.response, (buffer) => {
-        const data = buffer.getChannelData(0);
-        const sampleRate = buffer.sampleRate;
-        const windowSize = Math.floor(sampleRate * 0.05); // 50ms windows
-        const beats: BeatMarker[] = [];
-        let prevEnergy = 0;
+    const buffer = await ctx.decodeAudioData(ab);
+    // Use first channel (mix to mono if more channels present)
+    let data: Float32Array;
+    if (buffer.numberOfChannels === 1) {
+      data = buffer.getChannelData(0);
+    } else {
+      const ch0 = buffer.getChannelData(0);
+      const ch1 = buffer.getChannelData(1);
+      data = new Float32Array(Math.min(ch0.length, ch1.length));
+      for (let i = 0; i < data.length; i++) data[i] = (ch0[i] + ch1[i]) * 0.5;
+    }
 
-        for (let i = 0; i < data.length - windowSize; i += windowSize) {
-          let energy = 0;
-          for (let j = i; j < i + windowSize; j++) {
-            energy += data[j] * data[j];
-          }
-          energy /= windowSize;
-          if (energy > prevEnergy * 1.5 && energy > 0.01) {
-            beats.push({ time: i / sampleRate, intensity: Math.min(1, energy * 10) });
-          }
-          prevEnergy = energy;
-        }
+    const sampleRate = buffer.sampleRate;
+    // Short-time energy window ~32ms
+    const win = Math.max(256, Math.floor(sampleRate * 0.032));
+    const hop = Math.floor(win * 0.5);
+    const energies: number[] = [];
+    for (let i = 0; i + win < data.length; i += hop) {
+      let s = 0;
+      for (let j = i; j < i + win; j++) s += data[j] * data[j];
+      energies.push(s / win);
+    }
 
-        ctx.close();
-        resolve(beats);
-      }, () => {
-        resolve(Array.from({ length: 30 }, (_, i) => ({ time: i * 0.5, intensity: 0.7 })));
-      });
+    // Smooth energies with moving average
+    const smooth: number[] = [];
+    const ma = 4;
+    for (let i = 0; i < energies.length; i++) {
+      let sum = 0;
+      let count = 0;
+      for (let k = -ma; k <= ma; k++) {
+        const idx = i + k;
+        if (idx >= 0 && idx < energies.length) { sum += energies[idx]; count++; }
+      }
+      smooth.push(sum / Math.max(1, count));
+    }
+
+    // dynamic threshold: mean + 0.8 * std
+    const mean = smooth.reduce((a, b) => a + b, 0) / smooth.length || 0;
+    const variance = smooth.reduce((a, b) => a + (b - mean) * (b - mean), 0) / Math.max(1, smooth.length - 1);
+    const std = Math.sqrt(variance);
+    const threshold = mean + Math.max(std * 0.6, mean * 0.4);
+
+    // Peak picking: local maxima above threshold
+    const beats: BeatMarker[] = [];
+    for (let i = 1; i < smooth.length - 1; i++) {
+      if (smooth[i] > threshold && smooth[i] > smooth[i - 1] && smooth[i] >= smooth[i + 1]) {
+        const time = (i * hop) / sampleRate;
+        const intensity = Math.min(1, (smooth[i] - mean) / Math.max(1e-6, std * 3));
+        beats.push({ time, intensity });
+      }
+    }
+
+    // If no beats detected, fallback to light grid markers
+    if (beats.length === 0) {
+      const approx = Math.max(1, Math.floor(buffer.duration / 0.5));
+      for (let i = 0; i < approx; i++) beats.push({ time: i * 0.5, intensity: 0.6 });
+    }
+
+    ctx.close();
+    return beats;
+  } catch (err) {
+    // deterministic fallback: pseudo-random but stable sequence based on URL hash
+    const seed = Array.from(audioUrl).reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 2166136261);
+    const rng = (n: number) => {
+      // xorshift-ish
+      let x = (seed + n) >>> 0;
+      x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
+      return (x >>> 0) / 4294967295;
     };
-    request.onerror = () => {
-      resolve(Array.from({ length: 30 }, (_, i) => ({ time: i * 0.5, intensity: 0.7 })));
+    const beats = Array.from({ length: 40 }, (_, i) => ({ time: i * 0.5, intensity: 0.5 + rng(i) * 0.5 }));
+    return beats;
+  }
+}
+
+// Extract a compact waveform summary (array of `barCount` normalized values 0..1)
+async function extractWaveform(audioUrl: string, barCount = 200): Promise<number[]> {
+  try {
+    const resp = await fetch(audioUrl);
+    const ab = await resp.arrayBuffer();
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) throw new Error('AudioContext not available');
+
+    const ctx = new AudioContext();
+    const buffer = await ctx.decodeAudioData(ab);
+    const ch = buffer.numberOfChannels >= 2 ? 2 : 1;
+    // mix down to mono
+    const len = buffer.length;
+    const mono = new Float32Array(len);
+    for (let i = 0; i < len; i++) {
+      let sum = 0;
+      for (let c = 0; c < ch; c++) sum += buffer.getChannelData(c)[i] || 0;
+      mono[i] = sum / ch;
+    }
+
+    const blockSize = Math.floor(len / barCount) || 1;
+    const bars: number[] = [];
+    for (let b = 0; b < barCount; b++) {
+      let max = 0;
+      const start = b * blockSize;
+      const end = Math.min(len, start + blockSize);
+      for (let i = start; i < end; i++) {
+        const v = Math.abs(mono[i]);
+        if (v > max) max = v;
+      }
+      bars.push(max);
+    }
+    // normalize
+    const maxVal = Math.max(...bars, 1e-6);
+    const normalized = bars.map((v) => Math.min(1, v / maxVal));
+    ctx.close();
+    return normalized;
+  } catch (err) {
+    // fallback deterministic pseudo-waveform
+    const seed = Array.from(audioUrl).reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 2166136261);
+    const rng = (n: number) => {
+      let x = (seed + n) >>> 0;
+      x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
+      return (x >>> 0) / 4294967295;
     };
-    request.send();
-  });
+    return Array.from({ length: barCount }, (_, i) => 0.15 + rng(i) * 0.85);
+  }
 }
 
 // Motion preset keyframe builders
@@ -485,7 +574,12 @@ export const useVideoStore = create<VStore>((set, get) => ({
   isExporting: false,
   exportProgress: 0,
   stylePresets: loadPresetsFromStorage(),
-  exportQueue: [],
+  exportQueue: (() => {
+    try {
+      const raw = localStorage.getItem(EXPORT_QUEUE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  })(),
   projectVersions: loadVersionsFromStorage(),
   showSafeZones: false,
   showBeatMarkers: false,
@@ -667,43 +761,47 @@ export const useVideoStore = create<VStore>((set, get) => ({
   },
 
   // ─── Clips ──────────────────────────────────────────────────────
-
-  addClip: (clipData) => {
+  // load exportQueue from localStorage if present
+  addToExportQueue: (format) => {
     const { project } = get();
     if (!project) return;
-    const clip: VideoClip = {
-      id: `clip_${uid()}`,
-      name: clipData.name,
-      url: clipData.url,
-      duration: clipData.duration,
-      trimStart: clipData.trimStart ?? 0,
-      trimEnd: clipData.trimEnd ?? 0,
-      speed: 1,
-      volume: clipData.volume ?? 1,
-      muted: false,
-      filters: { ...DEFAULT_FILTERS },
-      transitionIn: 'none',
-      transitionOut: 'none',
-      transitionDuration: 0.5,
-      effectDuration: 0,  // 0 = full clip duration
-      thumbnails: [],
-      order: project.clips.length,
-      effect: 'none',
-      effectStack: [],
-      keyframes: [],
-      scaleX: 1,
-      scaleY: 1,
-      clipX: 50,
-      clipY: 50,
-      overlayMode: 'full',
-      opacity: 1,
-      offsetX: 0,
-      offsetY: 0,
+    const item: ExportQueueItem = {
+      id: `export_${uid()}`,
+      projectTitle: project.title,
+      format,
+      status: 'queued',
+      progress: 0,
+      createdAt: new Date().toISOString(),
     };
-    const clips = [...project.clips, clip];
-    set({ project: { ...project, clips }, activeClipId: clip.id, selectedClipIds: [clip.id] });
-    get().pushHistory();
-    get().generateThumbnails(clip.id);
+    set(state => {
+      const next = [...state.exportQueue, item];
+      try { localStorage.setItem(EXPORT_QUEUE_KEY, JSON.stringify(next)); } catch {}
+      return { exportQueue: next };
+    });
+
+    // Start simulated processing for UI responsiveness
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 8 + 2;
+      set(state => ({
+        exportQueue: state.exportQueue.map(q => q.id === item.id ? { ...q, status: 'exporting', progress: Math.min(99, Math.round(progress)) } : q),
+      }));
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(interval);
+        set(state => {
+          const next = state.exportQueue.map(q => q.id === item.id ? { ...q, status: 'completed', progress: 100, completedAt: new Date().toISOString() } : q);
+          try { localStorage.setItem(EXPORT_QUEUE_KEY, JSON.stringify(next)); } catch {}
+          return { exportQueue: next };
+        });
+      }
+    }, 300);
+  },
+
+  clearExportQueue: () => {
+    try { localStorage.removeItem(EXPORT_QUEUE_KEY); } catch {}
+    set({ exportQueue: [] });
+  },
     setTimeout(() => get().analyzeClipHealth(clip.id), 500);
   },
 
@@ -1287,10 +1385,18 @@ export const useVideoStore = create<VStore>((set, get) => ({
   analyzeBeatMarkers: async (audioUrl) => {
     set({ isAnalyzingBeats: true });
     try {
-      const beats = await detectBeats(audioUrl);
+      const [beats, waveform] = await Promise.all([detectBeats(audioUrl), extractWaveform(audioUrl, 160)]);
       const { project } = get();
       if (project) {
-        set({ project: { ...project, beatMarkers: beats }, showBeatMarkers: true });
+        // attach waveform to matching audio track or backgroundMusic when possible
+        let updatedProject = { ...project, beatMarkers: beats } as VideoProject;
+        if (project.backgroundMusic && project.backgroundMusic.url === audioUrl) {
+          updatedProject = { ...updatedProject, backgroundMusic: { ...project.backgroundMusic, waveform } };
+        } else {
+          const updatedTracks = (project.audioTracks || []).map(t => t.url === audioUrl ? { ...t, waveform } : t);
+          updatedProject = { ...updatedProject, audioTracks: updatedTracks };
+        }
+        set({ project: updatedProject, showBeatMarkers: true });
       }
     } finally {
       set({ isAnalyzingBeats: false });
@@ -1491,17 +1597,18 @@ export const useVideoStore = create<VStore>((set, get) => ({
 
   // ─── Export ───────────────────────────────────────────────────────
 
-  startExport: async (options = {}) => {
+  startExport: async (options: { fps?: number; width?: number; height?: number; quality?: number; format?: 'webm' | 'mp4' } = {}) => {
     const { project } = get();
     if (!project) return;
-    
+
+    const format = options.format || 'webm';
     set({ isExporting: true, exportProgress: 0 });
-    
+
     try {
-      const { exportVideo, downloadBlob } = await import('../lib/videoExport');
-      
-      const blob = await exportVideo(project, {
-        fps: 30,
+      const { exportVideo, downloadBlob, transcodeWebMToMP4 } = await import('../lib/videoExport');
+
+      const webmBlob = await exportVideo(project, {
+        fps: options.fps || 30,
         width: options.width,
         height: options.height,
         quality: options.quality,
@@ -1509,13 +1616,28 @@ export const useVideoStore = create<VStore>((set, get) => ({
           set({ exportProgress: Math.round(progress) });
         },
       });
-      
-      // Download the file
-      const filename = `${project.title || 'video'}_${new Date().getTime()}.webm`;
-      downloadBlob(blob, filename);
-      
+
+      if (format === 'webm') {
+        const filename = `${project.title || 'video'}_${Date.now()}.webm`;
+        downloadBlob(webmBlob, filename);
+        get().addToExportQueue('WebM');
+      } else if (format === 'mp4') {
+        // Try in-browser transcoding via ffmpeg.wasm
+        try {
+          set({ exportProgress: 10 });
+          const mp4 = await transcodeWebMToMP4(webmBlob, (p) => set({ exportProgress: Math.round(10 + p * 0.8) }));
+          const filename = `${project.title || 'video'}_${Date.now()}.mp4`;
+          downloadBlob(mp4, filename);
+          get().addToExportQueue('MP4');
+        } catch (e) {
+          console.warn('MP4 transcoding failed, falling back to WebM download', e);
+          const filename = `${project.title || 'video'}_${Date.now()}.webm`;
+          downloadBlob(webmBlob, filename);
+          get().addToExportQueue('WebM');
+        }
+      }
+
       set({ isExporting: false, exportProgress: 0 });
-      get().addToExportQueue('WebM');
     } catch (error) {
       console.error('Export failed:', error);
       set({ isExporting: false, exportProgress: 0 });

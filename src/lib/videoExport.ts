@@ -704,3 +704,31 @@ export function downloadBlob(blob: Blob, filename: string) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Transcode a WebM blob to MP4 using ffmpeg.wasm if available.
+ * Returns an MP4 Blob or throws if transcoding isn't possible.
+ */
+export async function transcodeWebMToMP4(webmBlob: Blob, onProgress?: (p: number) => void): Promise<Blob> {
+  try {
+    const { createFFmpeg, fetchFile } = await import('@ffmpeg/ffmpeg');
+    const ffmpeg = createFFmpeg({ log: false });
+    if (!ffmpeg.isLoaded()) await ffmpeg.load();
+
+    const data = new Uint8Array(await webmBlob.arrayBuffer());
+    ffmpeg.FS('writeFile', 'input.webm', data);
+
+    // Basic conversion - tune params if needed
+    await ffmpeg.run('-i', 'input.webm', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-c:a', 'aac', '-b:a', '128k', 'output.mp4');
+
+    const out = ffmpeg.FS('readFile', 'output.mp4');
+    const mp4 = new Blob([out.buffer], { type: 'video/mp4' });
+
+    // cleanup
+    try { ffmpeg.FS('unlink', 'input.webm'); } catch {};
+    try { ffmpeg.FS('unlink', 'output.mp4'); } catch {};
+    return mp4;
+  } catch (err) {
+    throw new Error('Transcoding to MP4 failed or ffmpeg.wasm not available');
+  }
+}
