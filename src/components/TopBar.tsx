@@ -255,7 +255,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
       {/* Undo / Redo */}
       <div className="flex items-center gap-0.5">
         <button
-          onClick={undo}
+          onClick={() => { undo(); addToast('Undone', 'info'); }}
           disabled={historyIndex <= 0}
           title={`Undo (${typeof window !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? 'Cmd' : 'Ctrl'}+Z)`}
           className="tool-btn w-8 h-8 disabled:opacity-30 disabled:cursor-not-allowed"
@@ -263,7 +263,7 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
           <Undo2 className="w-4 h-4" />
         </button>
         <button
-          onClick={redo}
+          onClick={() => { redo(); addToast('Redone', 'info'); }}
           disabled={historyIndex >= history.length - 1}
           title={`Redo (${typeof window !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? 'Cmd' : 'Ctrl'}+Y)`}
           className="tool-btn w-8 h-8 disabled:opacity-30 disabled:cursor-not-allowed"

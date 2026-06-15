@@ -181,6 +181,20 @@ export default function LeftSidebar() {
 
   const addImage = (url: string) => {
     if (!fabricCanvas) return;
+    // Basic URL validation to prevent XSS
+    try {
+      const parsed = new URL(url, window.location.origin);
+      const isHttp = parsed.protocol === 'http:' || parsed.protocol === 'https:';
+      const isData = parsed.protocol === 'data:';
+      const isBlob = parsed.protocol === 'blob:';
+      if (!isHttp && !isData && !isBlob) {
+        console.warn('Blocked non-HTTP URL in addImage:', parsed.protocol);
+        return;
+      }
+    } catch {
+      console.warn('Invalid URL passed to addImage:', url);
+      return;
+    }
     fabric.Image.fromURL(url, (img) => {
       const maxW = fabricCanvas.getWidth() * 0.5;
       img.scale(Math.min(maxW / (img.width || 1), 1));

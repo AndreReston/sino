@@ -1,4 +1,4 @@
-import { VideoProject, VideoClip, AudioTrack } from '../store/videoStore';
+import { VideoProject, VideoClip, AudioTrack, StickerOverlay } from '../store/videoStore';
 
 export interface ExportOptions {
   fps?: number;
@@ -183,44 +183,217 @@ async function renderFrame(
     }
   }
 
-  // Render subtitle entries
+  // Render subtitle entries with style support
   for (const subtitle of (project.subtitles ?? [])) {
     if (timestamp >= subtitle.startTime && timestamp <= subtitle.endTime) {
       ctx.save();
 
       const fontSize = Math.round(height * 0.045);
       const fontFamily = 'Arial, sans-serif';
-      ctx.font = `bold ${fontSize}px ${fontFamily}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
+      const style = subtitle.style ?? 'minimal';
+      const progress = (timestamp - subtitle.startTime) / (subtitle.endTime - subtitle.startTime);
 
+      // Calculate position
       const posY = subtitle.position === 'top' ? height * 0.1
         : subtitle.position === 'middle' ? height * 0.5
         : height * 0.9;
       const posX = width / 2;
-
       const lines = String(subtitle.text).split('\n');
       const lineH = fontSize * 1.25;
-      const maxW = Math.max(...lines.map((l) => ctx.measureText(l).width));
-      const pad = 14;
-      const bgW = maxW + pad * 2;
-      const bgH = lines.length * lineH + pad;
-      const bgX = posX - bgW / 2;
-      const bgY = posY - bgH;
 
-      // Background pill
-      ctx.globalAlpha = 0.75;
-      ctx.fillStyle = '#000000';
-      ctx.beginPath();
-      ctx.roundRect?.(bgX, bgY, bgW, bgH, 8) ?? ctx.fillRect(bgX, bgY, bgW, bgH);
-      ctx.fill();
+      // Style-specific rendering
+      if (style === 'karaoke') {
+        // Karaoke: highlight words progressively
+        ctx.font = `bold ${fontSize}px ${fontFamily}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        const totalChars = subtitle.text.length;
+        const highlightedChars = Math.floor(totalChars * progress);
+        const maxW = ctx.measureText(subtitle.text).width + 20;
+        const bgH = lineH + 12;
+        const bgX = posX - maxW / 2;
+        const bgY = posY - bgH;
 
-      // Text
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = '#ffffff';
-      lines.forEach((line, i) => {
-        ctx.fillText(line, posX, posY - (lines.length - 1 - i) * lineH - pad / 2);
-      });
+        // Background
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.roundRect?.(bgX, bgY, maxW, bgH, 6) ?? ctx.fillRect(bgX, bgY, maxW, bgH);
+        ctx.fill();
+
+        // Unhighlighted portion
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#666666';
+        ctx.fillText(subtitle.text, posX, posY - 6);
+
+        // Highlighted portion (clip to reveal karaoke effect)
+        if (highlightedChars > 0) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(bgX, bgY, (maxW * highlightedChars) / totalChars, bgH);
+          ctx.clip();
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(subtitle.text, posX, posY - 6);
+          ctx.restore();
+        }
+      } else if (style === 'tiktok' || style === 'pop-up') {
+        // TikTok/Pop-up style: word-by-word pop in
+        const words = subtitle.text.split(' ');
+        const wordProgress = Math.floor(progress * words.length);
+        const displayText = words.slice(0, wordProgress + 1).join(' ');
+
+        ctx.font = `bold ${fontSize}px ${fontFamily}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+
+        const maxW = ctx.measureText(displayText).width + 24;
+        const bgH = lineH + 16;
+        const bgX = posX - maxW / 2;
+        const bgY = posY - bgH;
+
+        // Animated scale on new word
+        const wordFadeProgress = (progress * words.length) % 1;
+        const scale = 1 + (wordFadeProgress < 0.1 ? (0.1 - wordFadeProgress) * 2 : 0);
+
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.roundRect?.(bgX, bgY, maxW, bgH, 8) ?? ctx.fillRect(bgX, bgY, maxW, bgH);
+        ctx.fill();
+
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${Math.round(fontSize * scale)}px ${fontFamily}`;
+        ctx.fillText(displayText, posX, posY - 8);
+      } else if (style === 'bold-highlight') {
+        // Bold highlight: current word is bold, rest is normal
+        const words = subtitle.text.split(' ');
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+
+        let totalW = 0;
+        const wordWidths: number[] = [];
+        for (const w of words) {
+          ctx.font = `bold ${fontSize}px ${fontFamily}`;
+          const wW = ctx.measureText(w + ' ').width;
+          wordWidths.push(wW);
+          totalW += wW;
+        }
+
+        const bgW = totalW + 24;
+        const bgH = lineH + 12;
+        const bgX = posX - bgW / 2;
+        const bgY = posY - bgH;
+
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.roundRect?.(bgX, bgY, bgW, bgH, 6) ?? ctx.fillRect(bgX, bgY, bgW, bgH);
+        ctx.fill();
+
+        const highlightWord = Math.min(Math.floor(progress * words.length), words.length - 1);
+        let cursorX = posX - totalW / 2;
+        ctx.globalAlpha = 1;
+
+        for (let i = 0; i < words.length; i++) {
+          ctx.font = i === highlightWord ? `bold ${fontSize}px ${fontFamily}` : `normal ${fontSize}px ${fontFamily}`;
+          ctx.fillStyle = i === highlightWord ? '#fbbf24' : '#ffffff';
+          ctx.fillText(words[i], cursorX, posY - 6);
+          cursorX += wordWidths[i];
+        }
+      } else {
+        // Minimal (default): simple centered text
+        ctx.font = `bold ${fontSize}px ${fontFamily}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+
+        const maxW = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 28;
+        const bgH = lines.length * lineH + 14;
+        const bgX = posX - maxW / 2;
+        const bgY = posY - bgH;
+
+        ctx.globalAlpha = 0.75;
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.roundRect?.(bgX, bgY, maxW, bgH, 8) ?? ctx.fillRect(bgX, bgY, maxW, bgH);
+        ctx.fill();
+
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#ffffff';
+        lines.forEach((line, i) => {
+          ctx.fillText(line, posX, posY - (lines.length - 1 - i) * lineH - 7);
+        });
+      }
+
+      ctx.restore();
+    }
+  }
+
+  // Render sticker overlays
+  for (const sticker of (project.stickerOverlays ?? [])) {
+    if (timestamp >= sticker.startTime && timestamp <= sticker.endTime) {
+      ctx.save();
+
+      const x = (sticker.x / 100) * width;
+      const y = (sticker.y / 100) * height;
+      const scale = sticker.scale ?? 1;
+      const rotation = (sticker.rotation ?? 0) * Math.PI / 180;
+      const opacity = sticker.opacity ?? 1;
+
+      ctx.globalAlpha = opacity;
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+
+      if (sticker.type === 'emoji') {
+        // Render emoji as text
+        const emojiSize = Math.round(height * 0.08 * scale);
+        ctx.font = `${emojiSize}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sticker.content, 0, 0);
+      } else if (sticker.type === 'photo' && sticker.content) {
+        // Photo sticker would need async image loading - render placeholder
+        const size = Math.round(height * 0.15 * scale);
+        ctx.fillStyle = sticker.color ?? '#333333';
+        ctx.fillRect(-size / 2, -size / 2, size, size);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-size / 2, -size / 2, size, size);
+      } else if (sticker.type === 'shape') {
+        // Render basic shape
+        const size = Math.round(height * 0.06 * scale);
+        ctx.fillStyle = sticker.color ?? '#ffffff';
+        if (sticker.content === 'circle') {
+          ctx.beginPath();
+          ctx.arc(0, 0, size, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (sticker.content === 'heart') {
+          ctx.beginPath();
+          const s = size * 0.6;
+          ctx.moveTo(0, s);
+          ctx.bezierCurveTo(-s * 2, -s, -s * 0.5, -s * 2, 0, -s * 0.5);
+          ctx.bezierCurveTo(s * 0.5, -s * 2, s * 2, -s, 0, s);
+          ctx.fill();
+        } else {
+          // Default: square
+          ctx.fillRect(-size / 2, -size / 2, size, size);
+        }
+      } else if (sticker.type === 'arrow') {
+        const arrowLen = Math.round(height * 0.08 * scale);
+        const arrowW = Math.round(height * 0.02 * scale);
+        ctx.strokeStyle = sticker.color ?? '#ffffff';
+        ctx.fillStyle = sticker.color ?? '#ffffff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-arrowLen / 2, 0);
+        ctx.lineTo(arrowLen / 2 - arrowW, 0);
+        ctx.lineTo(arrowLen / 2 - arrowW, -arrowW);
+        ctx.lineTo(arrowLen / 2, 0);
+        ctx.lineTo(arrowLen / 2 - arrowW, arrowW);
+        ctx.lineTo(arrowLen / 2 - arrowW, 0);
+        ctx.stroke();
+        ctx.fill();
+      }
 
       ctx.restore();
     }

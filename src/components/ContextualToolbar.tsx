@@ -376,11 +376,14 @@ function TextControls({
   useEffect(() => {
     if (!showImageFill) return;
     setLoadingUploads(true);
-    fetch('/api/media/list')
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    fetch('/api/media/list', { signal: controller.signal })
       .then((r) => (r.ok ? r.json() : { items: [] }))
-      .then((data) => setUploadedImages(data.items || []))
-      .catch(() => setUploadedImages([]))
+      .then((data) => { clearTimeout(timeout); setUploadedImages(data.items || []); })
+      .catch(() => { clearTimeout(timeout); setUploadedImages([]); })
       .finally(() => setLoadingUploads(false));
+    return () => { clearTimeout(timeout); controller.abort(); };
   }, [showImageFill]);
 
   const handleLocalUpload = (file: File) => {

@@ -1,10 +1,11 @@
 import React from 'react';
 import {
-  LogOut, Clock,
+  LogOut, Clock, Sun, Moon,
   FileStack, ArrowRight, Image, Film, Download, Monitor,
 } from 'lucide-react';
 import { SavedDesign, ProjectMode } from '../store/useStore';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { useThemeStore } from '../store/themeStore';
 
 const LOGO_SRC = '/Gemini_Generated_Image_9jhwhi9jhwhi9jhw_(1).png';
 
@@ -23,6 +24,7 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onDownload,
   const photoDesigns = designs.filter((d) => d.projectMode !== 'video');
   const videoProjects = designs.filter((d) => d.projectMode === 'video');
   const { isInstallable, isInstalled, installApp } = usePWAInstall();
+  const { mode, toggle } = useThemeStore();
 
   return (
     <div className="min-h-screen bg-[#07070d] text-white">
@@ -79,6 +81,14 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onDownload,
           <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${hasPendingChanges ? 'bg-amber-500/10 border border-amber-500/20 text-amber-300' : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'}`}>
             {syncStatus}
           </span>
+          <button
+            type="button"
+            onClick={toggle}
+            className="w-9 h-9 flex items-center justify-center rounded-full border border-panel-border bg-panel hover:bg-panel-hover text-theme-dim hover:text-theme-primary transition-colors"
+            title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {mode === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
           <button
             type="button"
             onClick={onLogout}

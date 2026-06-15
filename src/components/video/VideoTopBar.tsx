@@ -181,10 +181,10 @@ export default function VideoTopBar({ onBack, onSave, onOpenShortcuts, hasUnsave
 
       <div className="w-px h-6 bg-panel-border mx-1" />
 
-      <button onClick={undo} disabled={historyIndex <= 0} className="w-8 h-8 flex items-center justify-center rounded-lg text-theme-dim hover:text-theme-primary hover:bg-panel-hover transition-colors disabled:opacity-30" title="Undo (Ctrl+Z)" aria-label="Undo (Ctrl+Z)">
+      <button onClick={() => { undo(); addToast('Undone', 'info'); }} disabled={historyIndex <= 0} className="w-8 h-8 flex items-center justify-center rounded-lg text-theme-dim hover:text-theme-primary hover:bg-panel-hover transition-colors disabled:opacity-30" title="Undo (Ctrl+Z)" aria-label="Undo (Ctrl+Z)">
         <Undo2 className="w-4 h-4" />
       </button>
-      <button onClick={redo} disabled={historyIndex >= history.length - 1} className="w-8 h-8 flex items-center justify-center rounded-lg text-theme-dim hover:text-theme-primary hover:bg-panel-hover transition-colors disabled:opacity-30" title="Redo (Ctrl+Shift+Z)" aria-label="Redo (Ctrl+Shift+Z)">
+      <button onClick={() => { redo(); addToast('Redone', 'info'); }} disabled={historyIndex >= history.length - 1} className="w-8 h-8 flex items-center justify-center rounded-lg text-theme-dim hover:text-theme-primary hover:bg-panel-hover transition-colors disabled:opacity-30" title="Redo (Ctrl+Shift+Z)" aria-label="Redo (Ctrl+Shift+Z)">
         <Redo2 className="w-4 h-4" />
       </button>
 

@@ -15,6 +15,9 @@ const FONT_FAMILIES = [
 
 const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64, 72, 96];
 
+const isValidHex = (v: string): boolean => /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(v);
+const sanitizeHex = (v: string): string => isValidHex(v) ? v : '#000000';
+
 export default function RightPanel() {
   const {
     activeObject,
@@ -49,14 +52,31 @@ export default function RightPanel() {
 
   const setProp = (props: Partial<fabric.Object>) => {
     if (!obj || !fabricCanvas) return;
-    obj.set(props as any);
+    // Validate hex colors before setting
+    const validated: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(props)) {
+      if ((k === 'fill' || k === 'stroke') && typeof v === 'string') {
+        validated[k] = isValidHex(v) ? v : sanitizeHex(v);
+      } else {
+        validated[k] = v;
+      }
+    }
+    obj.set(validated as any);
     fabricCanvas.renderAll();
     refresh();
   };
 
   const setTextProp = (props: Record<string, unknown>) => {
     if (!obj || !fabricCanvas) return;
-    (obj as fabric.Textbox).set(props as any);
+    const validated: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(props)) {
+      if ((k === 'fill' || k === 'stroke') && typeof v === 'string') {
+        validated[k] = isValidHex(v) ? v : sanitizeHex(v);
+      } else {
+        validated[k] = v;
+      }
+    }
+    (obj as fabric.Textbox).set(validated as any);
     fabricCanvas.renderAll();
     refresh();
   };

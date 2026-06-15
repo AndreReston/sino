@@ -1,9 +1,10 @@
 import {
-  Download, LayoutGrid,
+  Download, LayoutGrid, Sun, Moon,
   MousePointer2, ArrowRight, Sparkles, Monitor,
   Film, Image, Palette,
 } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { useThemeStore } from '../store/themeStore';
 
 const LOGO_SRC = '/Gemini_Generated_Image_9jhwhi9jhwhi9jhw_(1).png';
 
@@ -76,6 +77,7 @@ function InstallButton({ className = '' }: { className?: string }) {
 }
 
 export default function LandingPage({ onLogin, onRegister }: Props) {
+  const { mode, toggle } = useThemeStore();
   return (
     <div className="min-h-screen bg-[#07070d] text-white overflow-x-hidden">
       {/* Ambient neon glows */}
@@ -107,6 +109,14 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
         </div>
         <div className="flex items-center gap-3">
           <InstallButton className="hidden sm:inline-flex" />
+          <button
+            type="button"
+            onClick={toggle}
+            className="w-9 h-9 flex items-center justify-center rounded-full border border-panel-border bg-panel hover:bg-panel-hover text-theme-dim hover:text-theme-primary transition-colors"
+            title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {mode === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
           <button
             onClick={onLogin}
             className="px-4 py-2 text-sm font-medium text-theme-secondary hover:text-theme-primary transition-colors"

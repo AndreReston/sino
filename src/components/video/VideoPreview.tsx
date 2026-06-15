@@ -13,8 +13,9 @@ const SAFE_ZONE_GUIDES = [
 ];
 
 export default function VideoPreview({ videoRef }: Props) {
-  // U4: Track video load errors
+  // U4: Track video load errors and buffering state
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [isBuffering, setIsBuffering] = useState(false);
   const project = useVideoStore(s => s.project);
   const activeClipId = useVideoStore(s => s.activeClipId);
   const currentTime = useVideoStore(s => s.currentTime);
@@ -58,10 +59,12 @@ export default function VideoPreview({ videoRef }: Props) {
     const video = videoRef.current;
     if (!video || !displayClip) return;
     if (video.src !== displayClip.url) {
-      setVideoError(null); // Clear previous errors
+      setVideoError(null);
+      setIsBuffering(true);
       video.src = displayClip.url;
       // U4: Add error handler for video load failures
       const handleError = () => {
+        setIsBuffering(false);
         const error = video.error;
         if (error?.code === error?.MEDIA_ERR_ABORTED) {
           setVideoError('Video loading aborted');
@@ -75,7 +78,12 @@ export default function VideoPreview({ videoRef }: Props) {
           setVideoError('Failed to load video');
         }
       };
+      const handleCanPlay = () => setIsBuffering(false);
+      const handleWaiting = () => setIsBuffering(true);
       video.addEventListener('error', handleError, { once: true });
+      video.addEventListener('canplay', handleCanPlay, { once: true });
+      video.addEventListener('waiting', handleWaiting);
+      video.addEventListener('playing', handleCanPlay);
       video.load();
       const st = useVideoStore.getState();
       const info = st.getClipAtTime(st.currentTime);
@@ -83,6 +91,10 @@ export default function VideoPreview({ videoRef }: Props) {
         const seekTo = displayClip.trimStart + info.clipLocalTime * displayClip.speed;
         video.addEventListener('loadedmetadata', () => { video.currentTime = seekTo; }, { once: true });
       }
+      return () => {
+        video.removeEventListener('waiting', handleWaiting);
+        video.removeEventListener('playing', handleCanPlay);
+      };
     }
   }, [displayClip?.id]);
 
@@ -504,6 +516,16 @@ export default function VideoPreview({ videoRef }: Props) {
         style={{ ...getAspectRatioStyle(), maxWidth: '100%', maxHeight: '100%', width: 'auto', height: '100%' }}
         onClick={() => { if (displayClip) setActiveClipId(displayClip.id); }}
       >
+        {/* Buffering indicator */}
+        {isBuffering && !videoError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-canvas-surface/60 z-20">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-10 h-10 border-3 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" />
+              <p className="text-xs text-sky-400">Loading…</p>
+            </div>
+          </div>
+        )}
+
         {/* U4: Show error message if video fails to load */}
         {videoError ? (
           <div className="absolute inset-0 flex items-center justify-center bg-canvas-surface/40 text-center p-4">

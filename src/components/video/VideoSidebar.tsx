@@ -394,9 +394,15 @@ export default function VideoSidebar() {
         {(uploading || uploadError || (project && countEphemeralUrls(project) > 0)) && (
           <div className="px-3 pt-3 shrink-0 space-y-2">
             {uploading && (
-              <p className="text-[11px] text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-lg px-3 py-2">
-                Uploading to cloud…
-              </p>
+              <div className="text-[11px] text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 border-2 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" />
+                  <span>Uploading to cloud…</span>
+                </div>
+                <div className="mt-2 h-1.5 bg-sky-500/20 rounded-full overflow-hidden">
+                  <div className="h-full bg-sky-500 rounded-full animate-pulse" style={{ width: '60%' }} />
+                </div>
+              </div>
             )}
             {uploadError && (
               <p className="text-[11px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
@@ -479,8 +485,15 @@ export default function VideoSidebar() {
                 <p className="text-[11px] text-theme-muted mb-2">Stock Media</p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {STOCK_VIDEOS.map((v, i) => (
-                    <button key={i} className="aspect-video rounded-lg overflow-hidden border border-panel-border hover:border-sky-500/30 transition-all">
-                      <img src={v.url} alt={v.label} className="w-full h-full object-cover" loading="lazy" />
+                    <button
+                      key={i}
+                      onClick={() => addStickerOverlay('photo', v.url.replace('?w=300', '?w=800'))}
+                      className="aspect-video rounded-lg overflow-hidden border border-panel-border hover:border-sky-500/30 transition-all group relative"
+                    >
+                      <img src={v.url} alt={v.label} className="w-full h-full object-cover group-hover:opacity-80 transition-opacity" loading="lazy" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-xs text-white font-medium">+ Add</span>
+                      </div>
                     </button>
                   ))}
                 </div>

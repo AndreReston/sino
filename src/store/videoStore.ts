@@ -1136,10 +1136,36 @@ export const useVideoStore = create<VStore>((set, get) => ({
   addAudioTrack: (url, name) => {
     const { project } = get();
     if (!project) return;
-    // Read actual duration before storing
+    // Read actual duration before storing with timeout
     const tempAudio = new Audio(url);
+    let resolved = false;
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        // Proceed with 0 duration as fallback
+        const track: AudioTrack = {
+          id: `audio_${uid()}`,
+          url,
+          name,
+          volume: 1,
+          muted: false,
+          startTime: 0,
+          duration: 0,
+        };
+        const { project: p } = get();
+        if (p) {
+          set({ project: { ...p, audioTracks: [...p.audioTracks, track] } });
+          get().pushHistory();
+        }
+        console.warn(`Audio track "${name}" loaded with unknown duration (timeout)`);
+      }
+    }, 8000);
+
     tempAudio.addEventListener('loadedmetadata', () => {
-      const dur = isFinite(tempAudio.duration) ? tempAudio.duration : 0;
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timeout);
+      const dur = isFinite(tempAudio.duration) && tempAudio.duration > 0 ? tempAudio.duration : 0;
       const track: AudioTrack = {
         id: `audio_${uid()}`,
         url,
@@ -1154,7 +1180,13 @@ export const useVideoStore = create<VStore>((set, get) => ({
       set({ project: { ...p, audioTracks: [...p.audioTracks, track] } });
       get().pushHistory();
     }, { once: true });
-    // Fallback: if metadata loads instantly (cached), handled above; if not, add with 0 duration temporarily
+    tempAudio.addEventListener('error', () => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timeout);
+        console.warn(`Failed to load audio track "${name}"`);
+      }
+    }, { once: true });
     tempAudio.load();
   },
 

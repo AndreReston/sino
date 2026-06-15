@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Mail, Lock, User, Image, Film, Sparkles, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, User, Image, Film, Sparkles, LayoutGrid, Sun, Moon } from 'lucide-react';
+import { useThemeStore } from '../store/themeStore';
 
 const LOGO_SRC = '/Gemini_Generated_Image_9jhwhi9jhwhi9jhw_(1).png';
 
@@ -26,6 +27,7 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { mode: themeMode, toggle } = useThemeStore();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -126,14 +128,24 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
         <div className="w-full max-w-[420px]">
 
           {/* Back link */}
-          <button
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-2 text-sm text-theme-muted hover:text-theme-primary transition-colors mb-10 group"
-          >
-            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-            Back to home
-          </button>
+          <div className="flex items-center justify-between mb-10">
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center gap-2 text-sm text-theme-muted hover:text-theme-primary transition-colors group"
+            >
+              <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+              Back to home
+            </button>
+            <button
+              type="button"
+              onClick={toggle}
+              className="w-9 h-9 flex items-center justify-center rounded-full border border-panel-border bg-panel hover:bg-panel-hover text-theme-dim hover:text-theme-primary transition-colors"
+              title={themeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {themeMode === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+          </div>
 
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
