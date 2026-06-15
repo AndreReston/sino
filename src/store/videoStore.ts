@@ -802,8 +802,7 @@ export const useVideoStore = create<VStore>((set, get) => ({
     try { localStorage.removeItem(EXPORT_QUEUE_KEY); } catch {}
     set({ exportQueue: [] });
   },
-    setTimeout(() => get().analyzeClipHealth(clip.id), 500);
-  },
+  
 
   removeClip: (id) => {
     const { project, activeClipId } = get();
