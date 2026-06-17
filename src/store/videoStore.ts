@@ -1451,45 +1451,6 @@ export const useVideoStore = create<VStore>((set, get) => ({
     savePresetsToStorage(updated);
   },
 
-  // ─── Export Queue ─────────────────────────────────────────────
-
-  addToExportQueue: (format) => {
-    const { project } = get();
-    if (!project) return;
-    const item: ExportQueueItem = {
-      id: `export_${uid()}`,
-      projectTitle: project.title,
-      format,
-      status: 'queued',
-      progress: 0,
-      createdAt: new Date().toISOString(),
-    };
-    set(state => ({ exportQueue: [...state.exportQueue, item] }));
-
-    // Simulate export
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 8 + 2;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-        set(state => ({
-          exportQueue: state.exportQueue.map(q =>
-            q.id === item.id ? { ...q, status: 'completed', progress: 100, completedAt: new Date().toISOString() } : q
-          ),
-        }));
-      } else {
-        set(state => ({
-          exportQueue: state.exportQueue.map(q =>
-            q.id === item.id ? { ...q, status: 'exporting', progress: Math.round(progress) } : q
-          ),
-        }));
-      }
-    }, 300);
-  },
-
-  clearExportQueue: () => set({ exportQueue: [] }),
-
   // ─── Version History ──────────────────────────────────────────
 
   saveProjectVersion: (label) => {

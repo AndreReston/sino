@@ -13,6 +13,10 @@ import RightPanel from './components/RightPanel';
 import ContextualToolbar from './components/ContextualToolbar';
 import CanvasWorkspace from './components/CanvasWorkspace';
 import VideoWorkspace from './components/video/VideoWorkspace';
+import PrivacyPolicy from './components/Legal/PrivacyPolicy';
+import TermsConditions from './components/Legal/TermsConditions';
+import CookiePolicy from './components/Legal/CookiePolicy';
+import CookieBanner from './components/CookieBanner';
 import {
   getCurrentUser,
   getUserDesigns,
@@ -25,7 +29,7 @@ import {
 } from './lib/userStorage';
 import { projectHasEphemeralUrls } from './lib/mediaUpload';
 
-type AppView = 'landing' | 'auth' | 'dashboard' | 'workspace' | 'video-workspace';
+type AppView = 'landing' | 'auth' | 'dashboard' | 'workspace' | 'video-workspace' | 'privacy' | 'terms' | 'cookie-policy';
 
 const LAST_VIEW_KEY = 'sino:lastView';
 const LAST_DESIGN_KEY = 'sino:lastDesignId';
@@ -518,42 +522,101 @@ export default function App() {
   };
 
   if (view === 'landing') {
-    return <LandingPage onLogin={() => { setAuthMode('login'); persistView('auth'); }} onRegister={() => { setAuthMode('register'); persistView('auth'); }} />;
+    return (
+      <>
+        <LandingPage
+          onLogin={() => { setAuthMode('login'); persistView('auth'); }}
+          onRegister={() => { setAuthMode('register'); persistView('auth'); }}
+          onPrivacy={() => persistView('privacy')}
+          onTerms={() => persistView('terms')}
+          onCookiePolicy={() => persistView('cookie-policy')}
+        />
+        <CookieBanner />
+      </>
+    );
   }
 
   if (view === 'auth') {
     return (
-      <AuthPage
-        mode={authMode}
-        onModeChange={(next) => setAuthMode(next)}
-        onLogin={handleLogin}
-        onRegister={handleRegister}
-        onBack={() => persistView('landing')}
-      />
+      <>
+        <AuthPage
+          mode={authMode}
+          onModeChange={(next) => setAuthMode(next)}
+          onLogin={handleLogin}
+          onRegister={handleRegister}
+          onBack={() => persistView('landing')}
+        />
+        <CookieBanner />
+      </>
     );
   }
 
   if (view === 'dashboard') {
     return (
-      <Dashboard
-        user={username}
-        designs={designs}
-        onCreate={handleCreateDesign}
-        onOpen={handleOpenDesign}
-        onDownload={handleDownloadDesign}
-        onLogout={handleLogout}
-        hasPendingChanges={workspaceDirty || videoDirty}
-        syncStatus={workspaceDirty || videoDirty ? 'You have unsaved changes' : lastSyncedAt ? `Last synced ${lastSyncedAt}` : 'Not synced yet'}
-      />
+      <>
+        <Dashboard
+          user={username}
+          designs={designs}
+          onCreate={handleCreateDesign}
+          onOpen={handleOpenDesign}
+          onDownload={handleDownloadDesign}
+          onLogout={handleLogout}
+          hasPendingChanges={workspaceDirty || videoDirty}
+          syncStatus={workspaceDirty || videoDirty ? 'You have unsaved changes' : lastSyncedAt ? `Last synced ${lastSyncedAt}` : 'Not synced yet'}
+          onPrivacy={() => persistView('privacy')}
+          onTerms={() => persistView('terms')}
+          onCookiePolicy={() => persistView('cookie-policy')}
+        />
+        <CookieBanner />
+      </>
     );
   }
 
   if (view === 'video-workspace') {
     return (
-      <VideoWorkspace
-        onBack={openDashboard}
-        onSave={handleSaveDesign}
-        hasUnsavedChanges={videoDirty}
+      <>
+        <VideoWorkspace
+          onBack={openDashboard}
+          onSave={handleSaveDesign}
+          hasUnsavedChanges={videoDirty}
+        />
+        <CookieBanner />
+      </>
+    );
+  }
+
+  if (view === 'privacy') {
+    return (
+      <PrivacyPolicy
+        onBack={() => {
+          const last = localStorage.getItem(LAST_VIEW_KEY);
+          if (last && last !== 'privacy') persistView(last as AppView);
+          else persistView('landing');
+        }}
+      />
+    );
+  }
+
+  if (view === 'terms') {
+    return (
+      <TermsConditions
+        onBack={() => {
+          const last = localStorage.getItem(LAST_VIEW_KEY);
+          if (last && last !== 'terms') persistView(last as AppView);
+          else persistView('landing');
+        }}
+      />
+    );
+  }
+
+  if (view === 'cookie-policy') {
+    return (
+      <CookiePolicy
+        onBack={() => {
+          const last = localStorage.getItem(LAST_VIEW_KEY);
+          if (last && last !== 'cookie-policy') persistView(last as AppView);
+          else persistView('landing');
+        }}
       />
     );
   }
@@ -569,6 +632,7 @@ export default function App() {
         </div>
         <RightPanel />
       </div>
+      <CookieBanner />
     </div>
   );
 }

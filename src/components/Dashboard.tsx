@@ -2,6 +2,7 @@ import React from 'react';
 import {
   LogOut, Clock, Sun, Moon,
   FileStack, ArrowRight, Image, Film, Download, Monitor,
+  Shield, FileText, Cookie,
 } from 'lucide-react';
 import { SavedDesign, ProjectMode } from '../store/useStore';
 import { usePWAInstall } from '../hooks/usePWAInstall';
@@ -18,9 +19,12 @@ type Props = {
   onLogout: () => void;
   hasPendingChanges: boolean;
   syncStatus: string;
+  onPrivacy?: () => void;
+  onTerms?: () => void;
+  onCookiePolicy?: () => void;
 };
 
-export default function Dashboard({ user, designs, onCreate, onOpen, onDownload, onLogout, hasPendingChanges, syncStatus }: Props) {
+export default function Dashboard({ user, designs, onCreate, onOpen, onDownload, onLogout, hasPendingChanges, syncStatus, onPrivacy, onTerms, onCookiePolicy }: Props) {
   const photoDesigns = designs.filter((d) => d.projectMode !== 'video');
   const videoProjects = designs.filter((d) => d.projectMode === 'video');
   const { isInstallable, isInstalled, installApp } = usePWAInstall();
@@ -181,6 +185,22 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onDownload,
           onOpen={onOpen}
           onDownload={onDownload}
         />
+
+        {/* Footer */}
+        <footer className="mt-16 border-t border-white/[0.04] py-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <img src={LOGO_SRC} alt="DesignForge" className="w-7 h-7 rounded-lg object-cover" />
+              <span className="text-sm font-semibold bg-gradient-to-r from-orange-400 to-sky-400 bg-clip-text text-transparent">DesignForge</span>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-theme-dim">
+              <button onClick={onPrivacy} className="hover:text-theme-primary transition-colors flex items-center gap-1"><Shield className="w-3 h-3" /> Privacy</button>
+              <button onClick={onTerms} className="hover:text-theme-primary transition-colors flex items-center gap-1"><FileText className="w-3 h-3" /> Terms</button>
+              <button onClick={onCookiePolicy} className="hover:text-theme-primary transition-colors flex items-center gap-1"><Cookie className="w-3 h-3" /> Cookies</button>
+            </div>
+            <p className="text-xs text-theme-dim">Copyright &copy; {new Date().getFullYear()} DesignForge. All rights reserved.</p>
+          </div>
+        </footer>
       </div>
     </div>
   );

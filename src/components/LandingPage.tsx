@@ -11,6 +11,9 @@ const LOGO_SRC = '/Gemini_Generated_Image_9jhwhi9jhwhi9jhw_(1).png';
 type Props = {
   onLogin: () => void;
   onRegister: () => void;
+  onPrivacy?: () => void;
+  onTerms?: () => void;
+  onCookiePolicy?: () => void;
 };
 
 const FEATURES = [
@@ -76,7 +79,7 @@ function InstallButton({ className = '' }: { className?: string }) {
   );
 }
 
-export default function LandingPage({ onLogin, onRegister }: Props) {
+export default function LandingPage({ onLogin, onRegister, onPrivacy, onTerms, onCookiePolicy }: Props) {
   const { mode, toggle } = useThemeStore();
   return (
     <div className="min-h-screen bg-[#07070d] text-white overflow-x-hidden">
@@ -381,12 +384,19 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-white/[0.04] py-8">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <img src={LOGO_SRC} alt="DesignForge" className="w-7 h-7 rounded-lg object-cover" />
-            <span className="text-sm font-semibold bg-gradient-to-r from-orange-400 to-sky-400 bg-clip-text text-transparent">DesignForge</span>
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <img src={LOGO_SRC} alt="DesignForge" className="w-7 h-7 rounded-lg object-cover" />
+              <span className="text-sm font-semibold bg-gradient-to-r from-orange-400 to-sky-400 bg-clip-text text-transparent">DesignForge</span>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-theme-dim">
+              <button onClick={onPrivacy} className="hover:text-theme-primary transition-colors">Privacy Policy</button>
+              <button onClick={onTerms} className="hover:text-theme-primary transition-colors">Terms</button>
+              <button onClick={onCookiePolicy} className="hover:text-theme-primary transition-colors">Cookie Policy</button>
+            </div>
+            <p className="text-xs text-theme-dim">Copyright &copy; {new Date().getFullYear()} DesignForge. All rights reserved.</p>
           </div>
-          <p className="text-xs text-theme-dim">Built for creators who move fast.</p>
         </div>
       </footer>
     </div>

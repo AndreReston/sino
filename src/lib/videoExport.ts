@@ -711,7 +711,9 @@ export function downloadBlob(blob: Blob, filename: string) {
  */
 export async function transcodeWebMToMP4(webmBlob: Blob, onProgress?: (p: number) => void): Promise<Blob> {
   try {
-    const { createFFmpeg, fetchFile } = await import('@ffmpeg/ffmpeg');
+    const ffmpegModule = await import('@ffmpeg/ffmpeg').catch(() => null);
+    if (!ffmpegModule) throw new Error('ffmpeg.wasm not available');
+    const { createFFmpeg, fetchFile } = ffmpegModule;
     const ffmpeg = createFFmpeg({ log: false });
     if (!ffmpeg.isLoaded()) await ffmpeg.load();
 
