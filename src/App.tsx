@@ -16,6 +16,7 @@ import VideoWorkspace from './components/video/VideoWorkspace';
 import PrivacyPolicy from './components/Legal/PrivacyPolicy';
 import TermsConditions from './components/Legal/TermsConditions';
 import CookiePolicy from './components/Legal/CookiePolicy';
+import DMCAPolicy from './components/Legal/DMCAPolicy';
 import CookieBanner from './components/CookieBanner';
 import {
   getCurrentUser,
@@ -29,7 +30,7 @@ import {
 } from './lib/userStorage';
 import { projectHasEphemeralUrls } from './lib/mediaUpload';
 
-type AppView = 'landing' | 'auth' | 'dashboard' | 'workspace' | 'video-workspace' | 'privacy' | 'terms' | 'cookie-policy';
+type AppView = 'landing' | 'auth' | 'dashboard' | 'workspace' | 'video-workspace' | 'privacy' | 'terms' | 'cookie-policy' | 'dmca';
 
 const LAST_VIEW_KEY = 'sino:lastView';
 const LAST_DESIGN_KEY = 'sino:lastDesignId';
@@ -530,6 +531,7 @@ export default function App() {
           onPrivacy={() => persistView('privacy')}
           onTerms={() => persistView('terms')}
           onCookiePolicy={() => persistView('cookie-policy')}
+          onDMCA={() => persistView('dmca')}
         />
         <CookieBanner />
       </>
@@ -566,6 +568,7 @@ export default function App() {
           onPrivacy={() => persistView('privacy')}
           onTerms={() => persistView('terms')}
           onCookiePolicy={() => persistView('cookie-policy')}
+          onDMCA={() => persistView('dmca')}
         />
         <CookieBanner />
       </>
@@ -615,6 +618,18 @@ export default function App() {
         onBack={() => {
           const last = localStorage.getItem(LAST_VIEW_KEY);
           if (last && last !== 'cookie-policy') persistView(last as AppView);
+          else persistView('landing');
+        }}
+      />
+    );
+  }
+
+  if (view === 'dmca') {
+    return (
+      <DMCAPolicy
+        onBack={() => {
+          const last = localStorage.getItem(LAST_VIEW_KEY);
+          if (last && last !== 'dmca') persistView(last as AppView);
           else persistView('landing');
         }}
       />

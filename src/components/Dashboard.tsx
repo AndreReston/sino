@@ -2,7 +2,7 @@ import React from 'react';
 import {
   LogOut, Clock, Sun, Moon,
   FileStack, ArrowRight, Image, Film, Download, Monitor,
-  Shield, FileText, Cookie,
+  Shield, FileText, Cookie, Ban,
 } from 'lucide-react';
 import { SavedDesign, ProjectMode } from '../store/useStore';
 import { usePWAInstall } from '../hooks/usePWAInstall';
@@ -22,9 +22,10 @@ type Props = {
   onPrivacy?: () => void;
   onTerms?: () => void;
   onCookiePolicy?: () => void;
+  onDMCA?: () => void;
 };
 
-export default function Dashboard({ user, designs, onCreate, onOpen, onDownload, onLogout, hasPendingChanges, syncStatus, onPrivacy, onTerms, onCookiePolicy }: Props) {
+export default function Dashboard({ user, designs, onCreate, onOpen, onDownload, onLogout, hasPendingChanges, syncStatus, onPrivacy, onTerms, onCookiePolicy, onDMCA }: Props) {
   const photoDesigns = designs.filter((d) => d.projectMode !== 'video');
   const videoProjects = designs.filter((d) => d.projectMode === 'video');
   const { isInstallable, isInstalled, installApp } = usePWAInstall();
@@ -197,6 +198,7 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onDownload,
               <button onClick={onPrivacy} className="hover:text-theme-primary transition-colors flex items-center gap-1"><Shield className="w-3 h-3" /> Privacy</button>
               <button onClick={onTerms} className="hover:text-theme-primary transition-colors flex items-center gap-1"><FileText className="w-3 h-3" /> Terms</button>
               <button onClick={onCookiePolicy} className="hover:text-theme-primary transition-colors flex items-center gap-1"><Cookie className="w-3 h-3" /> Cookies</button>
+              <button onClick={onDMCA} className="hover:text-theme-primary transition-colors flex items-center gap-1"><Ban className="w-3 h-3" /> DMCA</button>
             </div>
             <p className="text-xs text-theme-dim">Copyright &copy; {new Date().getFullYear()} DesignForge. All rights reserved.</p>
           </div>

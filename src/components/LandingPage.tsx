@@ -14,6 +14,7 @@ type Props = {
   onPrivacy?: () => void;
   onTerms?: () => void;
   onCookiePolicy?: () => void;
+  onDMCA?: () => void;
 };
 
 const FEATURES = [
@@ -79,7 +80,7 @@ function InstallButton({ className = '' }: { className?: string }) {
   );
 }
 
-export default function LandingPage({ onLogin, onRegister, onPrivacy, onTerms, onCookiePolicy }: Props) {
+export default function LandingPage({ onLogin, onRegister, onPrivacy, onTerms, onCookiePolicy, onDMCA }: Props) {
   const { mode, toggle } = useThemeStore();
   return (
     <div className="min-h-screen bg-[#07070d] text-white overflow-x-hidden">
@@ -394,6 +395,7 @@ export default function LandingPage({ onLogin, onRegister, onPrivacy, onTerms, o
               <button onClick={onPrivacy} className="hover:text-theme-primary transition-colors">Privacy Policy</button>
               <button onClick={onTerms} className="hover:text-theme-primary transition-colors">Terms</button>
               <button onClick={onCookiePolicy} className="hover:text-theme-primary transition-colors">Cookie Policy</button>
+              <button onClick={onDMCA} className="hover:text-theme-primary transition-colors">DMCA</button>
             </div>
             <p className="text-xs text-theme-dim">Copyright &copy; {new Date().getFullYear()} DesignForge. All rights reserved.</p>
           </div>
