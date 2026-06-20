@@ -179,6 +179,9 @@ export interface CanvasState {
   magicEraseMode: 'freehand' | 'brush';
   eraseStrokeWidth: number;
   showMagicToolsPanel: boolean;
+  // Brush settings for freehand drawing
+  brushColor: string;
+  brushSize: number;
   // Page transition animation
   isPageTransitioning: boolean;
   pageTransitionType: PageTransition;
@@ -239,6 +242,9 @@ export interface CanvasActions {
   setEraseMode: (mode: 'freehand' | 'brush') => void;
   setEraseStrokeWidth: (width: number) => void;
   removeBackground: () => Promise<void>;
+  // Brush settings actions
+  setBrushColor: (color: string) => void;
+  setBrushSize: (size: number) => void;
   // Text + Image combination
   applyImageFillToText: (textObj: fabric.Object, imageUrl: string, opacity?: number) => Promise<void>;
   removeImageFillFromText: (textObj: fabric.Object) => void;
@@ -325,6 +331,8 @@ export const useStore = create<Store>((set, get) => ({
   magicEraseMode: 'brush',
   eraseStrokeWidth: 20,
   showMagicToolsPanel: false,
+  brushColor: '#22c55e',
+  brushSize: 3,
   isPageTransitioning: false,
   pageTransitionType: 'fade',
   videoTrack: {
@@ -969,6 +977,22 @@ export const useStore = create<Store>((set, get) => ({
   setShowMagicToolsPanel: (show) => set({ showMagicToolsPanel: show }),
   setEraseMode: (mode) => set({ magicEraseMode: mode }),
   setEraseStrokeWidth: (width) => set({ eraseStrokeWidth: width }),
+
+  // ── Brush settings ──────────────────────────────────────────────────────────
+  setBrushColor: (color) => {
+    set({ brushColor: color });
+    const { fabricCanvas } = get();
+    if (fabricCanvas && fabricCanvas.freeDrawingBrush) {
+      fabricCanvas.freeDrawingBrush.color = color;
+    }
+  },
+  setBrushSize: (size) => {
+    set({ brushSize: size });
+    const { fabricCanvas } = get();
+    if (fabricCanvas && fabricCanvas.freeDrawingBrush) {
+      fabricCanvas.freeDrawingBrush.width = size;
+    }
+  },
 
   removeBackground: async () => {
     const { activeObject, fabricCanvas } = get();

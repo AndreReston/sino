@@ -24,6 +24,8 @@ export function useCanvas() {
     canvasHeight,
     canvasBackground,
     fabricCanvas,
+    brushColor,
+    brushSize,
   } = useStore();
 
   const serializeCanvas = useCallback(
@@ -212,8 +214,8 @@ export function useCanvas() {
       if (!fabricCanvas.freeDrawingBrush) {
         fabricCanvas.freeDrawingBrush = new fabric.PencilBrush(fabricCanvas);
       }
-      fabricCanvas.freeDrawingBrush.width = 3;
-      fabricCanvas.freeDrawingBrush.color = '#22c55e';
+      fabricCanvas.freeDrawingBrush.width = brushSize;
+      fabricCanvas.freeDrawingBrush.color = brushColor;
     } else if (toolMode === 'magicErase') {
       fabricCanvas.isDrawingMode = true;
       if (!fabricCanvas.freeDrawingBrush) {
@@ -416,7 +418,7 @@ export function useCanvas() {
       fabricCanvas.off('mouse:up', handleMouseUp);
       fabricCanvas.off('mouse:up', onToolMouseUp);
     };
-  }, [toolMode, fabricCanvas]);
+  }, [toolMode, fabricCanvas, brushColor, brushSize]);
 
   return { canvasRef, containerRef, guides };
 }
