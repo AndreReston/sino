@@ -55,6 +55,11 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  build: {
+    rollupOptions: {
+      external: ['@ffmpeg/ffmpeg'],
+    },
+  },
   configureServer(server: ViteDevServer) {
     server.middlewares.use(async (req, res, next) => {
       if (!req.url) return next();
