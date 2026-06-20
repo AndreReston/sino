@@ -1,4 +1,4 @@
-const CACHE_NAME = 'designforge-v3';
+const CACHE_NAME = 'dreflow-v3';
 
 const PRECACHE_URLS = ['./', './index.html'];
 

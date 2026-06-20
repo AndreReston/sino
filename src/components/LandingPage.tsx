@@ -6,7 +6,7 @@ import {
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useThemeStore } from '../store/themeStore';
 
-const LOGO_SRC = '/Gemini_Generated_Image_9jhwhi9jhwhi9jhw_(1).png';
+const LOGO_SRC = '/Untitled_design_(1).png';
 
 type Props = {
   onLogin: () => void;
@@ -100,11 +100,11 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
         <div className="flex items-center gap-3">
           <img
             src={LOGO_SRC}
-            alt="DesignForge"
+            alt="DreFlow"
             className="w-9 h-9 rounded-xl object-cover shadow-[0_0_20px_rgba(249,115,22,0.4)]"
           />
           <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-orange-400 via-amber-300 to-sky-400 bg-clip-text text-transparent">
-            DesignForge
+            DreFlow
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -195,7 +195,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
               <div className="flex-1 flex justify-center">
                 <div className="flex items-center gap-2 text-xs text-theme-dim">
                   <img src={LOGO_SRC} alt="" className="w-4 h-4 rounded object-cover" />
-                  <span className="text-theme-secondary font-medium">DesignForge</span>
+                  <span className="text-theme-secondary font-medium">DreFlow</span>
                   <span className="text-theme-dim">|</span>
                   <span>Untitled Design</span>
                 </div>
@@ -355,7 +355,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
             <div className="flex justify-center mb-5">
               <img
                 src={LOGO_SRC}
-                alt="DesignForge"
+                alt="DreFlow"
                 className="w-14 h-14 rounded-2xl object-cover shadow-[0_0_30px_rgba(249,115,22,0.5)]"
               />
             </div>
@@ -383,8 +383,8 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
       <footer className="relative z-10 border-t border-white/[0.04] py-8">
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <img src={LOGO_SRC} alt="DesignForge" className="w-7 h-7 rounded-lg object-cover" />
-            <span className="text-sm font-semibold bg-gradient-to-r from-orange-400 to-sky-400 bg-clip-text text-transparent">DesignForge</span>
+            <img src={LOGO_SRC} alt="DreFlow" className="w-7 h-7 rounded-lg object-cover" />
+            <span className="text-sm font-semibold bg-gradient-to-r from-orange-400 to-sky-400 bg-clip-text text-transparent">DreFlow</span>
           </div>
           <p className="text-xs text-theme-dim">Built for creators who move fast.</p>
         </div>

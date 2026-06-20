@@ -7,7 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const distDir = path.join(root, 'dist');
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const version = pkg.version || '1.0.0';
-const outName = `DesignForge-Web-${version}.zip`;
+const outName = `DreFlow-Web-${version}.zip`;
 const outPath = path.join(root, 'release', outName);
 
 if (!fs.existsSync(distDir)) {
@@ -32,7 +32,7 @@ addDir(zip, distDir);
 zip.file(
   'README.txt',
   [
-    'DesignForge — Web Package',
+    'DreFlow — Web Package',
     '========================',
     '',
     'Option A: Host online',

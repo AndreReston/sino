@@ -7,7 +7,7 @@ import { SavedDesign, ProjectMode } from '../store/useStore';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useThemeStore } from '../store/themeStore';
 
-const LOGO_SRC = '/Gemini_Generated_Image_9jhwhi9jhwhi9jhw_(1).png';
+const LOGO_SRC = '/Untitled_design_(1).png';
 
 type Props = {
   user: string;
@@ -47,11 +47,11 @@ export default function Dashboard({ user, designs, onCreate, onOpen, onDownload,
         <div className="flex items-center gap-3">
           <img
             src={LOGO_SRC}
-            alt="DesignForge"
+            alt="DreFlow"
             className="w-9 h-9 rounded-xl object-cover shadow-[0_0_18px_rgba(249,115,22,0.35)]"
           />
           <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-orange-400 via-amber-300 to-sky-400 bg-clip-text text-transparent">
-            DesignForge
+            DreFlow
           </span>
         </div>
 

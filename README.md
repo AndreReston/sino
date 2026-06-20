@@ -1,4 +1,4 @@
-# DesignForge
+# DreFlow
 
 Visual design and video editing platform.
 
@@ -28,8 +28,8 @@ After `npm install`, create distributable files in the `release/` folder:
 
 | Command | Output | Best for |
 |---------|--------|----------|
-| `npm run package:win` | `DesignForge-Portable-1.0.0.exe` + `DesignForge-Setup-1.0.0.exe` | Sharing a Windows desktop app (no install needed for Portable) |
-| `npm run package:web` | `DesignForge-Web-1.0.0.zip` | Hosting online or sending a static web bundle |
+| `npm run package:win` | `DreFlow-Portable-1.0.0.exe` + `DreFlow-Setup-1.0.0.exe` | Sharing a Windows desktop app (no install needed for Portable) |
+| `npm run package:web` | `DreFlow-Web-1.0.0.zip` | Hosting online or sending a static web bundle |
 | `npm run package:all` | Both of the above | Full release |
 
 ### Windows desktop app

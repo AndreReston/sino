@@ -1,6 +1,6 @@
 const { contextBridge } = require('electron');
 
-contextBridge.exposeInMainWorld('designForgeDesktop', {
+contextBridge.exposeInMainWorld('dreFlowDesktop', {
   isDesktopApp: true,
   platform: process.platform,
 });

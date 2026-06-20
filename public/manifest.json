@@ -1,6 +1,6 @@
 {
-  "name": "DesignForge",
-  "short_name": "DesignForge",
+  "name": "DreFlow",
+  "short_name": "DreFlow",
   "description": "Visual design and video editing platform for creators",
   "start_url": "./",
   "scope": "./",

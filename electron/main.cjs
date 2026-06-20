@@ -10,7 +10,7 @@ function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 640,
-    title: 'DesignForge',
+    title: 'DreFlow',
     backgroundColor: '#07070a',
     autoHideMenuBar: true,
     icon: path.join(__dirname, '..', 'build', 'icon.png'),

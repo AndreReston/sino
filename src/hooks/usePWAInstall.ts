@@ -10,7 +10,7 @@ export function usePWAInstall() {
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isDesktopApp] = useState(
-    () => !!(window as Window).designForgeDesktop?.isDesktopApp,
+    () => !!(window as Window).dreFlowDesktop?.isDesktopApp,
   );
 
   useEffect(() => {
@@ -94,11 +94,11 @@ export function usePWAInstall() {
     const isEdge = /Edg\//.test(navigator.userAgent);
     const isChrome = /Chrome\//.test(navigator.userAgent) && !isEdge;
 
-    let message = 'To install DesignForge:\n\n';
+    let message = 'To install DreFlow:\n\n';
     if (isMac && /iPhone|iPad/.test(navigator.userAgent)) {
       message += 'Tap Share → Add to Home Screen in Safari.';
     } else if (isMac) {
-      message += 'In Safari: File → Add to Dock.\nIn Chrome: ⋮ menu → Install DesignForge.';
+      message += 'In Safari: File → Add to Dock.\nIn Chrome: ⋮ menu → Install DreFlow.';
     } else if (isEdge) {
       message += 'Click the ⊕ App available icon in the address bar, or use Settings → Apps → Install this site as an app.';
     } else if (isChrome) {

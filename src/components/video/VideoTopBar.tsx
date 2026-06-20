@@ -126,8 +126,8 @@ export default function VideoTopBar({ onBack, onSave, onOpenShortcuts, hasUnsave
           </button>
         )}
         <img
-          src="/Gemini_Generated_Image_9jhwhi9jhwhi9jhw_(1).png"
-          alt="DesignForge"
+          src="/Untitled_design_(1).png"
+          alt="DreFlow"
           className="w-7 h-7 rounded-md object-cover shadow-[0_0_10px_rgba(56,189,248,0.35)]"
         />
       </div>

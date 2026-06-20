@@ -148,11 +148,11 @@ export default function TopBar({ onSave, onBack }: TopBarProps) {
       {/* Logo */}
       <div className="flex items-center gap-2 pr-3 border-r border-panel-border mr-1">
         <img
-          src="/Gemini_Generated_Image_9jhwhi9jhwhi9jhw_(1).png"
-          alt="DesignForge"
+          src="/Untitled_design_(1).png"
+          alt="DreFlow"
           className="w-7 h-7 rounded-md object-cover shadow-[0_0_10px_rgba(249,115,22,0.35)]"
         />
-        <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">DesignForge</span>
+        <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">DreFlow</span>
       </div>
 
       {/* Canvas Name */}

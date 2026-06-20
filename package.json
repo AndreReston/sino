@@ -1,9 +1,9 @@
 {
-  "name": "designforge",
+  "name": "dreflow",
   "private": true,
   "version": "1.0.0",
   "description": "Visual design and video editing platform",
-  "author": "DesignForge",
+  "author": "DreFlow",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -53,9 +53,9 @@
     "wait-on": "^8.0.1"
   },
   "build": {
-    "appId": "com.designforge.app",
-    "productName": "DesignForge",
-    "copyright": "Copyright © DesignForge",
+    "appId": "com.dreflow.app",
+    "productName": "DreFlow",
+    "copyright": "Copyright © DreFlow",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -78,17 +78,17 @@
         }
       ],
       "icon": "build/icon.png",
-      "artifactName": "DesignForge-${version}-${arch}.${ext}"
+      "artifactName": "DreFlow-${version}-${arch}.${ext}"
     },
     "portable": {
-      "artifactName": "DesignForge-Portable-${version}.exe"
+      "artifactName": "DreFlow-Portable-${version}.exe"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "artifactName": "DesignForge-Setup-${version}.exe"
+      "artifactName": "DreFlow-Setup-${version}.exe"
     }
   }
 }

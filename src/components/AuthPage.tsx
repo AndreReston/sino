@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Mail, Lock, User, Image, Film, Sparkles, LayoutGrid, Sun, Moon } from 'lucide-react';
 import { useThemeStore } from '../store/themeStore';
 
-const LOGO_SRC = '/Gemini_Generated_Image_9jhwhi9jhwhi9jhw_(1).png';
+const LOGO_SRC = '/Untitled_design_(1).png';
 
 type AuthMode = 'login' | 'register';
 
@@ -81,11 +81,11 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
           <div className="flex items-center gap-3 mb-12">
             <img
               src={LOGO_SRC}
-              alt="DesignForge"
+              alt="DreFlow"
               className="w-11 h-11 rounded-xl object-cover shadow-[0_0_24px_rgba(249,115,22,0.45)]"
             />
             <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-orange-400 via-amber-300 to-sky-400 bg-clip-text text-transparent">
-              DesignForge
+              DreFlow
             </span>
           </div>
 
@@ -151,11 +151,11 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
           <div className="lg:hidden flex items-center gap-3 mb-8">
             <img
               src={LOGO_SRC}
-              alt="DesignForge"
+              alt="DreFlow"
               className="w-9 h-9 rounded-xl object-cover shadow-[0_0_18px_rgba(249,115,22,0.4)]"
             />
             <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-orange-400 to-sky-400 bg-clip-text text-transparent">
-              DesignForge
+              DreFlow
             </span>
           </div>
 

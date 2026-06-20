@@ -1,10 +1,10 @@
 /// <reference types="vite/client" />
 
-interface DesignForgeDesktop {
+interface DreFlowDesktop {
   isDesktopApp: boolean;
   platform: string;
 }
 
 interface Window {
-  designForgeDesktop?: DesignForgeDesktop;
+  dreFlowDesktop?: DreFlowDesktop;
 }

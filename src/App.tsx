@@ -104,7 +104,7 @@ export default function App() {
   }, [workspaceDirty, videoDirty]);
 
   useEffect(() => {
-    document.title = `${workspaceDirty || videoDirty ? '• ' : ''}DesignForge`;
+    document.title = `${workspaceDirty || videoDirty ? '• ' : ''}DreFlow`;
   }, [workspaceDirty, videoDirty]);
 
   // Video project autosave to Supabase — debounced 4 seconds after last change
