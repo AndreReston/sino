@@ -25,7 +25,6 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { mode: themeMode, toggle } = useThemeStore();
@@ -252,22 +251,6 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
               </div>
             </div>
 
-            {mode === 'register' && (
-              <div className="flex items-start gap-2.5">
-                <input
-                  id="age-confirm"
-                  type="checkbox"
-                  checked={ageConfirmed}
-                  onChange={(e) => setAgeConfirmed(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded border-panel-border bg-panel text-orange-500 focus:ring-orange-500/30 cursor-pointer"
-                  required
-                />
-                <label htmlFor="age-confirm" className="text-xs text-theme-muted leading-relaxed cursor-pointer">
-                  I confirm that I am at least 13 years old. By creating an account, I agree to the Platform's <a href="#" className="text-sky-400 hover:text-sky-300 underline underline-offset-2">Terms of Service</a> and <a href="#" className="text-sky-400 hover:text-sky-300 underline underline-offset-2">Privacy Policy</a>. Our Platform complies with COPPA and does not knowingly collect data from children under 13.
-                </label>
-              </div>
-            )}
-
             {error && (
               <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
                 {error}
@@ -276,7 +259,7 @@ export default function AuthPage({ mode, onModeChange, onLogin, onRegister, onBa
 
             <button
               type="submit"
-              disabled={loading || (mode === 'register' && !ageConfirmed)}
+              disabled={loading}
               className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 py-3.5 text-sm font-semibold text-white transition-all hover:from-orange-400 hover:to-amber-400 hover:shadow-[0_8px_30px_rgba(249,115,22,0.35)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none mt-2"
             >
               {loading

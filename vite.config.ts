@@ -53,12 +53,7 @@ export default defineConfig(({ mode }) => ({
   base: mode === 'electron' ? './' : '/',
   plugins: [react()],
   optimizeDeps: {
-    exclude: ['lucide-react', '@ffmpeg/ffmpeg'],
-  },
-  build: {
-    rollupOptions: {
-      external: ['@ffmpeg/ffmpeg'],
-    },
+    exclude: ['lucide-react'],
   },
   configureServer(server: ViteDevServer) {
     server.middlewares.use(async (req, res, next) => {
