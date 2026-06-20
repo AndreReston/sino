@@ -530,31 +530,114 @@ function ShapesPanel({ addShape }: { addShape: (type: string, color?: string) =>
   );
 }
 
+const BRUSH_PALETTE = [
+  '#18181b', '#ef4444', '#f97316', '#eab308', '#22c55e',
+  '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff',
+];
+
+const BRUSH_SIZE_PRESETS = [2, 5, 10, 20, 40];
+
 function DrawingModeButton() {
-  const { toolMode, setToolMode, fabricCanvas } = useStore();
+  const { toolMode, setToolMode, fabricCanvas, brushColor, brushSize, setBrushColor, setBrushSize } = useStore();
   const isDrawing = toolMode === 'pen';
+
+  const toggle = () => {
+    if (isDrawing) {
+      setToolMode('select');
+    } else {
+      setToolMode('pen');
+      if (fabricCanvas) {
+        fabricCanvas.isDrawingMode = true;
+        fabricCanvas.freeDrawingBrush.width = brushSize;
+        fabricCanvas.freeDrawingBrush.color = brushColor;
+      }
+    }
+  };
+
   return (
-    <button
-      onClick={() => {
-        if (isDrawing) {
-          setToolMode('select');
-        } else {
-          setToolMode('pen');
-          if (fabricCanvas) {
-            fabricCanvas.isDrawingMode = true;
-            fabricCanvas.freeDrawingBrush.width = 3;
-            fabricCanvas.freeDrawingBrush.color = '#18181b';
-          }
-        }
-      }}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-sm font-medium
-        ${isDrawing
-          ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
-          : 'bg-panel-light border-panel-border text-theme-muted hover:text-theme-primary hover:border-zinc-500'}`}
-    >
-      <PenLine className="w-4 h-4" />
-      {isDrawing ? 'Drawing Mode Active — Click to Exit' : 'Enable Freehand Drawing'}
-    </button>
+    <div className="space-y-3">
+      <button
+        onClick={toggle}
+        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-sm font-medium
+          ${isDrawing
+            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+            : 'bg-panel-light border-panel-border text-theme-muted hover:text-theme-primary hover:border-zinc-500'}`}
+      >
+        <PenLine className="w-4 h-4" />
+        {isDrawing ? 'Drawing Mode Active — Click to Exit' : 'Enable Freehand Drawing'}
+        {isDrawing && (
+          <div
+            className="ml-auto w-4 h-4 rounded-full border-2 border-white/20 shrink-0"
+            style={{ backgroundColor: brushColor }}
+          />
+        )}
+      </button>
+
+      {isDrawing && (
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-3">
+          {/* Color picker */}
+          <div>
+            <p className="text-[10px] text-theme-muted uppercase tracking-wider mb-2">Brush Color</p>
+            <div className="flex flex-wrap gap-1.5">
+              {BRUSH_PALETTE.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setBrushColor(c)}
+                  className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${brushColor === c ? 'border-emerald-400 scale-110' : 'border-transparent'}`}
+                  style={{ backgroundColor: c, boxShadow: c === '#ffffff' ? 'inset 0 0 0 1px #52525b' : undefined }}
+                  title={c}
+                />
+              ))}
+              <label className="w-6 h-6 rounded-full border-2 border-dashed border-panel-border hover:border-emerald-400/50 flex items-center justify-center cursor-pointer transition-colors" title="Custom color">
+                <span className="text-[9px] text-theme-dim">+</span>
+                <input
+                  type="color"
+                  value={brushColor}
+                  onChange={(e) => setBrushColor(e.target.value)}
+                  className="absolute opacity-0 w-0 h-0"
+                />
+              </label>
+            </div>
+          </div>
+
+          {/* Size slider */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] text-theme-muted uppercase tracking-wider">Brush Size</p>
+              <span className="text-[10px] text-emerald-400 font-mono">{brushSize}px</span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={80}
+              value={brushSize}
+              onChange={(e) => setBrushSize(Number(e.target.value))}
+              className="w-full accent-emerald-400"
+            />
+            <div className="flex items-center justify-between mt-2">
+              {BRUSH_SIZE_PRESETS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setBrushSize(s)}
+                  className={`flex items-center justify-center w-7 h-7 rounded-lg text-[10px] font-medium transition-all ${brushSize === s ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-panel-hover text-theme-dim hover:text-theme-secondary'}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="flex items-center gap-2 pt-1">
+            <div
+              className="rounded-full"
+              style={{ width: Math.min(brushSize, 40), height: Math.min(brushSize, 40), backgroundColor: brushColor, boxShadow: brushColor === '#ffffff' ? 'inset 0 0 0 1px #52525b' : undefined }}
+            />
+            <span className="text-[10px] text-theme-dim">Brush preview</span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
