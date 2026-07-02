@@ -11,6 +11,8 @@ const LOGO_SRC = '/Untitled_design_(1).png';
 type Props = {
   onLogin: () => void;
   onRegister: () => void;
+  onPrivacy: () => void;
+  onTerms: () => void;
 };
 
 const FEATURES = [
@@ -76,7 +78,7 @@ function InstallButton({ className = '' }: { className?: string }) {
   );
 }
 
-export default function LandingPage({ onLogin, onRegister }: Props) {
+export default function LandingPage({ onLogin, onRegister, onPrivacy, onTerms }: Props) {
   const { mode, toggle } = useThemeStore();
   return (
     <div className="min-h-screen bg-[#07070d] text-white overflow-x-hidden">
@@ -381,12 +383,37 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-white/[0.04] py-8">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <img src={LOGO_SRC} alt="DreFlow" className="w-7 h-7 rounded-lg object-cover" />
-            <span className="text-sm font-semibold bg-gradient-to-r from-orange-400 to-sky-400 bg-clip-text text-transparent">DreFlow</span>
+        <div className="max-w-6xl mx-auto px-6 flex flex-col items-center gap-6">
+          {/* Brand and tagline */}
+          <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-4">
+            <div className="flex items-center gap-2.5">
+              <img src={LOGO_SRC} alt="DreFlow" className="w-7 h-7 rounded-lg object-cover" />
+              <span className="text-sm font-semibold bg-gradient-to-r from-orange-400 to-sky-400 bg-clip-text text-transparent">DreFlow</span>
+            </div>
+            <p className="text-xs text-theme-dim">Built for creators who move fast.</p>
           </div>
-          <p className="text-xs text-theme-dim">Built for creators who move fast.</p>
+
+          {/* Regulatory links */}
+          <div className="flex items-center gap-6 text-xs">
+            <button
+              onClick={onPrivacy}
+              className="text-theme-muted hover:text-theme-secondary transition-colors"
+            >
+              Privacy Policy
+            </button>
+            <span className="text-theme-dim">|</span>
+            <button
+              onClick={onTerms}
+              className="text-theme-muted hover:text-theme-secondary transition-colors"
+            >
+              Terms of Service
+            </button>
+          </div>
+
+          {/* Compliance stamp */}
+          <p className="text-[10px] text-theme-dim/60 text-center max-w-lg">
+            DreFlow Architecture Map — Secure Client-Side Sandbox Logic. No code data is retained on our servers.
+          </p>
         </div>
       </footer>
     </div>

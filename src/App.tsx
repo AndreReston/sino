@@ -7,6 +7,8 @@ import { loadFromIndexedDB } from './lib/indexedDBStorage';
 import LandingPage from './components/LandingPage';
 import AuthPage from './components/AuthPage';
 import Dashboard from './components/Dashboard';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsOfService from './components/TermsOfService';
 import TopBar from './components/TopBar';
 import LeftSidebar from './components/LeftSidebar';
 import RightPanel from './components/RightPanel';
@@ -25,7 +27,7 @@ import {
 } from './lib/userStorage';
 import { projectHasEphemeralUrls } from './lib/mediaUpload';
 
-type AppView = 'landing' | 'auth' | 'dashboard' | 'workspace' | 'video-workspace';
+type AppView = 'landing' | 'auth' | 'dashboard' | 'workspace' | 'video-workspace' | 'privacy' | 'terms';
 
 const LAST_VIEW_KEY = 'sino:lastView';
 const LAST_DESIGN_KEY = 'sino:lastDesignId';
@@ -517,8 +519,16 @@ export default function App() {
     }
   };
 
+  if (view === 'privacy') {
+    return <PrivacyPolicy onBack={() => persistView('landing')} />;
+  }
+
+  if (view === 'terms') {
+    return <TermsOfService onBack={() => persistView('landing')} />;
+  }
+
   if (view === 'landing') {
-    return <LandingPage onLogin={() => { setAuthMode('login'); persistView('auth'); }} onRegister={() => { setAuthMode('register'); persistView('auth'); }} />;
+    return <LandingPage onLogin={() => { setAuthMode('login'); persistView('auth'); }} onRegister={() => { setAuthMode('register'); persistView('auth'); }} onPrivacy={() => persistView('privacy')} onTerms={() => persistView('terms')} />;
   }
 
   if (view === 'auth') {
