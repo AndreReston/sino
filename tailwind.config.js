@@ -61,8 +61,6 @@ export default {
         },
       },
       boxShadow: {
-        'neon-green': 'var(--shadow-neon-green)',
-        'neon-blue': 'var(--shadow-neon-blue)',
         'panel': 'var(--shadow-panel)',
       },
       animation: {
